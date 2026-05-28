@@ -1,0 +1,63 @@
+{
+	"name": "@assinafy/cli",
+	"version": "1.0.0",
+	"description": "The official command-line interface for the Assinafy digital-signature API",
+	"license": "MIT",
+	"type": "module",
+	"engines": {
+		"node": ">=18"
+	},
+	"bin": {
+		"assinafy": "./dist/cli.cjs"
+	},
+	"files": ["dist/cli.cjs", "docs/", "install.sh", "install.ps1", "README.md", "LICENSE"],
+	"keywords": [
+		"assinafy",
+		"cli",
+		"digital-signature",
+		"electronic-signature",
+		"assinatura-eletronica",
+		"pdf",
+		"api-client",
+		"brazil"
+	],
+	"author": "Assinafy API Team",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/assinafy/assinafy-cli.git"
+	},
+	"bugs": {
+		"url": "https://github.com/assinafy/assinafy-cli/issues"
+	},
+	"homepage": "https://github.com/assinafy/assinafy-cli#readme",
+	"scripts": {
+		"dev": "tsx src/cli.ts",
+		"dev:watch": "tsx --watch src/cli.ts",
+		"build": "tsup",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"docs": "npm run build && node scripts/gen-docs.mjs",
+		"verify:bundle": "node scripts/verify-bundle.mjs",
+		"pack:release": "npm run build && node scripts/package-release.mjs",
+		"prepack": "npm run build && npm run verify:bundle",
+		"prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build && npm run verify:bundle"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.11.0",
+		"@commander-js/extra-typings": "^14.0.0",
+		"axios": "^1.7.9",
+		"commander": "^14.0.0",
+		"picocolors": "^1.1.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/node": "^22.10.0",
+		"tsup": "^8.3.5",
+		"tsx": "^4.19.2",
+		"typescript": "^5.7.2",
+		"vitest": "^2.1.8"
+	}
+}
