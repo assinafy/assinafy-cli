@@ -27,7 +27,7 @@ const createCommand = new Command('create')
 	.option('--method <method>', 'virtual or collect', 'virtual')
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
-	.option('--copy-receivers <csv>', 'Comma-separated emails to CC')
+	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const payload: ICreateAssignmentPayload = {

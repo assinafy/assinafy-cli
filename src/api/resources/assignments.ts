@@ -2,6 +2,8 @@ import type {
     IAssignment,
     ICreateAssignmentPayload,
     ICreateAssignmentResponse,
+    IEstimateCostResponse,
+    IResendCostEstimate,
     IResendEmailResponse,
     IWhatsAppNotification,
     SignerReference,
@@ -90,11 +92,12 @@ export class AssignmentResource extends BaseResource {
         payload: ICreateAssignmentPayload,
     ): Promise<ICreateAssignmentResponse> {
         const docId = this.requireId(documentId, 'Document ID');
-        const signers = extractSignerRefs(payload);
+        // buildAssignmentPayload normalises (and validates non-empty) the signer
+        // list; reuse its output for the count instead of extracting twice.
         const body = buildAssignmentPayload(payload);
         this.logger.info('Creating assignment', {
             documentId: docId,
-            signers: signers.length,
+            signers: (body.signers as unknown[]).length,
         });
         return this.call('Failed to create assignment', () =>
             this.http.post(`/documents/${docId}/assignments`, body),
@@ -105,7 +108,7 @@ export class AssignmentResource extends BaseResource {
     async estimateCost(
         documentId: string,
         payload: ICreateAssignmentPayload,
-    ): Promise<Record<string, unknown>> {
+    ): Promise<IEstimateCostResponse> {
         const docId = this.requireId(documentId, 'Document ID');
         return this.call('Failed to estimate assignment cost', () =>
             this.http.post(
@@ -153,7 +156,7 @@ export class AssignmentResource extends BaseResource {
         documentId: string,
         assignmentId: string,
         signerId: string,
-    ): Promise<Record<string, unknown>> {
+    ): Promise<IResendCostEstimate> {
         const docId = this.requireId(documentId, 'Document ID');
         const asgId = this.requireId(assignmentId, 'Assignment ID');
         const sid = this.requireId(signerId, 'Signer ID');

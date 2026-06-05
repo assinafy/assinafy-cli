@@ -5,7 +5,12 @@ import { CliError, errorMessage, normalizeError } from './errors';
 describe('normalizeError', () => {
 	it('normalizes a CliError', () => {
 		const n = normalizeError(new CliError('bad flag', { code: 'x' }));
-		expect(n).toEqual({ message: 'bad flag', code: 'x' });
+		expect(n).toEqual({ message: 'bad flag', code: 'x', exitCode: 1 });
+	});
+
+	it('carries a custom CliError exitCode through', () => {
+		const n = normalizeError(new CliError('nope', { code: 'x', exitCode: 2 }));
+		expect(n.exitCode).toBe(2);
 	});
 
 	it('normalizes an ApiError with status and details', () => {

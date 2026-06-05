@@ -48,7 +48,7 @@ export const sendCommand = new Command('send')
 	.option('--signers <json>', 'JSON array of signer objects (overrides --signer)')
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
-	.option('--copy-receivers <csv>', 'Comma-separated emails to CC')
+	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
 	.option('--metadata <json>', 'JSON object of metadata to attach to the document')
 	.option('--no-wait', 'Do not wait for the document to finish processing')
 	.action(async (file, opts, command) => {

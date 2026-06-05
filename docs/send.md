@@ -16,7 +16,8 @@ Options:
   --signers <json>        JSON array of signer objects (overrides --signer)
   --message <message>     Message shown to signers
   --expires-at <iso8601>  Expiration timestamp
-  --copy-receivers <csv>  Comma-separated emails to CC
+  --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
+                          document
   --metadata <json>       JSON object of metadata to attach to the document
   --no-wait               Do not wait for the document to finish processing
   -h, --help              display help for command

@@ -11,9 +11,11 @@ import type {
     IDocumentListResponse,
     IDocumentStatusInfo,
     IDocumentUploadResponse,
+    IEstimateCostResponse,
     IPublicDocumentInfo,
     ISigningProgress,
     ITag,
+    ITemplateCostSigner,
     ITemplateSigner,
     SendTokenChannel,
 } from '../types';
@@ -268,9 +270,9 @@ export class DocumentResource extends BaseResource {
     /** Estimate the credit cost of creating a document from a template. */
     async estimateCostFromTemplate(
         templateId: string,
-        signers: ITemplateSigner[],
+        signers: ITemplateCostSigner[],
         accountId?: string,
-    ): Promise<Record<string, unknown>> {
+    ): Promise<IEstimateCostResponse> {
         const tmplId = this.requireId(templateId, 'Template ID');
         const accId = this.accountId(accountId);
         return this.call('Failed to estimate cost from template', () =>

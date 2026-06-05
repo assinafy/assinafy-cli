@@ -14,3 +14,4 @@ export { AuthenticationResource } from './resources/authentication';
 export { FieldsResource } from './resources/fields';
 export { SignerDocumentsResource } from './resources/signer-documents';
 export { WebhookVerifier } from './support/webhook-verifier';
+export type { WebhookVerifierOptions } from './support/webhook-verifier';

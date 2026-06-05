@@ -164,15 +164,53 @@ export interface ICreateAssignmentPayload {
     entries?: unknown[];
 }
 
+/** Direct signing URL generated for one signer (inside `assignment.signing_urls`). */
+export interface ISigningUrl {
+    signer_id: string;
+    url: string;
+}
+
+/**
+ * One tracked notification-delivery record, returned inside
+ * `assignment.signers[].notification_history` (account-owner contexts only).
+ */
+export interface IAssignmentSignerNotification {
+    event: string;
+    status: string;
+    error_code?: string | null;
+    error_message?: string | null;
+    sent_at?: string | null;
+    failed_at?: string | null;
+}
+
+/**
+ * Signer as embedded inside an assignment. Extends the base {@link ISigner}
+ * with the per-assignment verification / notification / ordering fields the
+ * API returns. `completed` and `notification_history` are only present in
+ * account-owner contexts.
+ */
+export interface IAssignmentSigner extends ISigner {
+    verification_method?: AssignmentVerificationMethod | null;
+    notification_methods?: AssignmentNotificationMethod[] | null;
+    step?: number | null;
+    notified?: boolean | null;
+    completed?: boolean | null;
+    notification_history?: IAssignmentSignerNotification[];
+}
+
 /** Assignment object as returned by the API. */
 export interface IAssignment {
+    /** Resource type (`assignment`); present in single-resource responses. */
+    resource?: string;
     id: string;
     sender_email?: string;
-    method: AssignmentMethod;
-    expires_at?: string;
+    /** `virtual` or `collect`. Documented as `null` for some `collect` responses. */
+    method: AssignmentMethod | null;
+    /** ISO 8601 timestamp, or `null` when the assignment does not expire. */
+    expires_at?: string | null;
     expiration?: string;
-    message?: string;
-    signers: ISigner[];
+    message?: string | null;
+    signers: IAssignmentSigner[];
     copy_receivers?: string[];
     items?: unknown[];
     summary?: {
@@ -180,7 +218,7 @@ export interface IAssignment {
         completed_count: number;
         signers: unknown[];
     };
-    signing_urls?: Record<string, string>;
+    signing_urls?: ISigningUrl[];
 }
 
 export type ICreateAssignmentResponse = IAssignment;
@@ -189,6 +227,41 @@ export interface IResendEmailResponse {
     is_sent?: boolean;
     document_id?: string;
     signer_id?: string;
+}
+
+/** One line item in a cost-estimation `breakdown`. */
+export interface IEstimateCostBreakdownItem {
+    code: string;
+    name: string;
+    cost: number;
+    quantity: number;
+    unit_cost: number;
+}
+
+/**
+ * Cost-estimation response shared by the assignment `estimate-cost` and the
+ * template `documents/estimate-cost` endpoints (identical shape per the docs).
+ */
+export interface IEstimateCostResponse {
+    documents: number;
+    credits: number;
+    needs_extra_document: boolean;
+    extra_document_cost: number;
+    total_credits: number;
+    breakdown: IEstimateCostBreakdownItem[];
+    document_balance: number;
+    credit_balance: number;
+    has_sufficient_resources: boolean;
+    blocking_reason: 'PendingPayment' | 'InsufficientDocuments' | 'InsufficientCredits' | null;
+    message: string | null;
+}
+
+/** Cost-estimation response for resending a single signer notification. */
+export interface IResendCostEstimate {
+    total: number;
+    breakdown: Array<{ code: string; name: string; cost: number }>;
+    credit_balance: number;
+    has_sufficient_credits: boolean;
 }
 
 /** Webhook payload envelope. */
@@ -307,7 +380,8 @@ export interface IDocumentDetailsResponse {
         bundle?: string;
         thumbnail?: string;
     };
-    pages: unknown[];
+    /** Omitted by the signer-side `GET /signers/{id}/document` endpoint. */
+    pages?: unknown[];
     /** Tags attached to the document (inline `{ id, name, color }` shape). */
     tags?: IInlineTag[];
     created_at: string;
@@ -388,12 +462,14 @@ export interface IWebhookRegisterPayload {
 
 export interface IWebhookSubscription {
     id?: string;
-    url: string;
-    email: string;
+    /** Documented as `string|null` — `null` when no endpoint URL is configured. */
+    url: string | null;
+    /** Documented as `string|null` — `null` when no contact email is configured. */
+    email: string | null;
     events: string[];
     is_active: boolean;
-    created_at?: string;
-    updated_at?: string;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export interface IWebhookEventTypeInfo {
@@ -486,7 +562,10 @@ export interface ITemplateDetailsResponse {
     [key: string]: unknown;
 }
 
-/** Signer assignment for creating a document from a template. */
+/**
+ * Signer assignment for creating a document from a template. `id` is required
+ * here; for cost estimation it is optional — see {@link ITemplateCostSigner}.
+ */
 export interface ITemplateSigner {
     role_id: string;
     id: string;
@@ -494,6 +573,14 @@ export interface ITemplateSigner {
     notification_methods?: string[];
     /** Positive integer controlling signing order (see {@link SignerReference}). */
     step?: number;
+}
+
+/**
+ * Signer entry accepted by the template cost-estimation endpoint, where the
+ * signer `id` is optional (the docs mark it "not required for cost estimation").
+ */
+export interface ITemplateCostSigner extends Omit<ITemplateSigner, 'id'> {
+    id?: string;
 }
 
 /** Options for creating a document from a template. */

@@ -1,6 +1,6 @@
 {
 	"name": "@assinafy/cli",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "The official command-line interface for the Assinafy digital-signature API",
 	"license": "MIT",
 	"type": "module",

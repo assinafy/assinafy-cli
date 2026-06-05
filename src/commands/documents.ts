@@ -1,5 +1,10 @@
 import { Command } from '@commander-js/extra-typings';
-import type { DocumentArtifactName, IDocumentListParams, ITemplateSigner } from '../api';
+import type {
+	DocumentArtifactName,
+	IDocumentListParams,
+	ITemplateCostSigner,
+	ITemplateSigner,
+} from '../api';
 import { requireAccountId } from '../lib/client';
 import { defaultArtifactFilename, writeBinary } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
@@ -279,7 +284,7 @@ const estimateTemplateCostCommand = new Command('estimate-template-cost')
 	.action(async (templateId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
-			const signers = parseJsonArray(opts.signers, '--signers') as ITemplateSigner[];
+			const signers = parseJsonArray(opts.signers, '--signers') as ITemplateCostSigner[];
 			const result = await withSpinner('Estimating cost', config, () =>
 				client.documents.estimateCostFromTemplate(templateId, signers, accountId),
 			);
@@ -306,11 +311,12 @@ const statusesCommand = new Command('statuses')
 			const statuses = await withSpinner('Fetching statuses', config, () =>
 				client.documents.statuses(),
 			);
+			// The API returns only `code` + `deletable` (no `description`), so we
+			// don't render a permanently-empty DESCRIPTION column.
 			printData(statuses, config, (rows) =>
 				renderTable(rows, [
 					{ header: 'CODE', value: (r) => r.code },
 					{ header: 'DELETABLE', value: (r) => r.deletable },
-					{ header: 'DESCRIPTION', value: (r) => r.description },
 				]),
 			);
 		});
@@ -369,8 +375,8 @@ const waitCommand = new Command('wait')
 	.option('--interval <ms>', 'Poll interval in milliseconds', '2000')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
-			const maxWaitMs = parseInteger(opts.timeout, '--timeout');
-			const pollIntervalMs = parseInteger(opts.interval, '--interval');
+			const maxWaitMs = parseInteger(opts.timeout, '--timeout', { min: 1 });
+			const pollIntervalMs = parseInteger(opts.interval, '--interval', { min: 1 });
 			const doc = await withSpinner('Waiting for document', config, () =>
 				client.documents.waitUntilReady(id, { maxWaitMs, pollIntervalMs }),
 			);

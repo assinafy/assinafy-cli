@@ -13,8 +13,8 @@ export interface ListFlags {
 /** Build the SDK list params object from parsed list flags (omitting empties). */
 export function listParams(flags: ListFlags): Record<string, string | number> {
 	const params: Record<string, string | number> = {};
-	const page = parseInteger(flags.page, '--page');
-	const perPage = parseInteger(flags.perPage, '--per-page');
+	const page = parseInteger(flags.page, '--page', { min: 1 });
+	const perPage = parseInteger(flags.perPage, '--per-page', { min: 1 });
 	if (page !== undefined) params.page = page;
 	if (perPage !== undefined) params['per-page'] = perPage;
 	if (flags.search) params.search = flags.search;

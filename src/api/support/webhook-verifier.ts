@@ -1,23 +1,43 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { IWebhookPayload } from '../types';
 
+/** Tunables for {@link WebhookVerifier} so the scheme can match the platform. */
+export interface WebhookVerifierOptions {
+    /** HMAC hash algorithm. Defaults to `sha256`. */
+    algorithm?: string;
+    /** Digest encoding of the signature value. Defaults to `hex`. */
+    encoding?: 'hex' | 'base64';
+}
+
 /**
- * Verifier for Assinafy webhook payloads.
+ * Best-effort verifier for Assinafy webhook payload signatures.
  *
- * The Assinafy platform signs webhook bodies with HMAC-SHA256 using the
- * workspace webhook secret and sends the hex digest in an `X-Assinafy-Signature`
- * header. Use {@link WebhookVerifier.verify} to confirm the signature before
- * trusting the payload.
+ * NOTE: the public API reference does not document a webhook signing scheme.
+ * This helper implements the common convention — an HMAC of the raw body using
+ * the workspace webhook secret, compared against a hex digest sent in a
+ * signature header — and lets you override the algorithm/encoding to match
+ * whatever the platform actually sends. Confirm the exact header name and
+ * encoding against a real delivered webhook before relying on it, and treat a
+ * failed {@link WebhookVerifier.verify} as "unverified", not proof of forgery.
  */
 export class WebhookVerifier {
-    constructor(private readonly webhookSecret?: string) {}
+    private readonly algorithm: string;
+    private readonly encoding: 'hex' | 'base64';
 
-    /** Returns `true` if `signature` is a valid HMAC-SHA256 of `payload`. */
+    constructor(
+        private readonly webhookSecret?: string,
+        options: WebhookVerifierOptions = {},
+    ) {
+        this.algorithm = options.algorithm ?? 'sha256';
+        this.encoding = options.encoding ?? 'hex';
+    }
+
+    /** Returns `true` if `signature` is a valid HMAC of `payload` under the configured scheme. */
     verify(payload: string | Buffer, signature: string): boolean {
         if (!this.webhookSecret || !signature) return false;
 
         const buf = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
-        const expected = createHmac('sha256', this.webhookSecret).update(buf).digest('hex');
+        const expected = createHmac(this.algorithm, this.webhookSecret).update(buf).digest(this.encoding);
         const provided = signature.trim();
 
         const a = Buffer.from(expected, 'utf8');

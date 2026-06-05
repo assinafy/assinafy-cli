@@ -68,5 +68,5 @@ export function printError(err: unknown, config: OutputConfig): void {
 			writeErr(pc.dim(`  (HTTP ${normalized.statusCode})`));
 		}
 	}
-	process.exitCode = 1;
+	process.exitCode = normalized.exitCode ?? 1;
 }

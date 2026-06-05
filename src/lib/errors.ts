@@ -22,13 +22,15 @@ export interface NormalizedError {
 	message: string;
 	code: string;
 	statusCode?: number;
+	/** Process exit code to use (carried from {@link CliError}); defaults to 1. */
+	exitCode?: number;
 	details?: unknown;
 }
 
 /** Turn any thrown value into a normalized, presentable error. */
 export function normalizeError(err: unknown): NormalizedError {
 	if (err instanceof CliError) {
-		return { message: err.message, code: err.code };
+		return { message: err.message, code: err.code, exitCode: err.exitCode };
 	}
 	if (err instanceof ApiError) {
 		return {

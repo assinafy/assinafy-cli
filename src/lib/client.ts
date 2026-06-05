@@ -1,5 +1,5 @@
 import { AssinafyClient } from '../api';
-import { type GlobalOptions, type ResolvedConfig, resolveConfig } from './config';
+import type { ResolvedConfig } from './config';
 import { CliError } from './errors';
 
 interface CreateClientOptions {
@@ -37,15 +37,6 @@ export function createClient(
 	if (config.webhookSecret) clientOptions.webhookSecret = config.webhookSecret;
 
 	return new AssinafyClient(clientOptions);
-}
-
-/** Convenience: resolve config from global options and build a client in one step. */
-export function clientFromGlobals(globals: GlobalOptions): {
-	client: AssinafyClient;
-	config: ResolvedConfig;
-} {
-	const config = resolveConfig(globals);
-	return { client: createClient(config), config };
 }
 
 /**

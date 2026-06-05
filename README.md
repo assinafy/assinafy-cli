@@ -122,10 +122,10 @@ assinafy send contract.pdf \
   --signer "Bruno <+5548999990000>" \
   --message "Please sign" \
   --expires-at 2026-12-31T23:59:59Z \
-  --copy-receivers cc@example.com
+  --copy-receivers sig_abc123,sig_def456
 ```
 
-Use `--signers '<json>'` for full control (verification methods, signing order/`step`), and `--no-wait` to skip waiting for processing.
+Use `--signers '<json>'` for full control (verification methods, signing order/`step`), and `--no-wait` to skip waiting for processing. Per the API, `--copy-receivers` takes **signer IDs** (people who only receive a copy of the finished document), not arbitrary email addresses.
 
 ### `documents`
 

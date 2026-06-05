@@ -61,6 +61,18 @@ describe('parseInteger', () => {
 	it('throws on non-numeric input', () => {
 		expect(() => parseInteger('abc', '--n')).toThrow(/must be an integer/);
 	});
+
+	it('rejects partial / trailing-garbage input (not just a leading digit)', () => {
+		expect(() => parseInteger('5s', '--n')).toThrow(/must be an integer/);
+		expect(() => parseInteger('3.9', '--n')).toThrow(/must be an integer/);
+		expect(() => parseInteger('12abc', '--n')).toThrow(/must be an integer/);
+	});
+
+	it('enforces a minimum when provided', () => {
+		expect(() => parseInteger('0', '--page', { min: 1 })).toThrow(/1 or greater/);
+		expect(() => parseInteger('-1', '--page', { min: 1 })).toThrow(/1 or greater/);
+		expect(parseInteger('1', '--page', { min: 1 })).toBe(1);
+	});
 });
 
 describe('collect', () => {

@@ -54,12 +54,26 @@ export function collect(value: string, previous: string[] = []): string[] {
 	return [...previous, value];
 }
 
-/** Coerce a string flag to an integer, or throw a friendly error. */
-export function parseInteger(raw: string | undefined, flag: string): number | undefined {
+/**
+ * Coerce a string flag to an integer, or throw a friendly error.
+ *
+ * Validates the WHOLE token (unlike `Number.parseInt`, which would silently
+ * accept `5s` → 5 or `3.9` → 3). Pass `{ min }` to reject out-of-range values
+ * (e.g. `--page`/`--per-page` require a value of at least 1).
+ */
+export function parseInteger(
+	raw: string | undefined,
+	flag: string,
+	options: { min?: number } = {},
+): number | undefined {
 	if (raw === undefined) return undefined;
-	const n = Number.parseInt(raw, 10);
-	if (!Number.isFinite(n)) {
+	const trimmed = raw.trim();
+	if (!/^-?\d+$/.test(trimmed)) {
 		throw new CliError(`${flag} must be an integer.`);
+	}
+	const n = Number(trimmed);
+	if (options.min !== undefined && n < options.min) {
+		throw new CliError(`${flag} must be ${options.min} or greater.`);
 	}
 	return n;
 }

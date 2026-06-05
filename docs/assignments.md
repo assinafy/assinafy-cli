@@ -37,7 +37,8 @@ Options:
   --method <method>       virtual or collect (default: "virtual")
   --message <message>     Message shown to signers
   --expires-at <iso8601>  Expiration timestamp
-  --copy-receivers <csv>  Comma-separated emails to CC
+  --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
+                          document
   -h, --help              display help for command
 ```
 
