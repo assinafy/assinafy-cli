@@ -383,7 +383,7 @@ function buildUploadForm(
 ): FormData {
     const form = new FormData();
     // Blob copy-free view over the Buffer's underlying ArrayBuffer slice.
-    const view = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    const view = new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength);
     form.append('file', new Blob([view], { type: 'application/pdf' }), fileName);
     form.append('name', fileName);
     if (metadata) {

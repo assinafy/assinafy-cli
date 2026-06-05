@@ -25,7 +25,7 @@ export async function withSpinner<T>(
 		s.stop(message);
 		return result;
 	} catch (err) {
-		s.stop(message, 1);
+		s.error(message);
 		throw err;
 	}
 }
