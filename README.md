@@ -6,7 +6,7 @@ A self-contained CLI with full coverage of the public API: `commander`-based, hu
 
 ## Requirements
 
-- Node.js 18+ (for the built-in `FormData` / `Blob` APIs used by uploads)
+- Node.js 22+ (for the built-in `FormData` / `Blob` APIs used by uploads)
 
 ## Installation
 
@@ -236,9 +236,9 @@ npm run pack:release # create release archives in dist/release/
 ## Release
 
 GitHub CI runs typecheck, lint, tests, bundle verification, and package-content
-checks on Node 18, 20, and 22. Publishing a GitHub release packages the CLI into
-platform archives, uploads the assets, and publishes to npm when `NPM_TOKEN` is
-configured.
+checks on Node 22, 24, and 26. Publishing a GitHub release packages the CLI into
+platform archives, uploads the assets, and publishes to both npm (when `NPM_TOKEN`
+is configured) and GitHub Packages.
 
 ## License
 

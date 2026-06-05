@@ -44,8 +44,8 @@ Require-Command "node"
 Require-Command "tar"
 
 $nodeMajor = [int](& node -p "Number(process.versions.node.split('.')[0])")
-if ($nodeMajor -lt 18) {
-	Fail "Node.js 18+ is required. Found: $(& node --version)"
+if ($nodeMajor -lt 22) {
+	Fail "Node.js 22+ is required. Found: $(& node --version)"
 }
 
 $archName = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
@@ -114,7 +114,7 @@ try {
 	Add-UserPath $binDir
 	$installedVersion = & $exe --version
 	if ([string]::IsNullOrWhiteSpace($installedVersion)) {
-		Fail "Installed executable did not run. Confirm Node.js 18+ is available on PATH."
+		Fail "Installed executable did not run. Confirm Node.js 22+ is available on PATH."
 	}
 
 	Success "Installed $installedVersion to $exe"

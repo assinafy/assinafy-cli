@@ -45,7 +45,7 @@ main() {
 
 	installed_version="$("$executable" --version 2>/dev/null || true)"
 	if [ -z "$installed_version" ]; then
-		fail "Installed executable did not run. Confirm Node.js 18+ is available on PATH."
+		fail "Installed executable did not run. Confirm Node.js 22+ is available on PATH."
 	fi
 
 	ensure_path "$bin_dir"
@@ -105,8 +105,8 @@ check_prerequisites() {
 
 	local node_major
 	node_major="$(node -p "Number(process.versions.node.split('.')[0])" 2>/dev/null || echo 0)"
-	if [ "$node_major" -lt 18 ]; then
-		fail "Node.js 18+ is required. Found: $(node --version 2>/dev/null || echo unknown)"
+	if [ "$node_major" -lt 22 ]; then
+		fail "Node.js 22+ is required. Found: $(node --version 2>/dev/null || echo unknown)"
 	fi
 }
 
