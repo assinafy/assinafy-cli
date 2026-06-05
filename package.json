@@ -10,7 +10,14 @@
 	"bin": {
 		"assinafy": "./dist/cli.cjs"
 	},
-	"files": ["dist/cli.cjs", "docs/", "install.sh", "install.ps1", "README.md", "LICENSE"],
+	"files": [
+		"dist/cli.cjs",
+		"docs/",
+		"install.sh",
+		"install.ps1",
+		"README.md",
+		"LICENSE"
+	],
 	"keywords": [
 		"assinafy",
 		"cli",
