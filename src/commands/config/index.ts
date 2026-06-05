@@ -1,9 +1,9 @@
 import { Command } from '@commander-js/extra-typings';
 import pc from 'picocolors';
 import {
-	type ProfileConfig,
 	activeProfileName,
 	configPath,
+	type ProfileConfig,
 	readConfigFile,
 	resolveConfig,
 	writeConfigFile,

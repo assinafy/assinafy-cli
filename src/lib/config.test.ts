@@ -3,9 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-	DEFAULT_BASE_URL,
 	activeProfileName,
 	configPath,
+	DEFAULT_BASE_URL,
 	readConfigFile,
 	resolveConfig,
 	writeConfigFile,

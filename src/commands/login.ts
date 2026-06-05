@@ -1,8 +1,8 @@
 import { Command } from '@commander-js/extra-typings';
 import {
-	type ProfileConfig,
 	activeProfileName,
 	configPath,
+	type ProfileConfig,
 	readConfigFile,
 	writeConfigFile,
 } from '../lib/config';
