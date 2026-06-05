@@ -9,7 +9,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
 	entry: { cli: 'src/cli.ts' },
 	format: ['cjs'],
-	target: 'node18',
+	target: 'node22',
 	platform: 'node',
 	outExtension: () => ({ js: '.cjs' }),
 	banner: { js: '#!/usr/bin/env node' },
