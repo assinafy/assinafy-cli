@@ -1,11 +1,11 @@
 import { Command } from '@commander-js/extra-typings';
 import type { IWebhookDispatchListParams } from '../api';
 import { requireAccountId } from '../lib/client';
+import { CliError } from '../lib/errors';
 import { parseInteger, splitList } from '../lib/json';
 import { addListOptions } from '../lib/options';
 import { printData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
-import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
@@ -51,21 +51,6 @@ const getCommand = new Command('get')
 		});
 	});
 
-const deleteCommand = new Command('delete')
-	.alias('rm')
-	.description('Delete the webhook subscription')
-	.option('-y, --yes', 'Skip the confirmation prompt')
-	.action(async (opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const accountId = requireAccountId(config);
-			if (!(await confirmDestructive('Delete the webhook subscription?', Boolean(opts.yes))))
-				return;
-			await withSpinner('Deleting webhook', config, () => client.webhooks.delete(accountId));
-			printSuccess('Webhook subscription deleted', config);
-			printData({ deleted: true }, config);
-		});
-	});
-
 const inactivateCommand = new Command('inactivate')
 	.description('Inactivate the webhook subscription without deleting it')
 	.action(async (_opts, command) => {
@@ -107,7 +92,13 @@ const dispatchesCommand = addListOptions(
 		const accountId = requireAccountId(config);
 		const params: IWebhookDispatchListParams = { ...listParams(opts) };
 		if (opts.event) params.event = opts.event;
-		if (opts.delivered) params.delivered = opts.delivered as 'true' | 'false';
+		if (opts.delivered !== undefined) {
+			const v = opts.delivered.toLowerCase();
+			if (v !== 'true' && v !== 'false') {
+				throw new CliError('--delivered must be true or false');
+			}
+			params.delivered = v as 'true' | 'false';
+		}
 		const from = parseInteger(opts.from, '--from');
 		const to = parseInteger(opts.to, '--to');
 		if (from !== undefined) params.from = from;
@@ -149,7 +140,6 @@ export const webhooksCommand = new Command('webhooks')
 	.description('Manage webhook subscriptions and delivery history')
 	.addCommand(registerCommand)
 	.addCommand(getCommand)
-	.addCommand(deleteCommand)
 	.addCommand(inactivateCommand)
 	.addCommand(eventTypesCommand)
 	.addCommand(dispatchesCommand)

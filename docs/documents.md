@@ -13,7 +13,9 @@ Options:
 Commands:
   upload [options] <file>                        Upload a PDF to the workspace
   list [options]                                 List workspace documents
+  search [options] [query]                       Lightweight document search (type-ahead)
   get <id>                                       Show details for a document
+  rename <id> <name>                             Rename a document (only before the signature process starts)
   download [options] <id>                        Download a document artifact
   thumbnail [options] <id>                       Download the document thumbnail (JPEG)
   download-page [options] <id> <pageId>          Download a single document page (JPEG)
@@ -69,6 +71,25 @@ Options:
   -h, --help         display help for command
 ```
 
+### `assinafy documents search`
+
+```text
+Usage: assinafy documents search [options] [query]
+
+Lightweight document search (type-ahead)
+
+Arguments:
+  query              Search text (alias for --search)
+
+Options:
+  --status <status>  Filter by document status
+  --page <n>         Page number to fetch
+  --per-page <n>     Items per page
+  --search <query>   Filter results by a search query
+  --sort <field>     Sort by field (prefix with - for descending)
+  -h, --help         display help for command
+```
+
 ### `assinafy documents get`
 
 ```text
@@ -78,6 +99,21 @@ Show details for a document
 
 Arguments:
   id          Document ID
+
+Options:
+  -h, --help  display help for command
+```
+
+### `assinafy documents rename`
+
+```text
+Usage: assinafy documents rename [options] <id> <name>
+
+Rename a document (only before the signature process starts)
+
+Arguments:
+  id          Document ID
+  name        New document name
 
 Options:
   -h, --help  display help for command

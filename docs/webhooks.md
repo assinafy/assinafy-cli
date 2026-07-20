@@ -13,7 +13,6 @@ Options:
 Commands:
   register [options]    Register (or replace) the workspace webhook subscription
   get                   Show the current webhook subscription
-  delete|rm [options]   Delete the webhook subscription
   inactivate            Inactivate the webhook subscription without deleting it
   event-types           List supported webhook event types
   dispatches [options]  List webhook delivery history
@@ -44,18 +43,6 @@ Usage: assinafy webhooks get [options]
 Show the current webhook subscription
 
 Options:
-  -h, --help  display help for command
-```
-
-### `assinafy webhooks delete`
-
-```text
-Usage: assinafy webhooks delete|rm [options]
-
-Delete the webhook subscription
-
-Options:
-  -y, --yes   Skip the confirmation prompt
   -h, --help  display help for command
 ```
 

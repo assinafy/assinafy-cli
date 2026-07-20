@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { Command } from '@commander-js/extra-typings';
-import { printData, printInfo } from '../lib/output';
+import { printData, printInfo, printWarning } from '../lib/output';
 import { runAction } from '../lib/run';
 
 const DOCS_URL = 'https://api.assinafy.com.br/v1/docs';
@@ -17,11 +17,17 @@ export const docsCommand = new Command('docs')
 						: process.platform === 'win32'
 							? 'start'
 							: 'xdg-open';
-				spawn(opener, [DOCS_URL], {
+				const child = spawn(opener, [DOCS_URL], {
 					stdio: 'ignore',
 					detached: true,
 					shell: process.platform === 'win32',
-				}).unref();
+				});
+				// Without an 'error' handler a missing opener binary (ENOENT) emits an
+				// unhandled 'error' event that crashes the process.
+				child.on('error', () =>
+					printWarning(`Could not open a browser. Visit ${DOCS_URL}`, config),
+				);
+				child.unref();
 				printInfo(`Opening ${DOCS_URL}`, config);
 			}
 			printData({ docs: DOCS_URL }, config, (data) => data.docs);
