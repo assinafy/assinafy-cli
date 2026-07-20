@@ -2,6 +2,10 @@
 
 Auto-generated from `assinafy <command> --help`.
 
+See [`api-reference.md`](./api-reference.md) for the HTTP endpoint and real request/response payloads behind each command.
+
+## Commands
+
 - [send](./send.md)
 - [documents](./documents.md)
 - [signers](./signers.md)

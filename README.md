@@ -112,7 +112,7 @@ Commands exit `0` on success and `1` on error (`130` on Ctrl-C). This makes the 
 
 ## Command reference
 
-Run `assinafy <command> --help` for full flag details on any command. Detailed per-resource docs live in [`docs/`](./docs).
+Run `assinafy <command> --help` for full flag details on any command. Per-command help is mirrored under [`docs/`](./docs), and [`docs/api-reference.md`](./docs/api-reference.md) documents the underlying HTTP endpoint and **real request/response payloads** each command exchanges with the API.
 
 ### `send` — upload + request signatures (headline workflow)
 
@@ -133,7 +133,9 @@ Use `--signers '<json>'` for full control (verification methods, signing order/`
 | --- | --- |
 | `documents upload <file> [--name] [--metadata] [--wait]` | Upload a PDF |
 | `documents list [--status] [--method] [--tags] [--page] [--per-page] [--search] [--sort]` | List documents |
+| `documents search [query] [--status] [--page] [--per-page]` | Lightweight type-ahead search |
 | `documents get <id>` | Show document details |
+| `documents rename <id> <name>` | Rename a document (before signing starts) |
 | `documents download <id> [--artifact] [-o]` | Download an artifact (`original`/`certificated`/`certificate-page`/`bundle`) |
 | `documents thumbnail <id> [-o]` | Download the thumbnail (JPEG) |
 | `documents download-page <id> <pageId> [-o]` | Download one page (JPEG) |
@@ -162,7 +164,7 @@ assinafy signers create --name "Ana Lima" --email ana@example.com --cpf 123.456.
 
 ### `assignments`
 
-`create <documentId>` · `estimate-cost <documentId>` · `reset-expiration <documentId> <assignmentId>` · `resend <documentId> <assignmentId> <signerId>` · `estimate-resend-cost ...` · `whatsapp-notifications <documentId> <assignmentId>`
+`list` · `create <documentId>` · `estimate-cost <documentId>` · `reset-expiration <documentId> <assignmentId>` · `resend <documentId> <assignmentId> <signerId>` · `estimate-resend-cost ...` · `whatsapp-notifications <documentId> <assignmentId>`
 
 ```bash
 assinafy assignments create doc_123 --signer-ids sig_1,sig_2 --message "Please sign"
@@ -182,7 +184,9 @@ assinafy assignments create doc_123 --signer-ids sig_1,sig_2 --message "Please s
 
 ### `webhooks`
 
-`register --url --email [--events] [--inactive]` · `get` · `delete [-y]` · `inactivate` · `event-types` · `dispatches [filters]` · `retry <dispatchId>`
+`register --url --email [--events] [--inactive]` · `get` · `inactivate` · `event-types` · `dispatches [filters]` · `retry <dispatchId>`
+
+> The API has no delete-subscription endpoint — use `inactivate` to stop deliveries.
 
 ### `workspaces` (alias `accounts`)
 

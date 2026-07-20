@@ -38,61 +38,58 @@ export interface ActionContext {
 }
 
 /**
- * Run a command handler that needs an authenticated SDK client. Resolves
- * configuration, builds the client (surfacing a friendly error when no
- * credentials are configured), and funnels every thrown value through a single
- * error printer that sets the process exit code.
+ * Shared scaffold for every command handler: resolve configuration, run the
+ * handler, and funnel any thrown value through a single error printer that sets
+ * the process exit code. Client construction happens INSIDE the try so a
+ * missing-credentials error is reported the same way as any other failure.
  */
-export async function runWithClient(
+async function withResolvedConfig(
 	command: CommandLike,
-	handler: (ctx: ClientContext) => Promise<void>,
+	handler: (config: ResolvedConfig) => Promise<void>,
 ): Promise<void> {
 	const config = resolveConfig(getGlobals(command));
 	try {
-		const client = createClient(config);
-		await handler({ client, config });
+		await handler(config);
 	} catch (err) {
 		printError(err, config);
 	}
+}
+
+/**
+ * Run a command handler that needs an authenticated SDK client. Surfaces a
+ * friendly error when no credentials are configured.
+ */
+export function runWithClient(
+	command: CommandLike,
+	handler: (ctx: ClientContext) => Promise<void>,
+): Promise<void> {
+	return withResolvedConfig(command, (config) => handler({ client: createClient(config), config }));
 }
 
 /** Run a command against endpoints that do not require API-key/JWT credentials. */
-export async function runWithOptionalClient(
+export function runWithOptionalClient(
 	command: CommandLike,
 	handler: (ctx: ClientContext) => Promise<void>,
 ): Promise<void> {
-	const config = resolveConfig(getGlobals(command));
-	try {
-		const client = createClient(config, { allowUnauthenticated: true });
-		await handler({ client, config });
-	} catch (err) {
-		printError(err, config);
-	}
+	return withResolvedConfig(command, (config) =>
+		handler({ client: createClient(config, { allowUnauthenticated: true }), config }),
+	);
 }
 
 /** Run a command that specifically requires a user JWT bearer token. */
-export async function runWithTokenClient(
+export function runWithTokenClient(
 	command: CommandLike,
 	handler: (ctx: ClientContext) => Promise<void>,
 ): Promise<void> {
-	const config = resolveConfig(getGlobals(command));
-	try {
-		const client = createClient(config, { preferToken: true });
-		await handler({ client, config });
-	} catch (err) {
-		printError(err, config);
-	}
+	return withResolvedConfig(command, (config) =>
+		handler({ client: createClient(config, { preferToken: true }), config }),
+	);
 }
 
 /** Run a command handler that only needs resolved configuration (no client). */
-export async function runAction(
+export function runAction(
 	command: CommandLike,
 	handler: (ctx: ActionContext) => Promise<void>,
 ): Promise<void> {
-	const config = resolveConfig(getGlobals(command));
-	try {
-		await handler({ config });
-	} catch (err) {
-		printError(err, config);
-	}
+	return withResolvedConfig(command, (config) => handler({ config }));
 }

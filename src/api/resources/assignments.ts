@@ -1,14 +1,16 @@
-import type {
-    IAssignment,
-    ICreateAssignmentPayload,
-    ICreateAssignmentResponse,
-    IEstimateCostResponse,
-    IResendCostEstimate,
-    IResendEmailResponse,
-    IWhatsAppNotification,
-    SignerReference,
-} from '../types';
 import { ValidationError } from '../errors';
+import type {
+	IAssignment,
+	ICreateAssignmentPayload,
+	ICreateAssignmentResponse,
+	IEstimateCostResponse,
+	IListParams,
+	IResendCostEstimate,
+	IResendEmailResponse,
+	IWhatsAppNotification,
+	PaginatedResult,
+	SignerReference,
+} from '../types';
 import { cleanParams } from '../utils';
 import { BaseResource } from './base';
 
@@ -17,169 +19,192 @@ import { BaseResource } from './base';
  * `signers: [{ id }]` plus optional docs-level fields.
  */
 export function buildAssignmentPayload(
-    payload: ICreateAssignmentPayload,
-    options: { allowSignersWithoutId?: boolean } = {},
+	payload: ICreateAssignmentPayload,
+	options: { allowSignersWithoutId?: boolean; allowEmptySigners?: boolean } = {},
 ): Record<string, unknown> {
-    const signers = extractSignerRefs(payload);
-    if (signers.length === 0) {
-        throw new ValidationError('At least one signer is required', {
-            signers: payload.signers ?? payload.signer_ids ?? payload.signerIds,
-        });
-    }
+	const signers = extractSignerRefs(payload);
+	// Cost estimation for `collect` assignments may legitimately carry zero
+	// signers (the docs mark `signers` "Required for virtual" only), so callers
+	// can opt out of the non-empty guard.
+	if (signers.length === 0 && !options.allowEmptySigners) {
+		throw new ValidationError('At least one signer is required', {
+			signers: payload.signers ?? payload.signer_ids ?? payload.signerIds,
+		});
+	}
 
-    return cleanParams({
-        method: payload.method ?? 'virtual',
-        signers: signers.map((ref) => normaliseSignerRef(ref, options)),
-        message: payload.message,
-        expires_at: payload.expires_at,
-        copy_receivers: payload.copy_receivers,
-        entries: payload.entries,
-    });
+	return cleanParams({
+		method: payload.method ?? 'virtual',
+		signers: signers.map((ref) => normaliseSignerRef(ref, options)),
+		message: payload.message,
+		expires_at: payload.expires_at,
+		copy_receivers: payload.copy_receivers,
+		entries: payload.entries,
+	});
 }
 
 function extractSignerRefs(payload: ICreateAssignmentPayload): SignerReference[] {
-    if (Array.isArray(payload.signers) && payload.signers.length > 0) {
-        return payload.signers;
-    }
+	if (Array.isArray(payload.signers) && payload.signers.length > 0) {
+		return payload.signers;
+	}
 
-    const legacy = payload.signer_ids ?? payload.signerIds;
-    return Array.isArray(legacy) ? legacy : [];
+	const legacy = payload.signer_ids ?? payload.signerIds;
+	return Array.isArray(legacy) ? legacy : [];
 }
 
 function normaliseSignerRef(
-    ref: SignerReference,
-    options: { allowSignersWithoutId?: boolean },
+	ref: SignerReference,
+	options: { allowSignersWithoutId?: boolean },
 ): { id?: string; verification_method?: string; notification_methods?: string[]; step?: number } {
-    if (typeof ref === 'string') {
-        if (!ref) throw new ValidationError('Signer ID cannot be empty');
-        return { id: ref };
-    }
-    if (ref && typeof ref === 'object') {
-        const input = ref as {
-            id?: string;
-            signer_id?: string;
-            verification_method?: string;
-            notification_methods?: string[];
-            step?: number;
-        };
-        const id = input.id ?? input.signer_id;
-        const normalised = cleanParams({
-            id,
-            verification_method: input.verification_method,
-            notification_methods: input.notification_methods,
-            step: input.step,
-        });
+	if (typeof ref === 'string') {
+		if (!ref) throw new ValidationError('Signer ID cannot be empty');
+		return { id: ref };
+	}
+	if (ref && typeof ref === 'object') {
+		const input = ref as {
+			id?: string;
+			signer_id?: string;
+			verification_method?: string;
+			notification_methods?: string[];
+			step?: number;
+		};
+		const id = input.id ?? input.signer_id;
+		const normalised = cleanParams({
+			id,
+			verification_method: input.verification_method,
+			notification_methods: input.notification_methods,
+			step: input.step,
+		});
 
-        if (typeof id === 'string' && id.length > 0) {
-            return normalised as { id: string; verification_method?: string; notification_methods?: string[] };
-        }
+		if (typeof id === 'string' && id.length > 0) {
+			return normalised as {
+				id: string;
+				verification_method?: string;
+				notification_methods?: string[];
+			};
+		}
 
-        if (options.allowSignersWithoutId && Object.keys(normalised).length > 0) {
-            return normalised as { verification_method?: string; notification_methods?: string[] };
-        }
+		if (options.allowSignersWithoutId && Object.keys(normalised).length > 0) {
+			return normalised as { verification_method?: string; notification_methods?: string[] };
+		}
 
-        if (options.allowSignersWithoutId && Object.keys(normalised).length === 0) {
-            return {};
-        }
-    }
-    throw new ValidationError('Invalid signer reference', { ref: ref as unknown });
+		if (options.allowSignersWithoutId && Object.keys(normalised).length === 0) {
+			return {};
+		}
+	}
+	throw new ValidationError('Invalid signer reference', { ref: ref as unknown });
 }
 
 export class AssignmentResource extends BaseResource {
-    /** Create a signing assignment for a document. */
-    async create(
-        documentId: string,
-        payload: ICreateAssignmentPayload,
-    ): Promise<ICreateAssignmentResponse> {
-        const docId = this.requireId(documentId, 'Document ID');
-        // buildAssignmentPayload normalises (and validates non-empty) the signer
-        // list; reuse its output for the count instead of extracting twice.
-        const body = buildAssignmentPayload(payload);
-        this.logger.info('Creating assignment', {
-            documentId: docId,
-            signers: (body.signers as unknown[]).length,
-        });
-        return this.call('Failed to create assignment', () =>
-            this.http.post(`/documents/${docId}/assignments`, body),
-        );
-    }
+	/**
+	 * List assignments across the account (`GET /assignments`).
+	 *
+	 * The endpoint is account-scoped via a required `accountId` query parameter
+	 * (note the camelCase — it differs from the path style used elsewhere).
+	 * Supports `page` / `per-page`.
+	 */
+	async list(params: IListParams = {}, accountId?: string): Promise<PaginatedResult<IAssignment>> {
+		const id = this.accountId(accountId);
+		return this.callList<IAssignment>('Failed to list assignments', () =>
+			this.http.get('/assignments', { params: cleanParams({ accountId: id, ...params }) }),
+		);
+	}
 
-    /** Estimate the cost (in credits) of creating the assignment. */
-    async estimateCost(
-        documentId: string,
-        payload: ICreateAssignmentPayload,
-    ): Promise<IEstimateCostResponse> {
-        const docId = this.requireId(documentId, 'Document ID');
-        return this.call('Failed to estimate assignment cost', () =>
-            this.http.post(
-                `/documents/${docId}/assignments/estimate-cost`,
-                buildAssignmentPayload(payload, { allowSignersWithoutId: true }),
-            ),
-        );
-    }
+	/** Create a signing assignment for a document. */
+	async create(
+		documentId: string,
+		payload: ICreateAssignmentPayload,
+	): Promise<ICreateAssignmentResponse> {
+		const docId = this.requireId(documentId, 'Document ID');
+		// buildAssignmentPayload normalises (and validates non-empty) the signer
+		// list; reuse its output for the count instead of extracting twice.
+		const body = buildAssignmentPayload(payload);
+		this.logger.info('Creating assignment', {
+			documentId: docId,
+			signers: (body.signers as unknown[]).length,
+		});
+		return this.call('Failed to create assignment', () =>
+			this.http.post(`/documents/${docId}/assignments`, body),
+		);
+	}
 
-    /**
-     * Update the expiration date of an existing assignment.
-     * Pass `null` to remove the expiration entirely.
-     */
-    async resetExpiration(
-        documentId: string,
-        assignmentId: string,
-        expiresAt: string | null,
-    ): Promise<IAssignment> {
-        const docId = this.requireId(documentId, 'Document ID');
-        const asgId = this.requireId(assignmentId, 'Assignment ID');
-        // `null` is meaningful here ("no expiration"), so don't strip it.
-        return this.call('Failed to update assignment expiration', () =>
-            this.http.put(`/documents/${docId}/assignments/${asgId}/reset-expiration`, {
-                expires_at: expiresAt,
-            }),
-        );
-    }
+	/** Estimate the cost (in credits) of creating the assignment. */
+	async estimateCost(
+		documentId: string,
+		payload: ICreateAssignmentPayload,
+	): Promise<IEstimateCostResponse> {
+		const docId = this.requireId(documentId, 'Document ID');
+		return this.call('Failed to estimate assignment cost', () =>
+			this.http.post(
+				`/documents/${docId}/assignments/estimate-cost`,
+				buildAssignmentPayload(payload, {
+					allowSignersWithoutId: true,
+					allowEmptySigners: true,
+				}),
+			),
+		);
+	}
 
-    /** Resend the signing notification to a single signer. */
-    async resendNotification(
-        documentId: string,
-        assignmentId: string,
-        signerId: string,
-    ): Promise<IResendEmailResponse> {
-        const docId = this.requireId(documentId, 'Document ID');
-        const asgId = this.requireId(assignmentId, 'Assignment ID');
-        const sid = this.requireId(signerId, 'Signer ID');
-        return this.call('Failed to resend signer notification', () =>
-            this.http.put(`/documents/${docId}/assignments/${asgId}/signers/${sid}/resend`),
-        );
-    }
+	/**
+	 * Update the expiration date of an existing assignment.
+	 * Pass `null` to remove the expiration entirely.
+	 */
+	async resetExpiration(
+		documentId: string,
+		assignmentId: string,
+		expiresAt: string | null,
+	): Promise<IAssignment> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		// `null` is meaningful here ("no expiration"), so don't strip it.
+		return this.call('Failed to update assignment expiration', () =>
+			this.http.put(`/documents/${docId}/assignments/${asgId}/reset-expiration`, {
+				expires_at: expiresAt,
+			}),
+		);
+	}
 
-    /** Estimate the cost of resending a signer notification. */
-    async estimateResendCost(
-        documentId: string,
-        assignmentId: string,
-        signerId: string,
-    ): Promise<IResendCostEstimate> {
-        const docId = this.requireId(documentId, 'Document ID');
-        const asgId = this.requireId(assignmentId, 'Assignment ID');
-        const sid = this.requireId(signerId, 'Signer ID');
-        return this.call('Failed to estimate resend cost', () =>
-            this.http.post(
-                `/documents/${docId}/assignments/${asgId}/signers/${sid}/estimate-resend-cost`,
-            ),
-        );
-    }
+	/** Resend the signing notification to a single signer. */
+	async resendNotification(
+		documentId: string,
+		assignmentId: string,
+		signerId: string,
+	): Promise<IResendEmailResponse> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		return this.call('Failed to resend signer notification', () =>
+			this.http.put(`/documents/${docId}/assignments/${asgId}/signers/${sid}/resend`),
+		);
+	}
 
-    /**
-     * `GET /documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
-     * — list every WhatsApp notification rendered + sent for an assignment.
-     */
-    async listWhatsAppNotifications(
-        documentId: string,
-        assignmentId: string,
-    ): Promise<IWhatsAppNotification[]> {
-        const docId = this.requireId(documentId, 'Document ID');
-        const asgId = this.requireId(assignmentId, 'Assignment ID');
-        return this.call('Failed to list WhatsApp notifications', () =>
-            this.http.get(`/documents/${docId}/assignments/${asgId}/whatsapp-notifications`),
-        );
-    }
+	/** Estimate the cost of resending a signer notification. */
+	async estimateResendCost(
+		documentId: string,
+		assignmentId: string,
+		signerId: string,
+	): Promise<IResendCostEstimate> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		return this.call('Failed to estimate resend cost', () =>
+			this.http.post(
+				`/documents/${docId}/assignments/${asgId}/signers/${sid}/estimate-resend-cost`,
+			),
+		);
+	}
 
+	/**
+	 * `GET /documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
+	 * — list every WhatsApp notification rendered + sent for an assignment.
+	 */
+	async listWhatsAppNotifications(
+		documentId: string,
+		assignmentId: string,
+	): Promise<IWhatsAppNotification[]> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		return this.call('Failed to list WhatsApp notifications', () =>
+			this.http.get(`/documents/${docId}/assignments/${asgId}/whatsapp-notifications`),
+		);
+	}
 }

@@ -53,6 +53,8 @@ const topLevel = subcommands(help([]));
 mkdirSync(docsDir, { recursive: true });
 
 let index = '# Command reference\n\nAuto-generated from `assinafy <command> --help`.\n\n';
+index +=
+	'See [`api-reference.md`](./api-reference.md) for the HTTP endpoint and real request/response payloads behind each command.\n\n## Commands\n\n';
 
 for (const name of topLevel) {
 	const md = `# \`assinafy ${name}\`\n\n${section([name], 0)}`;

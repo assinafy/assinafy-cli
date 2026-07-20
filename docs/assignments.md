@@ -11,6 +11,7 @@ Options:
   -h, --help                                                   display help for command
 
 Commands:
+  list [options]                                               List assignments across the account
   create [options] <documentId>                                Create a signing assignment for a document
   estimate-cost [options] <documentId>                         Estimate the credit cost of an assignment
   reset-expiration [options] <documentId> <assignmentId>       Update or clear an assignment expiration date
@@ -18,6 +19,21 @@ Commands:
   estimate-resend-cost <documentId> <assignmentId> <signerId>  Estimate the cost of resending a signer notification
   whatsapp-notifications <documentId> <assignmentId>           List WhatsApp notifications sent for an assignment
   help [command]                                               display help for command
+```
+
+### `assinafy assignments list`
+
+```text
+Usage: assinafy assignments list [options]
+
+List assignments across the account
+
+Options:
+  --page <n>        Page number to fetch
+  --per-page <n>    Items per page
+  --search <query>  Filter results by a search query
+  --sort <field>    Sort by field (prefix with - for descending)
+  -h, --help        display help for command
 ```
 
 ### `assinafy assignments create`

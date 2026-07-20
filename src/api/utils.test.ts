@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cleanParams, handleAssinafyResponse } from './utils';
 import { ApiError } from './errors';
+import { cleanParams, handleAssinafyResponse } from './utils';
 
 describe('handleAssinafyResponse', () => {
 	it('unwraps successful Assinafy envelopes', () => {
@@ -10,9 +10,9 @@ describe('handleAssinafyResponse', () => {
 	});
 
 	it('throws ApiError for failed envelopes', () => {
-		expect(() =>
-			handleAssinafyResponse({ status: 400, message: 'Bad request', data: [] }),
-		).toThrow(ApiError);
+		expect(() => handleAssinafyResponse({ status: 400, message: 'Bad request', data: [] })).toThrow(
+			ApiError,
+		);
 	});
 
 	it('passes through non-envelope responses', () => {

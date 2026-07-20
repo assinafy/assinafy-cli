@@ -1,8 +1,11 @@
 import { Command } from '@commander-js/extra-typings';
 import type { ICreateAssignmentPayload, SignerReference } from '../api';
+import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { parseJsonArray, splitList } from '../lib/json';
+import { addListOptions } from '../lib/options';
 import { printData, printSuccess } from '../lib/output';
+import { listParams, paginationFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
@@ -18,6 +21,28 @@ function resolveSigners(signersJson?: string, signerIdsCsv?: string): SignerRefe
 	}
 	return ids;
 }
+
+const listCommand = addListOptions(
+	new Command('list').description('List assignments across the account'),
+).action(async (opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		const accountId = requireAccountId(config);
+		const result = await withSpinner('Fetching assignments', config, () =>
+			client.assignments.list(listParams(opts), accountId),
+		);
+		printData(result.data, config, (rows) => {
+			const table = renderTable(rows, [
+				{ header: 'ID', value: (r) => r.id },
+				{ header: 'METHOD', value: (r) => r.method },
+				{ header: 'SENDER', value: (r) => r.sender_email },
+				{ header: 'SIGNERS', value: (r) => r.signers?.length },
+				{ header: 'EXPIRES', value: (r) => r.expires_at },
+			]);
+			const footer = paginationFooter(result);
+			return footer ? `${table}\n${footer}` : table;
+		});
+	});
+});
 
 const createCommand = new Command('create')
 	.description('Create a signing assignment for a document')
@@ -141,6 +166,7 @@ const whatsappCommand = new Command('whatsapp-notifications')
 
 export const assignmentsCommand = new Command('assignments')
 	.description('Create and manage signing assignments')
+	.addCommand(listCommand)
 	.addCommand(createCommand)
 	.addCommand(estimateCostCommand)
 	.addCommand(resetExpirationCommand)

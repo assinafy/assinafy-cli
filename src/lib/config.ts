@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -85,13 +93,30 @@ export function readConfigFile(): ConfigFile {
 	}
 }
 
-/** Persist the config file (creating the directory) with owner-only permissions. */
+/**
+ * Persist the config file (creating the directory) with owner-only permissions.
+ *
+ * Written atomically via a temp file + rename so an interrupted write can never
+ * truncate an existing config, and `chmod`ed explicitly because `writeFileSync`'s
+ * `mode` is ignored when the target file already exists — without this an
+ * already-created, loosely-permissioned config keeps its old permissions and
+ * leaks credentials.
+ */
 export function writeConfigFile(config: ConfigFile): void {
 	const dir = configDir();
 	if (!existsSync(dir)) {
 		mkdirSync(dir, { recursive: true, mode: 0o700 });
 	}
-	writeFileSync(configPath(), `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+	const file = configPath();
+	const tmp = `${file}.${process.pid}.tmp`;
+	writeFileSync(tmp, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+	try {
+		chmodSync(tmp, 0o600);
+		renameSync(tmp, file);
+	} catch (err) {
+		rmSync(tmp, { force: true });
+		throw err;
+	}
 }
 
 /** The active profile name, honouring the flag, env var, then the file default. */

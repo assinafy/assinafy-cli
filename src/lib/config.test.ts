@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -50,6 +50,17 @@ describe('config file round-trip', () => {
 		expect(mode).toBe(0o600);
 		const round = readConfigFile();
 		expect(round.profiles?.default?.api_key).toBe('k_abc');
+	});
+
+	it('re-applies owner-only permissions when overwriting a pre-existing loose file', () => {
+		// A previously-created, world-readable config must not keep its loose mode
+		// (writeFileSync's `mode` is ignored for existing files — the fix chmods).
+		writeFileSync(configPath(), '{}');
+		chmodSync(configPath(), 0o644);
+		expect(statSync(configPath()).mode & 0o777).toBe(0o644);
+		writeConfigFile({ profiles: { default: { api_key: 'k' } } });
+		expect(statSync(configPath()).mode & 0o777).toBe(0o600);
+		expect(readConfigFile().profiles?.default?.api_key).toBe('k');
 	});
 
 	it('returns an empty object when the file is missing', () => {

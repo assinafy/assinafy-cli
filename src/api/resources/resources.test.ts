@@ -1,7 +1,8 @@
 import type { AxiosInstance } from 'axios';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ValidationError } from '../errors';
+import { ApiError, ValidationError } from '../errors';
 import { AssignmentResource, buildAssignmentPayload } from './assignments';
+import { AuthenticationResource } from './authentication';
 import { DocumentResource } from './documents';
 import { FieldsResource } from './fields';
 import { SignerDocumentsResource } from './signer-documents';
@@ -35,6 +36,10 @@ function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 		put: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
 			calls.push({ method: 'PUT', url, body, config });
 			return ok({ id: 'updated' });
+		},
+		patch: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
+			calls.push({ method: 'PATCH', url, body, config });
+			return ok({ id: 'renamed', ...(body as Record<string, unknown>) });
 		},
 		delete: async (url: string, config?: CapturedCall['config']) => {
 			calls.push({ method: 'DELETE', url, config });
@@ -117,6 +122,55 @@ describe('DocumentResource', () => {
 		await expect(docs.addTags('doc1', [])).rejects.toThrow(ValidationError);
 		await expect(docs.download('')).rejects.toThrow(ValidationError);
 	});
+
+	it('searches documents against the dedicated search endpoint', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls), 'acc');
+		await docs.search({ search: 'contract', status: 'pending_signature', per_page: 5 });
+		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/accounts/acc/documents/search',
+			config: { params: { search: 'contract', status: 'pending_signature', 'per-page': 5 } },
+		});
+	});
+
+	it('renames a document via PATCH and rejects a blank name', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls), 'acc');
+		await docs.rename('doc1', 'New Name.pdf');
+		expect(calls[0]).toMatchObject({
+			method: 'PATCH',
+			url: '/documents/doc1',
+			body: { name: 'New Name.pdf' },
+		});
+		await expect(docs.rename('doc1', '   ')).rejects.toThrow(ValidationError);
+	});
+
+	it('waitUntilReady surfaces a 4xx error immediately instead of masking it as a timeout', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => {
+				throw new ApiError('not found', 404);
+			},
+		} as unknown as AxiosInstance;
+		const docs = new DocumentResource(http, 'acc');
+		await expect(
+			docs.waitUntilReady('doc1', { maxWaitMs: 10_000, pollIntervalMs: 50 }),
+		).rejects.toBeInstanceOf(ApiError);
+	});
+
+	it('waitUntilReady keeps retrying transient 5xx errors until it times out', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => {
+				throw new ApiError('service unavailable', 503);
+			},
+		} as unknown as AxiosInstance;
+		const docs = new DocumentResource(http, 'acc');
+		await expect(
+			docs.waitUntilReady('doc1', { maxWaitMs: 40, pollIntervalMs: 10 }),
+		).rejects.toThrow(/Timeout/);
+	});
 });
 
 describe('SignerResource', () => {
@@ -149,6 +203,26 @@ describe('SignerResource', () => {
 		await signers.create({ full_name: 'Ana', email: 'ana@example.com', cpf: '390.533.447-05' });
 		expect(calls.at(-1)?.body).toMatchObject({ cpf: '39053344705' });
 	});
+
+	it('omits an all-punctuation CPF instead of sending an empty string', async () => {
+		await signers.create({ full_name: 'Ana', whatsapp_phone_number: '+5548999990000', cpf: '---' });
+		expect(calls.at(-1)?.body).not.toHaveProperty('cpf');
+	});
+
+	it('is idempotent by email: reuses an existing signer without a second POST', async () => {
+		const captured: CapturedCall[] = [];
+		const http = {
+			...mockHttp(captured),
+			get: async (url: string, config?: CapturedCall['config']) => {
+				captured.push({ method: 'GET', url, config });
+				return ok([{ id: 'existing', full_name: 'Ana', email: 'ana@example.com' }]);
+			},
+		} as unknown as AxiosInstance;
+		const resource = new SignerResource(http, 'acc');
+		const created = await resource.create({ full_name: 'Ana', email: 'ana@example.com' });
+		expect(created.id).toBe('existing');
+		expect(captured.some((c) => c.method === 'POST')).toBe(false);
+	});
 });
 
 describe('TagResource', () => {
@@ -178,9 +252,7 @@ describe('FieldsResource', () => {
 	it('validates create input and signer-code validation params', async () => {
 		const calls: CapturedCall[] = [];
 		const fields = new FieldsResource(mockHttp(calls), 'acc');
-		await expect(fields.create({ type: '', name: 'x' } as never)).rejects.toThrow(
-			ValidationError,
-		);
+		await expect(fields.create({ type: '', name: 'x' } as never)).rejects.toThrow(ValidationError);
 		await fields.validate('field1', '400.676.228-36', { signerAccessCode: 'code-1' });
 		expect(calls[0]).toMatchObject({
 			method: 'POST',
@@ -294,6 +366,50 @@ describe('SignerDocumentsResource', () => {
 			ValidationError,
 		);
 	});
+
+	it('sends the access code as a query param for accept-terms (not the body)', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await signerDocs.acceptTerms('code-1');
+		expect(calls[0]).toMatchObject({
+			method: 'PUT',
+			url: '/signers/accept-terms',
+			body: undefined,
+			config: { params: { 'signer-access-code': 'code-1' } },
+		});
+	});
+
+	it('sends documented confirm-data body fields and the reuse signature flag', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await signerDocs.confirmData('doc1', 'code-1', {
+			full_name: 'Ana Lima',
+			government_id: '39053344705',
+		});
+		await signerDocs.uploadSignature('code-1', Buffer.from([1]), { reuse: true });
+		expect(calls[0]).toMatchObject({
+			method: 'PUT',
+			url: '/documents/doc1/signers/confirm-data',
+			body: { full_name: 'Ana Lima', government_id: '39053344705' },
+			config: { params: { 'signer-access-code': 'code-1' } },
+		});
+		expect(calls[1]?.config?.params).toMatchObject({
+			'signer-access-code': 'code-1',
+			type: 'signature',
+			reuse: true,
+		});
+	});
+
+	it('searches signer documents with the access code and query', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await signerDocs.search('signer1', 'contract', 'code-1');
+		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/signers/signer1/documents/search',
+			config: { params: { 'signer-access-code': 'code-1', search: 'contract' } },
+		});
+	});
 });
 
 describe('AssignmentResource', () => {
@@ -328,6 +444,28 @@ describe('AssignmentResource', () => {
 			ValidationError,
 		);
 	});
+
+	it('lists account assignments via the camelCase accountId query param', async () => {
+		const calls: CapturedCall[] = [];
+		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
+		await assignments.list({ per_page: 10 });
+		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/assignments',
+			config: { params: { accountId: 'acc', 'per-page': 10 } },
+		});
+	});
+
+	it('estimates cost for a collect assignment with no signers', async () => {
+		const calls: CapturedCall[] = [];
+		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
+		await assignments.estimateCost('doc1', { method: 'collect' });
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/documents/doc1/assignments/estimate-cost',
+			body: { method: 'collect', signers: [] },
+		});
+	});
 });
 
 describe('WorkspaceResource', () => {
@@ -336,5 +474,32 @@ describe('WorkspaceResource', () => {
 		await expect(workspaces.get('')).rejects.toThrow(ValidationError);
 		await expect(workspaces.update('', { name: 'Updated' })).rejects.toThrow(ValidationError);
 		await expect(workspaces.delete('')).rejects.toThrow(ValidationError);
+	});
+
+	it('requires a name on create', async () => {
+		const workspaces = new WorkspaceResource(mockHttp());
+		await expect(workspaces.create({ name: '' })).rejects.toThrow(ValidationError);
+	});
+});
+
+describe('AuthenticationResource', () => {
+	it('returns the masked API key when one exists', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => ok({ api_key: 'sk_live_****abcd' }),
+		} as unknown as AxiosInstance;
+		const auth = new AuthenticationResource(http);
+		await expect(auth.getApiKey()).resolves.toEqual({ api_key: 'sk_live_****abcd' });
+	});
+
+	it('resolves to null (not throw) when no key has been generated (404)', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => {
+				throw new ApiError('not found', 404);
+			},
+		} as unknown as AxiosInstance;
+		const auth = new AuthenticationResource(http);
+		await expect(auth.getApiKey()).resolves.toBeNull();
 	});
 });

@@ -6,6 +6,7 @@ import type {
 	ITemplateSigner,
 } from '../api';
 import { requireAccountId } from '../lib/client';
+import { CliError } from '../lib/errors';
 import { defaultArtifactFilename, writeBinary } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
 import { addListOptions } from '../lib/options';
@@ -74,6 +75,33 @@ const listCommand = addListOptions(
 	});
 });
 
+const searchCommand = addListOptions(
+	new Command('search')
+		.description('Lightweight document search (type-ahead)')
+		.argument('[query]', 'Search text (alias for --search)')
+		.option('--status <status>', 'Filter by document status'),
+).action(async (query, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		const accountId = requireAccountId(config);
+		const params: IDocumentListParams = { ...listParams(opts) };
+		if (query) params.search = query;
+		if (opts.status) params.status = opts.status;
+		const result = await withSpinner('Searching documents', config, () =>
+			client.documents.search(params, accountId),
+		);
+		printData(result.data, config, (rows) => {
+			const table = renderTable(rows, [
+				{ header: 'ID', value: (r) => r.id },
+				{ header: 'NAME', value: (r) => r.name },
+				{ header: 'STATUS', value: (r) => r.status },
+				{ header: 'CREATED', value: (r) => r.created_at },
+			]);
+			const footer = paginationFooter(result);
+			return footer ? `${table}\n${footer}` : table;
+		});
+	});
+});
+
 const getCommand = new Command('get')
 	.description('Show details for a document')
 	.argument('<id>', 'Document ID')
@@ -96,6 +124,20 @@ const getCommand = new Command('get')
 		});
 	});
 
+const renameCommand = new Command('rename')
+	.description('Rename a document (only before the signature process starts)')
+	.argument('<id>', 'Document ID')
+	.argument('<name>', 'New document name')
+	.action(async (id, name, _opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const doc = await withSpinner('Renaming document', config, () =>
+				client.documents.rename(id, name),
+			);
+			printSuccess(`Renamed document ${id}`, config);
+			printData(doc, config, (d) => renderKeyValue({ id: d.id, name: d.name, status: d.status }));
+		});
+	});
+
 const downloadCommand = new Command('download')
 	.description('Download a document artifact')
 	.argument('<id>', 'Document ID')
@@ -107,7 +149,7 @@ const downloadCommand = new Command('download')
 	.option('-o, --output <path>', 'Output file path')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
-			const artifact = opts.artifact as DocumentArtifactName;
+			const artifact = parseArtifact(opts.artifact);
 			const buffer = await withSpinner('Downloading document', config, () =>
 				client.documents.download(id, artifact),
 			);
@@ -385,6 +427,21 @@ const waitCommand = new Command('wait')
 		});
 	});
 
+const ARTIFACT_NAMES: readonly DocumentArtifactName[] = [
+	'original',
+	'certificated',
+	'certificate-page',
+	'bundle',
+];
+
+/** Validate the --artifact flag against the known artifact names. */
+function parseArtifact(value: string): DocumentArtifactName {
+	if ((ARTIFACT_NAMES as readonly string[]).includes(value)) {
+		return value as DocumentArtifactName;
+	}
+	throw new CliError(`--artifact must be one of: ${ARTIFACT_NAMES.join(', ')}`);
+}
+
 /** Drop undefined/null entries so we never send empty params. */
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
 	const out: Record<string, unknown> = {};
@@ -398,7 +455,9 @@ export const documentsCommand = new Command('documents')
 	.description('Upload, list, download, and manage documents')
 	.addCommand(uploadCommand)
 	.addCommand(listCommand)
+	.addCommand(searchCommand)
 	.addCommand(getCommand)
+	.addCommand(renameCommand)
 	.addCommand(downloadCommand)
 	.addCommand(thumbnailCommand)
 	.addCommand(downloadPageCommand)
