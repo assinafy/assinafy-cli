@@ -36,9 +36,16 @@ export class WorkspaceResource extends BaseResource {
 		return this.call('Failed to update workspace', () => this.http.put(`/accounts/${id}`, payload));
 	}
 
-	/** Delete a workspace. */
-	async delete(accountId: string): Promise<void> {
+	/**
+	 * Delete a workspace.
+	 *
+	 * By default fails with `ApiError` (400) if the workspace has an active
+	 * paid subscription; pass `{ force: true }` to cancel it and delete anyway.
+	 */
+	async delete(accountId: string, options: { force?: boolean } = {}): Promise<void> {
 		const id = this.requireId(accountId, 'Account ID');
-		return this.callVoid('Failed to delete workspace', () => this.http.delete(`/accounts/${id}`));
+		return this.callVoid('Failed to delete workspace', () =>
+			this.http.delete(`/accounts/${id}`, options.force ? { data: { force: true } } : undefined),
+		);
 	}
 }

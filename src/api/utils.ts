@@ -67,3 +67,8 @@ export function cleanParams(params: Record<string, unknown>): Record<string, unk
 function normalizeQueryKey(key: string): string {
 	return key === 'per_page' ? 'per-page' : key;
 }
+
+/** Strip a single trailing slash from a base URL, so paths can always join with a leading `/`. */
+export function normalizeBaseUrl(raw: string): string {
+	return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+}

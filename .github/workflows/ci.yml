@@ -62,6 +62,11 @@ jobs:
       - name: Verify bundle
         run: npm run verify:bundle
 
+      - name: Verify generated docs are up to date
+        run: |
+          node scripts/gen-docs.mjs
+          git diff --exit-code -- docs/
+
       - name: Verify installer syntax
         run: |
           bash -n install.sh

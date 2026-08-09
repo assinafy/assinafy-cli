@@ -12,6 +12,7 @@ import type {
 	IDocumentListResponse,
 	IDocumentStatusInfo,
 	IDocumentUploadResponse,
+	IDocumentVerifyResponse,
 	IEstimateCostResponse,
 	IPublicDocumentInfo,
 	ISendTokenResponse,
@@ -103,7 +104,9 @@ export class DocumentResource extends BaseResource {
 	 * Lightweight document search (`GET /accounts/{id}/documents/search`).
 	 *
 	 * A slimmer counterpart to {@link list} exposed by the API for
-	 * type-ahead/autocomplete. Accepts `search`, `status`, `page`, `per-page`.
+	 * type-ahead/autocomplete. The published spec documents only `search`,
+	 * `status`, `page`, `per-page`, but `sort` is also accepted and functional
+	 * (live-verified against the sandbox).
 	 */
 	async search(
 		params: IDocumentListParams = {},
@@ -318,8 +321,11 @@ export class DocumentResource extends BaseResource {
 		);
 	}
 
-	/** Verify a document by its signature hash. */
-	async verify(hash: string): Promise<Record<string, unknown>> {
+	/**
+	 * Verify a document by its signature hash. Always resolves (the API
+	 * returns `200` even for an unknown hash, with `is_valid: false`).
+	 */
+	async verify(hash: string): Promise<IDocumentVerifyResponse> {
 		const h = this.requireId(hash, 'Signature hash');
 		return this.call('Failed to verify document', () => this.http.get(`/documents/${h}/verify`));
 	}

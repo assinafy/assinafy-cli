@@ -123,6 +123,15 @@ describe('DocumentResource', () => {
 		await expect(docs.download('')).rejects.toThrow(ValidationError);
 	});
 
+	it('fails loud on an unrecognised list response shape instead of returning an empty list', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => ok({ items: ['unexpected-shape'] }),
+		} as unknown as AxiosInstance;
+		const docs = new DocumentResource(http, 'acc');
+		await expect(docs.list()).rejects.toThrow(ValidationError);
+	});
+
 	it('searches documents against the dedicated search endpoint', async () => {
 		const calls: CapturedCall[] = [];
 		const docs = new DocumentResource(mockHttp(calls), 'acc');
@@ -276,6 +285,27 @@ describe('FieldsResource', () => {
 });
 
 describe('TemplateResource', () => {
+	it('downloads a template page as a Buffer from the 4-segment path', async () => {
+		const calls: CapturedCall[] = [];
+		const bytes = new Uint8Array([1, 2, 3, 4]);
+		const http = {
+			...mockHttp(),
+			get: async (url: string, config?: CapturedCall['config']) => {
+				calls.push({ method: 'GET', url, config });
+				return { status: 200, data: bytes.buffer, headers: {} };
+			},
+		} as unknown as AxiosInstance;
+		const templates = new TemplateResource(http, 'acc');
+		const buffer = await templates.downloadPage('t1', 'p1');
+		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/accounts/acc/templates/t1/pages/p1/download',
+			config: { responseType: 'arraybuffer' },
+		});
+		expect(Buffer.isBuffer(buffer)).toBe(true);
+		expect([...buffer]).toEqual([1, 2, 3, 4]);
+	});
+
 	it('covers list and single-template lookup', async () => {
 		const calls: CapturedCall[] = [];
 		const templates = new TemplateResource(mockHttp(calls), 'acc');
@@ -326,6 +356,17 @@ describe('WebhookResource', () => {
 			config: { params: { delivered: false, 'per-page': 20 } },
 		});
 		expect(dispatches.meta).toEqual({ current_page: 1, per_page: 20, total: 2, last_page: 1 });
+	});
+
+	it('respects an explicit empty events array instead of substituting the defaults', async () => {
+		const calls: CapturedCall[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		await webhooks.register({
+			url: 'https://example.com/hook',
+			email: 'ops@example.com',
+			events: [],
+		});
+		expect(calls[0]?.body).toMatchObject({ events: [] });
 	});
 
 	it('requires dispatch IDs for retries', async () => {

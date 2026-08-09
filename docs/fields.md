@@ -79,6 +79,7 @@ Options:
   --type <type>    Field type
   --name <name>    Field name
   --regex <regex>  Validation regex
+  --clear-regex    Remove the existing validation regex
   --required       Mark as required
   --optional       Mark as not required
   --active         Activate the field

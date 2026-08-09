@@ -9,6 +9,8 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import pc from 'picocolors';
+import { normalizeBaseUrl } from '../api';
 
 /**
  * The default production base URL. The sandbox lives at a different host
@@ -79,7 +81,14 @@ export function configPath(): string {
 	return path.join(configDir(), 'config.json');
 }
 
-/** Read and parse the config file. Returns an empty object when absent or invalid. */
+/**
+ * Read and parse the config file. Returns an empty object when absent.
+ *
+ * A present-but-corrupt file also returns `{}` (so callers still get a usable
+ * config), but prints a warning first — silently discarding it would leave a
+ * user with real stored credentials staring at a misleading "no credentials
+ * found" error with no clue their config file, not their setup, is the problem.
+ */
 export function readConfigFile(): ConfigFile {
 	const file = configPath();
 	if (!existsSync(file)) {
@@ -87,8 +96,15 @@ export function readConfigFile(): ConfigFile {
 	}
 	try {
 		const parsed = JSON.parse(readFileSync(file, 'utf8')) as ConfigFile;
-		return parsed && typeof parsed === 'object' ? parsed : {};
+		if (parsed && typeof parsed === 'object') return parsed;
+		process.stderr.write(
+			`${pc.yellow('!')} Config file at ${file} is not a JSON object; ignoring it.\n`,
+		);
+		return {};
 	} catch {
+		process.stderr.write(
+			`${pc.yellow('!')} Config file at ${file} is not valid JSON; ignoring it.\n`,
+		);
 		return {};
 	}
 }
@@ -149,8 +165,4 @@ export function resolveConfig(globals: GlobalOptions): ResolvedConfig {
 		json: Boolean(globals.json),
 		quiet: Boolean(globals.quiet),
 	};
-}
-
-function normalizeBaseUrl(raw: string): string {
-	return raw.endsWith('/') ? raw.slice(0, -1) : raw;
 }

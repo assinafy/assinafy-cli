@@ -75,6 +75,7 @@ const updateCommand = new Command('update')
 	.option('--type <type>', 'Field type')
 	.option('--name <name>', 'Field name')
 	.option('--regex <regex>', 'Validation regex')
+	.option('--clear-regex', 'Remove the existing validation regex')
 	.option('--required', 'Mark as required')
 	.option('--optional', 'Mark as not required')
 	.option('--active', 'Activate the field')
@@ -85,7 +86,8 @@ const updateCommand = new Command('update')
 			const payload: IUpdateFieldPayload = {};
 			if (opts.type) payload.type = opts.type;
 			if (opts.name) payload.name = opts.name;
-			if (opts.regex !== undefined) payload.regex = opts.regex;
+			if (opts.clearRegex) payload.regex = null;
+			else if (opts.regex !== undefined) payload.regex = opts.regex;
 			if (opts.required) payload.is_required = true;
 			if (opts.optional) payload.is_required = false;
 			if (opts.active) payload.is_active = true;

@@ -1,5 +1,5 @@
 import { Command } from '@commander-js/extra-typings';
-import type { ICreateAssignmentPayload, SignerReference } from '../api';
+import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { parseJsonArray, splitList } from '../lib/json';
@@ -53,6 +53,10 @@ const createCommand = new Command('create')
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
 	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
+	.option(
+		'--entries <json>',
+		'JSON array of field placement entries, required for --method collect (e.g. \'[{"page_id":"p1","fields":[{"signer_id":"s1","field_id":"f1"}]}]\')',
+	)
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const payload: ICreateAssignmentPayload = {
@@ -63,6 +67,9 @@ const createCommand = new Command('create')
 			if (opts.expiresAt) payload.expires_at = opts.expiresAt;
 			const cc = splitList(opts.copyReceivers);
 			if (cc) payload.copy_receivers = cc;
+			if (opts.entries) {
+				payload.entries = parseJsonArray(opts.entries, '--entries') as ICollectAssignmentEntry[];
+			}
 			const assignment = await withSpinner('Creating assignment', config, () =>
 				client.assignments.create(documentId, payload),
 			);
@@ -83,11 +90,20 @@ const estimateCostCommand = new Command('estimate-cost')
 	.argument('<documentId>', 'Document ID')
 	.option('--signer-ids <csv>', 'Comma-separated signer IDs')
 	.option('--signers <json>', 'JSON array of signer refs')
+	.option('--method <method>', 'virtual or collect', 'virtual')
+	.option(
+		'--entries <json>',
+		'JSON array of field placement entries, required for --method collect',
+	)
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const payload: ICreateAssignmentPayload = {
+				method: opts.method as ICreateAssignmentPayload['method'],
 				signers: resolveSigners(opts.signers, opts.signerIds),
 			};
+			if (opts.entries) {
+				payload.entries = parseJsonArray(opts.entries, '--entries') as ICollectAssignmentEntry[];
+			}
 			const result = await withSpinner('Estimating cost', config, () =>
 				client.assignments.estimateCost(documentId, payload),
 			);

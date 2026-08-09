@@ -91,11 +91,18 @@ export abstract class BaseResource {
 		try {
 			const response = await request();
 			const unwrapped = handleAssinafyResponse<T[] | { data?: T[] }>(response.data);
-			const data: T[] = Array.isArray(unwrapped)
-				? unwrapped
-				: Array.isArray(unwrapped?.data)
-					? (unwrapped as { data: T[] }).data
-					: [];
+			let data: T[];
+			if (Array.isArray(unwrapped)) {
+				data = unwrapped;
+			} else if (Array.isArray(unwrapped?.data)) {
+				data = (unwrapped as { data: T[] }).data;
+			} else {
+				// Fail loud: a shape we don't recognise means the API contract
+				// drifted, not that there are genuinely zero results.
+				throw new ValidationError(`Unexpected list response shape for ${label}`, {
+					response: unwrapped as unknown,
+				});
+			}
 			const meta = parsePaginationMeta(response.headers);
 			return meta === undefined ? { data } : { data, meta };
 		} catch (err) {

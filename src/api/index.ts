@@ -15,3 +15,4 @@ export { WorkspaceResource } from './resources/workspaces';
 export type { WebhookVerifierOptions } from './support/webhook-verifier';
 export { WebhookVerifier } from './support/webhook-verifier';
 export * from './types';
+export { normalizeBaseUrl } from './utils';
