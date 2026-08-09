@@ -22,6 +22,10 @@ import { BaseResource } from './base';
  *  - `POST /accounts/{id}/fields/{id}/validate?signer-access-code=…`
  *  - `POST /accounts/{id}/fields/validate-multiple?signer-access-code=…`
  *  - `GET /field-types`
+ *
+ * The `signer-access-code` query param on the two `validate*` endpoints isn't
+ * in the published OpenAPI spec but is live-verified against the sandbox: a
+ * bogus code returns 401, matching every other signer-access-code endpoint.
  */
 export class FieldsResource extends BaseResource {
 	/** Create a field definition. */

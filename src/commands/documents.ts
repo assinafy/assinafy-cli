@@ -2,6 +2,7 @@ import { Command } from '@commander-js/extra-typings';
 import type {
 	DocumentArtifactName,
 	IDocumentListParams,
+	IDocumentListResponse,
 	ITemplateCostSigner,
 	ITemplateSigner,
 } from '../api';
@@ -46,6 +47,18 @@ const uploadCommand = new Command('upload')
 		});
 	});
 
+/** Shared by `list` and `search`: both return the same paginated document-row shape. */
+function renderDocumentListTable(result: IDocumentListResponse): string {
+	const table = renderTable(result.data, [
+		{ header: 'ID', value: (r) => r.id },
+		{ header: 'NAME', value: (r) => r.name },
+		{ header: 'STATUS', value: (r) => r.status },
+		{ header: 'CREATED', value: (r) => r.created_at },
+	]);
+	const footer = paginationFooter(result);
+	return footer ? `${table}\n${footer}` : table;
+}
+
 const listCommand = addListOptions(
 	new Command('list')
 		.description('List workspace documents')
@@ -62,16 +75,7 @@ const listCommand = addListOptions(
 		const result = await withSpinner('Fetching documents', config, () =>
 			client.documents.list(params, accountId),
 		);
-		printData(result.data, config, (rows) => {
-			const table = renderTable(rows, [
-				{ header: 'ID', value: (r) => r.id },
-				{ header: 'NAME', value: (r) => r.name },
-				{ header: 'STATUS', value: (r) => r.status },
-				{ header: 'CREATED', value: (r) => r.created_at },
-			]);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
-		});
+		printData(result.data, config, () => renderDocumentListTable(result));
 	});
 });
 
@@ -89,16 +93,7 @@ const searchCommand = addListOptions(
 		const result = await withSpinner('Searching documents', config, () =>
 			client.documents.search(params, accountId),
 		);
-		printData(result.data, config, (rows) => {
-			const table = renderTable(rows, [
-				{ header: 'ID', value: (r) => r.id },
-				{ header: 'NAME', value: (r) => r.name },
-				{ header: 'STATUS', value: (r) => r.status },
-				{ header: 'CREATED', value: (r) => r.created_at },
-			]);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
-		});
+		printData(result.data, config, () => renderDocumentListTable(result));
 	});
 });
 

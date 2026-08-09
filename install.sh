@@ -15,15 +15,21 @@ main() {
 	check_prerequisites
 	validate_github_base "$github_base"
 
-	local target archive_url archive extract_dir executable installed_version
+	local target archive_url checksums_url archive checksums_file extract_dir executable installed_version
 	target="$(detect_target)"
 	archive_url="$(release_url "$github_base" "$repo" "$requested_version" "$target")"
+	checksums_url="$(checksums_release_url "$github_base" "$repo" "$requested_version")"
 	archive="$tmp_dir/assinafy.tar.gz"
+	checksums_file="$tmp_dir/SHA256SUMS"
 	extract_dir="$tmp_dir/extract"
 	executable="$bin_dir/assinafy"
 
 	info "Downloading Assinafy CLI for $target"
 	curl -fsSL "$archive_url" -o "$archive"
+
+	info "Verifying checksum"
+	curl -fsSL "$checksums_url" -o "$checksums_file"
+	verify_checksum "$archive" "$checksums_file" "assinafy-$target.tar.gz"
 
 	mkdir -p "$extract_dir" "$bin_dir" "$install_dir"
 	tar -xzf "$archive" -C "$extract_dir"
@@ -153,6 +159,47 @@ release_url() {
 	fi
 
 	printf '%s/releases/download/v%s/assinafy-%s.tar.gz' "$base" "$requested_version" "$target"
+}
+
+checksums_release_url() {
+	local github_base="$1"
+	local repo="$2"
+	local requested_version="$3"
+	local base
+	base="${github_base%/}/${repo}"
+
+	if [ -z "$requested_version" ]; then
+		printf '%s/releases/latest/download/SHA256SUMS' "$base"
+		return
+	fi
+
+	printf '%s/releases/download/v%s/SHA256SUMS' "$base" "${requested_version#v}"
+}
+
+# Verify $archive's SHA-256 against the line for $expected_name in $checksums_file.
+verify_checksum() {
+	local archive="$1"
+	local checksums_file="$2"
+	local expected_name="$3"
+	local expected_line expected_hash actual_hash
+
+	expected_line="$(grep -F "$expected_name" "$checksums_file" | head -n1 || true)"
+	if [ -z "$expected_line" ]; then
+		fail "SHA256SUMS did not contain an entry for $expected_name"
+	fi
+	expected_hash="$(printf '%s\n' "$expected_line" | awk '{print $1}')"
+
+	if command -v shasum >/dev/null 2>&1; then
+		actual_hash="$(shasum -a 256 "$archive" | awk '{print $1}')"
+	elif command -v sha256sum >/dev/null 2>&1; then
+		actual_hash="$(sha256sum "$archive" | awk '{print $1}')"
+	else
+		fail "Required command not found: shasum or sha256sum"
+	fi
+
+	if [ "$actual_hash" != "$expected_hash" ]; then
+		fail "Checksum mismatch for $expected_name: expected $expected_hash, got $actual_hash"
+	fi
 }
 
 path_has() {

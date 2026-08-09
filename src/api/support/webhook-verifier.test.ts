@@ -61,9 +61,38 @@ describe('WebhookVerifier envelope parsing', () => {
 		expect(v.getEventType(null)).toBeNull();
 	});
 
-	it('reads event data from `data` then `object`', () => {
+	it('reads event data from `payload`, then `data`, then `object`', () => {
+		expect(v.getEventData({ payload: { p: 0 }, data: { a: 1 } } as never)).toEqual({ p: 0 });
 		expect(v.getEventData({ data: { a: 1 } } as never)).toEqual({ a: 1 });
 		expect(v.getEventData({ object: { b: 2 } } as never)).toEqual({ b: 2 });
 		expect(v.getEventData(null)).toEqual({});
+	});
+
+	it('extracts the real per-event data from a live-shaped webhook dispatch envelope', () => {
+		// Matches a real delivered webhook body (sandbox-verified): the useful
+		// data lives under `payload`, while `object` is just a resource marker.
+		const envelope = {
+			id: 15715,
+			event: 'signature_requested',
+			object: { type: 'Document' },
+			origin: null,
+			message: null,
+			payload: {
+				signer_email: 'bill@febacapital.com',
+				signer_full_name: 'Audit Bill A2',
+				notification_method: 'email',
+				signer_whatsapp_phone_number: null,
+			},
+			subject: { id: 'user1', type: 'User' },
+			account_id: 'acc1',
+			created_at: '2026-07-20T19:37:08Z',
+		};
+		expect(v.getEventType(envelope as never)).toBe('signature_requested');
+		expect(v.getEventData(envelope as never)).toEqual({
+			signer_email: 'bill@febacapital.com',
+			signer_full_name: 'Audit Bill A2',
+			notification_method: 'email',
+			signer_whatsapp_phone_number: null,
+		});
 	});
 });

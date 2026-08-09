@@ -71,10 +71,22 @@ export class WebhookVerifier {
 		return e.event ?? e.type ?? null;
 	}
 
-	/** Extract the event data (`data` or `object`) from an event envelope. */
+	/**
+	 * Extract the event data from an event envelope.
+	 *
+	 * Verified against a real delivered webhook: the per-event data (signer
+	 * email, document id, etc.) lives under `payload`; `object` is just a
+	 * `{ type: "Document" }` resource marker, and `data` is a legacy/alternate
+	 * key some integrations use. Check `payload` first.
+	 */
 	getEventData(event: IWebhookPayload | null | undefined): Record<string, unknown> {
 		if (!event || typeof event !== 'object') return {};
 		const e = event as IWebhookPayload & { object?: Record<string, unknown> };
-		return (e.data as Record<string, unknown> | undefined) ?? e.object ?? {};
+		return (
+			(e.payload as Record<string, unknown> | undefined) ??
+			(e.data as Record<string, unknown> | undefined) ??
+			e.object ??
+			{}
+		);
 	}
 }

@@ -111,18 +111,24 @@ const confirmDataCommand = new Command('confirm-data')
 	.description("Confirm a signer's contact data")
 	.argument('<documentId>', 'Document ID')
 	.requiredOption('--access-code <code>', 'Signer access code')
+	.option('--full-name <name>', 'Full name to confirm')
 	.option('--email <email>', 'Email to confirm')
 	.option('--phone <number>', 'WhatsApp phone number to confirm')
+	.option('--government-id <id>', 'Government ID (e.g. CPF) to confirm')
 	.option('--accept-terms', 'Also accept the platform terms')
 	.action(async (documentId, opts, command) => {
 		await runWithOptionalClient(command, async ({ client, config }) => {
 			const payload: {
+				full_name?: string;
 				email?: string;
 				whatsapp_phone_number?: string;
+				government_id?: string;
 				has_accepted_terms?: boolean;
 			} = {};
+			if (opts.fullName) payload.full_name = opts.fullName;
 			if (opts.email) payload.email = opts.email;
 			if (opts.phone) payload.whatsapp_phone_number = opts.phone;
+			if (opts.governmentId) payload.government_id = opts.governmentId;
 			if (opts.acceptTerms) payload.has_accepted_terms = true;
 			const result = await withSpinner('Confirming data', config, () =>
 				client.signerDocuments.confirmData(documentId, opts.accessCode, payload),
@@ -138,6 +144,7 @@ const uploadSignatureCommand = new Command('upload-signature')
 	.requiredOption('--file <path>', 'Path to the signature image (PNG)')
 	.option('--type <type>', 'signature or initial', 'signature')
 	.option('--content-type <mime>', 'Image MIME type', 'image/png')
+	.option('--reuse', "Mark the signer's signature as reusable in future processes")
 	.action(async (opts, command) => {
 		await runWithOptionalClient(command, async ({ client, config }) => {
 			const image = readBinary(opts.file);
@@ -145,6 +152,7 @@ const uploadSignatureCommand = new Command('upload-signature')
 				client.signerDocuments.uploadSignature(opts.accessCode, image, {
 					imageType: opts.type as 'signature' | 'initial',
 					contentType: opts.contentType,
+					reuse: opts.reuse,
 				}),
 			);
 			printSuccess('Signature uploaded', config);

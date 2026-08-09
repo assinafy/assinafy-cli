@@ -7,12 +7,9 @@ export class AssinafyError extends Error {
 		context: Record<string, unknown> = {},
 		options?: { cause?: unknown },
 	) {
-		super(message);
+		super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
 		this.name = 'AssinafyError';
 		this.context = context;
-		if (options?.cause !== undefined) {
-			(this as { cause?: unknown }).cause = options.cause;
-		}
 	}
 }
 

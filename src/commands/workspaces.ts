@@ -79,11 +79,14 @@ const deleteCommand = new Command('delete')
 	.alias('rm')
 	.description('Delete a workspace')
 	.argument('<id>', 'Account/workspace ID')
+	.option('--force', 'Cancel an active paid subscription automatically and delete anyway')
 	.option('-y, --yes', 'Skip the confirmation prompt')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			if (!(await confirmDestructive(`Delete workspace ${id}?`, Boolean(opts.yes)))) return;
-			await withSpinner('Deleting workspace', config, () => client.workspaces.delete(id));
+			await withSpinner('Deleting workspace', config, () =>
+				client.workspaces.delete(id, { force: opts.force }),
+			);
 			printSuccess(`Deleted workspace ${id}`, config);
 			printData({ deleted: id }, config);
 		});

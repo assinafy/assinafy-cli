@@ -86,6 +86,7 @@ Arguments:
   id          Account/workspace ID
 
 Options:
+  --force     Cancel an active paid subscription automatically and delete anyway
   -y, --yes   Skip the confirmation prompt
   -h, --help  display help for command
 ```

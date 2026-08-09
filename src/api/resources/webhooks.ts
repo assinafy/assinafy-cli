@@ -32,7 +32,9 @@ export class WebhookResource extends BaseResource {
 		const body = {
 			url: payload.url,
 			email: payload.email,
-			events: payload.events && payload.events.length > 0 ? payload.events : DEFAULT_EVENTS,
+			// Distinguish "omitted" (use the sensible default set) from an
+			// explicit empty array (the caller wants zero events).
+			events: payload.events ?? DEFAULT_EVENTS,
 			is_active: payload.is_active ?? true,
 		};
 

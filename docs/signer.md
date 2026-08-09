@@ -129,8 +129,10 @@ Arguments:
 
 Options:
   --access-code <code>  Signer access code
+  --full-name <name>    Full name to confirm
   --email <email>       Email to confirm
   --phone <number>      WhatsApp phone number to confirm
+  --government-id <id>  Government ID (e.g. CPF) to confirm
   --accept-terms        Also accept the platform terms
   -h, --help            display help for command
 ```
@@ -147,6 +149,8 @@ Options:
   --file <path>          Path to the signature image (PNG)
   --type <type>          signature or initial (default: "signature")
   --content-type <mime>  Image MIME type (default: "image/png")
+  --reuse                Mark the signer's signature as reusable in future
+                         processes
   -h, --help             display help for command
 ```
 

@@ -19,7 +19,7 @@ import type {
 	IUploadAndRequestSignaturesSigner,
 	Logger,
 } from './types';
-import { createNoopLogger } from './utils';
+import { createNoopLogger, normalizeBaseUrl } from './utils';
 
 /** Flexible input accepted by {@link AssinafyClient.fromConfig} (snake_case or camelCase). */
 export interface ClientConfigInput {
@@ -85,7 +85,7 @@ export class AssinafyClient {
 		this.logger = options.logger ?? createNoopLogger();
 		this.webhookSecret = options.webhookSecret;
 
-		const baseURL = normaliseBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
+		const baseURL = normalizeBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
@@ -225,8 +225,4 @@ export class AssinafyClient {
 	getAxiosInstance(): AxiosInstance {
 		return this.axiosInstance;
 	}
-}
-
-function normaliseBaseUrl(raw: string): string {
-	return raw.endsWith('/') ? raw.slice(0, -1) : raw;
 }

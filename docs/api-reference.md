@@ -1,6 +1,6 @@
 # Assinafy API — request / response reference
 
-> Auto-generated for the `@assinafy/cli` audit. Response bodies are **real payloads captured live** from the Assinafy **sandbox** (`https://sandbox.assinafy.com.br/v1`) on 2026-07-20, lightly trimmed. Endpoints that require account-admin scope, an interactive login, or a signer OTP access-code were not exercised live and are documented from the API spec (marked _spec-only_).
+> Auto-generated for the `@assinafy/cli` audit. Response bodies are **real payloads captured live** from the Assinafy **sandbox** (`https://sandbox.assinafy.com.br/v1`), most recently re-verified against the published [OpenAPI spec](https://api.assinafy.com.br/v1/docs/openapi.json) on 2026-08-08 (originally captured 2026-07-20), lightly trimmed. That re-verification pass corrected several endpoints previously mislabeled `_production-only_`/`_not exercised live_` — `workspaces.list/get/create/update/delete`, `documents.search`, and `documents.verify` all work against the sandbox with a plain API key. Endpoints that still require an interactive login (JWT), an existing user account, or a signer OTP access-code from a real emailed link were not exercised live and are documented from the API spec (marked _spec-only_ / _Not exercised live_).
 
 ## Conventions
 
@@ -306,8 +306,48 @@ SDK `documents.detachTag` · CLI `assinafy documents tags-remove`
 _Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
 
 ### `GET /v1/accounts/{accountId}/documents/search`
+SDK `documents.search` · CLI `assinafy documents search`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+**Query params**
+```json
+{
+  "per-page": 3
+}
+```
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": [
+    {
+      "id": "103e4af8c99c19de9cabda1d22c4",
+      "account_id": "102d25a489f34a275d31a16045fd",
+      "template_id": null,
+      "name": "asn-sdk-khqs4ilsgu7n4lIRa8I.pdf",
+      "status": "metadata_ready",
+      "artifacts": {
+        "original": "https://sandbox.assinafy.com.br/v1/documents/103e4af8c99c19de9cabda1d22c4/download/original",
+        "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103e4af8c99c19de9cabda1d22c4/thumbnail"
+      },
+      "is_closed": false,
+      "signing_url": "https://app-sandbox.assinafy.com.br/sign/103e4af8c99c19de9cabda1d22c4",
+      "decline_reason": null,
+      "declined_by": null,
+      "tags": [],
+      "created_at": "2026-08-05T23:39:43Z",
+      "updated_at": "2026-08-05T23:39:45Z"
+    }
+  ]
+}
+```
+
+Pagination metadata is returned in headers as usual. `sort` is accepted and
+functional here (live-verified: `sort=name` changes the returned order/set)
+even though the published OpenAPI spec only documents `search`, `status`,
+`page`, `per-page` for this endpoint — the CLI's `--sort` flag is intentional,
+not a bug.
 
 ### `POST /v1/accounts/{accountId}/templates/{templateId}/documents`
 SDK `documents.createFromTemplate` · CLI `assinafy documents create-from-template`
@@ -384,58 +424,76 @@ SDK `documents.details` · CLI `assinafy documents get`
 {
   "status": 200,
   "message": "",
-  "data": [
-    {
-      "code": "uploading",
-      "deletable": false
+  "data": {
+    "resource": "document",
+    "id": "103ee2156b2e79aeb01e4d7b50d5",
+    "account_id": "102d25a489f34a275d31a16045fd",
+    "template_id": null,
+    "name": "audit-live-1786226707046.pdf",
+    "status": "metadata_processing",
+    "artifacts": {
+      "original": "https://sandbox.assinafy.com.br/v1/documents/103ee2156b2e79aeb01e4d7b50d5/download/original"
     },
-    {
-      "code": "uploaded",
-      "deletable": false
-    },
-    {
-      "code": "metadata_processing",
-      "deletable": false
-    },
-    {
-      "code": "metadata_ready",
-      "deletable": true
-    },
-    {
-      "code": "expired",
-      "deletable": true
-    },
-    {
-      "code": "certificating",
-      "deletable": false
-    },
-    {
-      "code": "certificated",
-      "deletable": false
-    },
-    {
-      "code": "rejected_by_signer",
-      "deletable": true
-    },
-    {
-      "code": "pending_signature",
-      "deletable": true
-    },
-    {
-      "code": "rejected_by_user",
-      "deletable": true
-    },
-    {
-      "code": "failed",
-      "deletable": true
-    }
-  ]
+    "is_closed": false,
+    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103ee2156b2e79aeb01e4d7b50d5",
+    "decline_reason": null,
+    "declined_by": null,
+    "tags": [],
+    "created_at": "2026-08-08T22:05:07Z",
+    "updated_at": "2026-08-08T22:05:07Z",
+    "assignment": null,
+    "pages": []
+  }
 }
 ```
 
 ### `PATCH /v1/documents/{documentId}`
+SDK `documents.rename` · CLI `assinafy documents rename`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+Only allowed once the document has finished processing (`metadata_ready` or
+later) **and** before any assignment is active — the API returns the same
+400 message for both "not ready yet" and "already has an assignment".
+
+**Request body**
+```json
+{ "name": "audit-renamed-ready-1786226819392.pdf" }
+```
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "resource": "document",
+    "id": "103ee2260ce5d7264e6aeb8c8302",
+    "account_id": "102d25a489f34a275d31a16045fd",
+    "template_id": null,
+    "name": "audit-renamed-ready-1786226819392.pdf",
+    "status": "metadata_ready",
+    "artifacts": {
+      "original": "https://sandbox.assinafy.com.br/v1/documents/103ee2260ce5d7264e6aeb8c8302/download/original",
+      "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103ee2260ce5d7264e6aeb8c8302/thumbnail"
+    },
+    "is_closed": false,
+    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103ee2260ce5d7264e6aeb8c8302",
+    "decline_reason": null,
+    "declined_by": null,
+    "tags": [],
+    "created_at": "2026-08-08T22:06:56Z",
+    "updated_at": "2026-08-08T22:06:59Z"
+  }
+}
+```
+
+**Response 400** — once an assignment is active (or before the document reaches `metadata_ready`)
+```json
+{
+  "status": 400,
+  "data": null,
+  "message": "Document cannot be renamed after the signature process has started."
+}
+```
 
 ### `GET /v1/documents/{documentId}/activities`
 SDK `documents.activities` · CLI `assinafy documents activities`
@@ -487,12 +545,86 @@ SDK `documents.thumbnail` · CLI `assinafy documents thumbnail`
 ### `GET /v1/documents/{documentSignatureHash}/verify`
 SDK `documents.verify` · CLI `assinafy documents verify`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+Public, unauthenticated endpoint. Always returns `200`, even for an unknown
+hash — `is_valid` is `false` and every other field but `hash`/`verified_at`
+is `null`.
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "hash": "FE32EDDADE7CBDDCBB934E7402047450B0E59C02",
+    "id": null,
+    "status": null,
+    "page_count": null,
+    "signer_count": null,
+    "completed_count": null,
+    "completed_at": null,
+    "verified_at": "2026-08-08T22:22:53Z",
+    "is_valid": false,
+    "message": "Documento não assinado ou não encontrado."
+  }
+}
+```
 
 ### `GET /v1/documents/statuses`
 SDK `documents.statuses` · CLI `assinafy documents statuses`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": [
+    {
+      "code": "uploading",
+      "deletable": false
+    },
+    {
+      "code": "uploaded",
+      "deletable": false
+    },
+    {
+      "code": "metadata_processing",
+      "deletable": false
+    },
+    {
+      "code": "metadata_ready",
+      "deletable": true
+    },
+    {
+      "code": "expired",
+      "deletable": true
+    },
+    {
+      "code": "certificating",
+      "deletable": false
+    },
+    {
+      "code": "certificated",
+      "deletable": false
+    },
+    {
+      "code": "rejected_by_signer",
+      "deletable": true
+    },
+    {
+      "code": "pending_signature",
+      "deletable": true
+    },
+    {
+      "code": "rejected_by_user",
+      "deletable": true
+    },
+    {
+      "code": "failed",
+      "deletable": true
+    }
+  ]
+}
+```
 
 ## Signers
 
@@ -788,6 +920,13 @@ SDK `assignments.resetExpiration` · CLI `assinafy assignments reset-expiration`
 ### `POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/estimate-resend-cost`
 SDK `assignments.estimateResendCost` · CLI `assinafy assignments estimate-resend-cost`
 
+Re-verified live on 2026-08-08: still returns the smaller shape below, not the
+larger `estimate-cost`-style schema (`documents`, `needs_extra_document`,
+`total_credits`, …) that the published OpenAPI spec's schema for this specific
+operation documents — that schema appears to be copy-pasted from the sibling
+`estimate-cost` endpoint. The SDK's `IResendCostEstimate` type follows the
+live-verified shape.
+
 **Response 200**
 ```json
 {
@@ -839,7 +978,47 @@ SDK `assignments.listWhatsAppNotifications` · CLI `assinafy assignments whatsap
 ### `POST /v1/documents/{documentId}/assignments/estimate-cost`
 SDK `assignments.estimateCost` · CLI `assinafy assignments estimate-cost`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+Live-verified for `method: "collect"` with real `entries` (field placements) —
+CLI: `assinafy assignments estimate-cost <documentId> --method collect --entries <json>`.
+
+**Request body**
+```json
+{
+  "method": "collect",
+  "signers": [
+    { "id": "19e6b92e7895332ed9708535d8c" }
+  ],
+  "entries": [
+    {
+      "page_id": "103ee3806b47c84cbb6514254d52",
+      "fields": [
+        { "signer_id": "19e6b92e7895332ed9708535d8c", "field_id": "102d25a48bcf142065f2b06cf821" }
+      ]
+    }
+  ]
+}
+```
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "documents": 1,
+    "credits": 0,
+    "needs_extra_document": false,
+    "extra_document_cost": 0,
+    "total_credits": 0,
+    "breakdown": [],
+    "document_balance": 44,
+    "credit_balance": 0,
+    "has_sufficient_resources": true,
+    "blocking_reason": null,
+    "message": null
+  }
+}
+```
 
 ## Templates
 
@@ -1334,6 +1513,11 @@ SDK `fields.list` · CLI `assinafy fields list`
 ### `POST /v1/accounts/{accountId}/fields`
 SDK `fields.create` · CLI `assinafy fields create`
 
+`regex` must be a **PCRE pattern with delimiters** (e.g. `/^[0-9]+$/`), not a
+bare pattern — live-verified: `"^[0-9]+$"` (no delimiters) is rejected with
+`400 Padrão RegEx inválido.` while `"/^[0-9]+$/"` succeeds. The SDK passes the
+string through unchanged; supply the delimiters yourself.
+
 **Request body**
 ```json
 {
@@ -1401,7 +1585,7 @@ SDK `fields.get` · CLI `assinafy fields get`
 ```
 
 ### `PUT /v1/accounts/{accountId}/fields/{fieldId}`
-SDK `fields.update` · CLI `assinafy fields update`
+SDK `fields.update` · CLI `assinafy fields update` (also `--clear-regex`, live-verified)
 
 **Request body**
 ```json
@@ -1431,8 +1615,34 @@ SDK `fields.update` · CLI `assinafy fields update`
 }
 ```
 
+**Clearing a regex** — pass `{ "regex": null }` (`assinafy fields update <id> --clear-regex`):
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "resource": "field_definition",
+    "id": "103ee388025db5ab059e7c25163b",
+    "name": "audit-clear-regex-1786229135707",
+    "type": "text",
+    "regex": null,
+    "is_pre_defined": false,
+    "is_active": true,
+    "is_required": true,
+    "is_standard": false,
+    "is_read_only": false,
+    "is_visible": true
+  }
+}
+```
+
 ### `POST /v1/accounts/{accountId}/fields/{fieldId}/validate`
 SDK `fields.validate` · CLI `assinafy fields validate`
+
+The `signer-access-code` query parameter (for signer-side validation) is not
+in the published spec for this endpoint, but is live-verified: a bogus code
+returns `401` ("Credenciais inválidas."), the same behavior as every other
+`signer-access-code`-gated endpoint.
 
 **Request body**
 ```json
@@ -1811,8 +2021,14 @@ SDK `webhooks.listEventTypes` · CLI `assinafy webhooks event-types`
 
 ## Workspaces / Accounts
 
+> `list`/`get`/`create`/`update`/`delete` were previously (incorrectly) marked
+> _production-only_ in this doc. All five were re-verified live against the
+> sandbox on 2026-08-08 with a plain API key — none of them are restricted to
+> production. Only the logo/stats/theme endpoints below remain out of CLI
+> scope / unverified.
+
 ### `GET /v1/accounts`
-SDK `workspaces.list` · CLI `assinafy workspaces list` · _production-only_
+SDK `workspaces.list` · CLI `assinafy workspaces list`
 
 **Response 200**
 ```json
@@ -1836,15 +2052,38 @@ SDK `workspaces.list` · CLI `assinafy workspaces list` · _production-only_
 ### `POST /v1/accounts`
 SDK `workspaces.create` · CLI `assinafy workspaces create`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "id": "103ee217b741cf6de6d751a45477",
+    "name": "Audit Live Workspace 1786226722112",
+    "primary_color": null,
+    "secondary_color": null,
+    "created_at": "2026-08-08T22:05:22Z"
+  }
+}
+```
 
 ### `DELETE /v1/accounts/{accountId}`
-SDK `workspaces.delete` · CLI `assinafy workspaces delete` · _production-only_
+SDK `workspaces.delete` · CLI `assinafy workspaces delete`
 
-_Not exercised live (production-only account admin); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+Optional request body `{ "force": true }` cancels an active paid subscription
+automatically; otherwise deleting a workspace with one active returns `400`.
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": []
+}
+```
 
 ### `GET /v1/accounts/{accountId}`
-SDK `workspaces.get` · CLI `assinafy workspaces get` · _production-only_
+SDK `workspaces.get` · CLI `assinafy workspaces get`
 
 **Response 200**
 ```json
@@ -1862,9 +2101,27 @@ SDK `workspaces.get` · CLI `assinafy workspaces get` · _production-only_
 ```
 
 ### `PUT /v1/accounts/{accountId}`
-SDK `workspaces.update` · CLI `assinafy workspaces update` · _production-only_
+SDK `workspaces.update` · CLI `assinafy workspaces update`
 
-_Not exercised live (production-only account admin); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+**Request body**
+```json
+{ "name": "Audit Live Workspace 1786226722112 (updated)" }
+```
+
+**Response 200**
+```json
+{
+  "status": 200,
+  "message": "",
+  "data": {
+    "id": "103ee217b741cf6de6d751a45477",
+    "name": "Audit Live Workspace 1786226722112 (updated)",
+    "primary_color": null,
+    "secondary_color": null,
+    "created_at": "2026-08-08T22:05:22Z"
+  }
+}
+```
 
 ### `DELETE /v1/accounts/{accountId}/logo`
 _out-of-scope for the CLI_ · _production-only_
@@ -1893,11 +2150,6 @@ _Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assin
 
 ## Authentication
 
-### `GET /v1/auth/authenticate`
-_out-of-scope for the CLI_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
 ### `POST /v1/auth/link-social-login`
 _out-of-scope for the CLI_
 
@@ -1911,7 +2163,16 @@ _Not exercised live (requires interactive login or a signer OTP access-code); se
 ### `PUT /v1/authentication/request-password-reset`
 SDK `auth.requestPasswordReset` · CLI `assinafy auth request-password-reset`
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+**Response 404** — for an email with no Assinafy user account (live-verified;
+note the API distinguishes "no such user" from success here, rather than
+returning a uniform response — factor this in if building enumeration-safe UX)
+```json
+{
+  "status": 404,
+  "data": null,
+  "message": "Usuário não localizado."
+}
+```
 
 ### `PUT /v1/authentication/reset-password`
 SDK `auth.resetPassword` · CLI `assinafy auth reset-password`
@@ -1927,11 +2188,6 @@ _Not exercised live (requires interactive login or a signer OTP access-code); se
 SDK `auth.login` · CLI `assinafy auth login`
 
 _Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/login-callback`
-_out-of-scope for the CLI_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
 
 ### `DELETE /v1/users/api-keys`
 SDK `auth.deleteApiKey` · CLI `assinafy auth api-keys delete`
@@ -1974,39 +2230,42 @@ _Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assin
 ### `POST /v1/documents/{documentId}/assignments/{assignmentId}`
 SDK `signerDocuments.sign` · CLI `assinafy signer sign`
 
+Sign a document with input fields (`collect` method): submit the signer's item
+values, completing their items. For **virtual** assignments the signer must
+first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`,
+otherwise this returns `400` ("Signer data must be confirmed before signing").
+The request body is a bare JSON **array** of item entries (not an object).
+
+_Not exercised live (requires a real signer OTP access-code from an emailed
+signing link); request/response derived from the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+
 **Request body**
 ```json
-{
-  "method": "virtual",
-  "signers": [
-    {
-      "verification_method": "Email",
-      "notification_methods": [
-        "Email"
-      ]
-    }
-  ]
-}
+[
+  {
+    "itemId": "615606efcde1a39c9d21e30e",
+    "fieldId": "6152120297080d55bdd13197",
+    "pageId": "615213ed81b071f4293b2fc2",
+    "value": "Signed by Sonny Bayer"
+  }
+]
 ```
 
-**Response 200**
+**Response 200** — `data` is an opaque object on success (the spec doesn't document its fields)
 ```json
 {
   "status": 200,
   "message": "",
-  "data": {
-    "documents": 1,
-    "credits": 0,
-    "needs_extra_document": false,
-    "extra_document_cost": 0,
-    "total_credits": 0,
-    "breakdown": [],
-    "document_balance": 68,
-    "credit_balance": 0,
-    "has_sufficient_resources": true,
-    "blocking_reason": null,
-    "message": null
-  }
+  "data": {}
+}
+```
+
+**Response 400** — virtual assignment, signer hasn't confirmed their data yet
+```json
+{
+  "status": 400,
+  "data": null,
+  "message": "Signer data must be confirmed before signing"
 }
 ```
 
@@ -2040,6 +2299,10 @@ SDK `documents.getPublic` · CLI `assinafy documents public`
 
 ### `PUT /v1/public/documents/{documentId}/send-token`
 SDK `documents.sendToken` · CLI `assinafy documents send-token`
+
+Requires the document to be in `pending_signature` status (i.e. a signature
+request/assignment is already active) — returns 400 ("O documento não está
+com status de assinatura pendente.") otherwise.
 
 **Request body**
 ```json

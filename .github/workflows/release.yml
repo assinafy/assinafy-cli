@@ -33,6 +33,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          # Pin to the actual tag being released so a `workflow_dispatch` rerun
+          # (which otherwise checks out whatever ref was selected in the UI,
+          # defaulting to the default branch) can never build/publish assets
+          # from unreviewed, untagged source under an existing release's tag.
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
           persist-credentials: false
 
       - name: Setup Node
@@ -60,6 +65,11 @@ jobs:
       - name: Verify bundle
         run: npm run verify:bundle
 
+      - name: Verify generated docs are up to date
+        run: |
+          node scripts/gen-docs.mjs
+          git diff --exit-code -- docs/
+
       - name: Verify installer syntax
         run: |
           bash -n install.sh
@@ -71,9 +81,13 @@ jobs:
       - name: Resolve release tag
         id: release-tag
         shell: bash
+        env:
+          # Passed via env (not interpolated directly into the script) so a
+          # tag value containing shell metacharacters can't be executed.
+          DISPATCH_TAG: ${{ inputs.tag }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "tag=$DISPATCH_TAG" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi

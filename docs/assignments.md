@@ -55,6 +55,9 @@ Options:
   --expires-at <iso8601>  Expiration timestamp
   --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
                           document
+  --entries <json>        JSON array of field placement entries, required for
+                          --method collect (e.g.
+                          '[{"page_id":"p1","fields":[{"signer_id":"s1","field_id":"f1"}]}]')
   -h, --help              display help for command
 ```
 
@@ -71,6 +74,9 @@ Arguments:
 Options:
   --signer-ids <csv>  Comma-separated signer IDs
   --signers <json>    JSON array of signer refs
+  --method <method>   virtual or collect (default: "virtual")
+  --entries <json>    JSON array of field placement entries, required for
+                      --method collect
   -h, --help          display help for command
 ```
 

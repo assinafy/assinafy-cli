@@ -160,8 +160,32 @@ export interface ICreateAssignmentPayload {
 	message?: string;
 	expires_at?: string;
 	copy_receivers?: string[];
-	/** Field placement entries used when `method` is `collect`. */
-	entries?: unknown[];
+	/** Field placement entries. Required when `method` is `collect`. */
+	entries?: ICollectAssignmentEntry[];
+}
+
+/**
+ * A field placement rectangle on a document page. Geometry values are pixels
+ * in Assinafy's 150-DPI page image, measured from the upper-left corner.
+ */
+export interface IDisplaySettings {
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+	fontSize: number;
+	fontFamily?: string;
+	backgroundColor?: string;
+}
+
+/** One page's field placements, used by `collect`-method assignments. */
+export interface ICollectAssignmentEntry {
+	page_id: string;
+	fields: Array<{
+		signer_id: string;
+		field_id: string;
+		display_settings?: IDisplaySettings;
+	}>;
 }
 
 /** Direct signing URL generated for one signer (inside `assignment.signing_urls`). */
@@ -198,6 +222,27 @@ export interface IAssignmentSigner extends ISigner {
 	notification_history?: IAssignmentSignerNotification[];
 }
 
+/**
+ * One item (field placement instance) inside an assignment. `signer` and
+ * `field` are embedded objects whose exact shape varies by context (the API's
+ * own spec leaves them generic); `display_settings` is populated for
+ * `collect`-method items and an empty array for `virtual`/legacy ones.
+ */
+export interface IAssignmentItem {
+	id: string;
+	page: { id: string; number: number; height: number; width: number; download_url: string } | null;
+	signer: Partial<ISigner> & Record<string, unknown>;
+	field: Partial<IFieldDefinition> & Record<string, unknown>;
+	display_settings: IDisplaySettings | unknown[];
+	value: string | null;
+	completed: boolean;
+}
+
+/** Signer summary entry inside `assignment.summary.signers` (account-owner contexts). */
+export interface IAssignmentSummarySigner extends ISigner {
+	completed: boolean;
+}
+
 /** Assignment object as returned by the API. */
 export interface IAssignment {
 	/** Resource type (`assignment`); present in single-resource responses. */
@@ -212,11 +257,11 @@ export interface IAssignment {
 	message?: string | null;
 	signers: IAssignmentSigner[];
 	copy_receivers?: string[];
-	items?: unknown[];
+	items?: IAssignmentItem[];
 	summary?: {
 		signer_count: number;
 		completed_count: number;
-		signers: unknown[];
+		signers: IAssignmentSummarySigner[];
 	};
 	signing_urls?: ISigningUrl[];
 }
@@ -368,7 +413,10 @@ export interface IDocumentUploadResponse {
 	template_id: string | null;
 	name: string;
 	status: DocumentStatus;
-	assignment: unknown;
+	/** Absent immediately after upload; present once a signature request is active. */
+	assignment?: IAssignment | null;
+	/** Direct signing URL; present once the document has been processed. */
+	signing_url?: string | null;
 	artifacts: {
 		original: string;
 		certificated?: string;
@@ -389,7 +437,7 @@ export interface IDocumentUploadResponse {
 	updated_at: string;
 	is_closed: boolean;
 	decline_reason: string | null;
-	declined_by: string | null;
+	declined_by: ISigner | null;
 }
 
 /** Detailed document response. */
@@ -517,8 +565,10 @@ export interface IWebhookDispatch {
 	http_status: number | null;
 	response_body: string | null;
 	error: string | null;
-	created_at: number;
-	updated_at?: number;
+	/** ISO 8601 timestamp (verified against the sandbox — not a unix epoch number). */
+	created_at: string;
+	/** ISO 8601 timestamp (verified against the sandbox — not a unix epoch number). */
+	updated_at?: string;
 }
 
 export interface IWebhookDispatchListParams extends IListParams {
@@ -638,6 +688,26 @@ export interface IDocumentStatusInfo {
 	description?: string;
 }
 
+/**
+ * Response from `GET /documents/{signatureHash}/verify` (live-verified against
+ * the sandbox). Always a `200`: an unknown/unsigned hash comes back with
+ * `is_valid: false`, every other field `null` (except `hash`/`verified_at`),
+ * and `message` explaining why.
+ */
+export interface IDocumentVerifyResponse {
+	hash: string;
+	id: string | null;
+	status: DocumentStatus | string | null;
+	page_count: string | null;
+	signer_count: string | null;
+	completed_count: number | null;
+	completed_at: string | null;
+	verified_at: string;
+	is_valid: boolean;
+	/** Reason when not valid; empty string on success. */
+	message: string;
+}
+
 /** Item returned by `GET /public/documents/{id}`. */
 export interface IPublicDocumentInfo {
 	resource?: string;
@@ -659,7 +729,7 @@ export type SendTokenChannel = 'email' | 'whatsapp' | string;
  * live behaviour.
  */
 export interface ISendTokenResponse {
-	document?: string;
+	document?: IPublicDocumentInfo;
 	channel?: SendTokenChannel;
 	recipient?: string;
 	[key: string]: unknown;

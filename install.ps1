@@ -80,20 +80,37 @@ $baseUrl = "$($githubBase.TrimEnd('/'))/$repo"
 $cleanVersion = $Version.TrimStart("v")
 if ([string]::IsNullOrWhiteSpace($cleanVersion)) {
 	$url = "$baseUrl/releases/latest/download/assinafy-$target.tar.gz"
+	$sumsUrl = "$baseUrl/releases/latest/download/SHA256SUMS"
 } elseif ($cleanVersion -match "^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$") {
 	$url = "$baseUrl/releases/download/v$cleanVersion/assinafy-$target.tar.gz"
+	$sumsUrl = "$baseUrl/releases/download/v$cleanVersion/SHA256SUMS"
 } else {
 	Fail "Version must be a semantic version, for example v1.0.0"
 }
 
 $tmpDir = Join-Path ([IO.Path]::GetTempPath()) "assinafy-$([Guid]::NewGuid())"
 $archive = Join-Path $tmpDir "assinafy.tar.gz"
+$sumsFile = Join-Path $tmpDir "SHA256SUMS"
 $extractDir = Join-Path $tmpDir "extract"
 
 try {
 	New-Item -ItemType Directory -Path $binDir, $extractDir -Force | Out-Null
 	Info "Downloading Assinafy CLI for $target"
 	Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+
+	Info "Verifying checksum"
+	Invoke-WebRequest -Uri $sumsUrl -OutFile $sumsFile -UseBasicParsing
+	$archiveName = "assinafy-$target.tar.gz"
+	$expectedLine = Get-Content $sumsFile | Where-Object { $_ -match [regex]::Escape($archiveName) } | Select-Object -First 1
+	if (-not $expectedLine) {
+		Fail "SHA256SUMS did not contain an entry for $archiveName"
+	}
+	$expectedHash = ($expectedLine -split '\s+')[0].ToLowerInvariant()
+	$actualHash = (Get-FileHash -Path $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+	if ($actualHash -ne $expectedHash) {
+		Fail "Checksum mismatch for ${archiveName}: expected $expectedHash, got $actualHash"
+	}
+
 	tar -xzf $archive -C $extractDir
 
 	$cmdSource = Join-Path $extractDir "assinafy.cmd"
