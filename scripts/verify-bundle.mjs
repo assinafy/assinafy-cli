@@ -22,6 +22,7 @@ const apiCjs = path.join(root, 'dist', 'api.cjs');
 const apiEsm = path.join(root, 'dist', 'api.js');
 const apiTypes = path.join(root, 'dist', 'types', 'api', 'index.d.ts');
 const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+const npmCli = process.env.npm_execpath;
 
 function fail(message) {
 	console.error(`Bundle verification failed: ${message}`);
@@ -37,6 +38,7 @@ function run(args) {
 }
 
 if (!existsSync(bin)) fail('dist/cli.cjs does not exist; run npm run build first');
+if (!npmCli) fail('npm_execpath is not set; run npm run verify:bundle');
 for (const file of [apiCjs, apiEsm, apiTypes]) {
 	if (!existsSync(file))
 		fail(`${path.relative(root, file)} does not exist; run npm run build first`);
@@ -69,16 +71,20 @@ if (typeof cjsApi.AssinafyClient !== 'function' || typeof esmApi.AssinafyClient 
 const consumer = mkdtempSync(path.join(tmpdir(), 'assinafy-sdk-consumer-'));
 let consumerError;
 try {
-	const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-	execFileSync(npm, ['pack', '--ignore-scripts', '--pack-destination', consumer], {
-		cwd: root,
-		stdio: ['ignore', 'pipe', 'pipe'],
-	});
+	execFileSync(
+		process.execPath,
+		[npmCli, 'pack', '--ignore-scripts', '--pack-destination', consumer],
+		{
+			cwd: root,
+			stdio: ['ignore', 'pipe', 'pipe'],
+		},
+	);
 	const archive = readdirSync(consumer).find((file) => file.endsWith('.tgz'));
 	if (!archive) throw new Error('npm pack did not create an archive');
 	execFileSync(
-		npm,
+		process.execPath,
 		[
+			npmCli,
 			'install',
 			'--ignore-scripts',
 			'--no-audit',
