@@ -1,22 +1,25 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type {
-	DocumentArtifactName,
 	IDocumentListParams,
 	IDocumentListResponse,
+	IDocumentSearchParams,
 	ITemplateCostSigner,
+	ITemplateEditorField,
 	ITemplateSigner,
 } from '../api';
+import { requireDocumentArtifactName } from '../api/utils';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { defaultArtifactFilename, writeBinary } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
 import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
-import { runWithClient, runWithOptionalClient } from '../lib/run';
+import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
+import { sanitizeTerminalText } from '../lib/terminal';
 
 const uploadCommand = new Command('upload')
 	.description('Upload a PDF to the workspace')
@@ -28,10 +31,12 @@ const uploadCommand = new Command('upload')
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const metadata = parseJsonObject(opts.metadata, '--metadata');
-			const source = opts.name ? { filePath: file, fileName: opts.name } : { filePath: file };
+			const uploadOptions: Parameters<typeof client.documents.upload>[1] = { accountId };
+			if (metadata) uploadOptions.metadata = metadata;
+			if (opts.name) uploadOptions.name = opts.name;
 
 			const doc = await withSpinner('Uploading document', config, () =>
-				client.documents.upload(source, metadata ? { accountId, metadata } : { accountId }),
+				client.documents.upload({ filePath: file }, uploadOptions),
 			);
 
 			if (opts.wait) {
@@ -75,7 +80,7 @@ const listCommand = addListOptions(
 		const result = await withSpinner('Fetching documents', config, () =>
 			client.documents.list(params, accountId),
 		);
-		printData(result.data, config, () => renderDocumentListTable(result));
+		printPaginatedData(result, config, () => renderDocumentListTable(result));
 	});
 });
 
@@ -87,13 +92,13 @@ const searchCommand = addListOptions(
 ).action(async (query, opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
-		const params: IDocumentListParams = { ...listParams(opts) };
+		const params: IDocumentSearchParams = { ...listParams(opts) };
 		if (query) params.search = query;
 		if (opts.status) params.status = opts.status;
 		const result = await withSpinner('Searching documents', config, () =>
 			client.documents.search(params, accountId),
 		);
-		printData(result.data, config, () => renderDocumentListTable(result));
+		printPaginatedData(result, config, () => renderDocumentListTable(result));
 	});
 });
 
@@ -138,19 +143,24 @@ const downloadCommand = new Command('download')
 	.argument('<id>', 'Document ID')
 	.option(
 		'--artifact <name>',
-		'original | certificated | certificate-page | bundle',
+		'original | certificated | certificate-page | pades | bundle',
 		'certificated',
 	)
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
-			const artifact = parseArtifact(opts.artifact);
+			const artifact = requireDocumentArtifactName(opts.artifact);
 			const buffer = await withSpinner('Downloading document', config, () =>
 				client.documents.download(id, artifact),
 			);
-			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, artifact), buffer);
+			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, artifact), buffer, {
+				force: opts.force,
+			});
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength, artifact }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength, artifact }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 
@@ -158,14 +168,19 @@ const thumbnailCommand = new Command('thumbnail')
 	.description('Download the document thumbnail (JPEG)')
 	.argument('<id>', 'Document ID')
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const buffer = await withSpinner('Downloading thumbnail', config, () =>
 				client.documents.thumbnail(id),
 			);
-			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, 'thumbnail'), buffer);
+			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, 'thumbnail'), buffer, {
+				force: opts.force,
+			});
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 
@@ -174,14 +189,19 @@ const downloadPageCommand = new Command('download-page')
 	.argument('<id>', 'Document ID')
 	.argument('<pageId>', 'Page ID')
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (id, pageId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const buffer = await withSpinner('Downloading page', config, () =>
 				client.documents.downloadPage(id, pageId),
 			);
-			const out = writeBinary(opts.output ?? `${id}-page-${pageId}.jpg`, buffer);
+			const out = writeBinary(opts.output ?? `${id}-page-${pageId}.jpg`, buffer, {
+				force: opts.force,
+			});
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 
@@ -274,11 +294,11 @@ const tagsRemoveCommand = new Command('tags-remove')
 	.action(async (id, tagId, _opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
-			await withSpinner('Detaching tag', config, () =>
+			const result = await withSpinner('Detaching tag', config, () =>
 				client.documents.detachTag(id, tagId, accountId),
 			);
 			printSuccess(`Detached tag ${tagId}`, config);
-			printData({ document_id: id, detached_tag: tagId }, config);
+			printData(result, config);
 		});
 	});
 
@@ -298,7 +318,9 @@ const createFromTemplateCommand = new Command('create-from-template')
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const signers = parseJsonArray(opts.signers, '--signers') as ITemplateSigner[];
-			const editorFields = parseJsonArray(opts.editorFields, '--editor-fields');
+			const editorFields = parseJsonArray(opts.editorFields, '--editor-fields') as
+				| ITemplateEditorField[]
+				| undefined;
 			const options = clean({
 				name: opts.name,
 				message: opts.message,
@@ -333,7 +355,7 @@ const verifyCommand = new Command('verify')
 	.description('Verify a document by its signature hash')
 	.argument('<hash>', 'Signature hash')
 	.action(async (hash, _opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Verifying document', config, () =>
 				client.documents.verify(hash),
 			);
@@ -363,25 +385,43 @@ const publicCommand = new Command('public')
 	.description('Public (unauthenticated) lookup of basic document info')
 	.argument('<id>', 'Document ID')
 	.action(async (id, _opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const info = await withSpinner('Fetching public info', config, () =>
 				client.documents.getPublic(id),
 			);
-			printData(info, config, (d) => renderKeyValue(d as Record<string, unknown>));
+			printData(info, config, (d) => renderKeyValue(d as unknown as Record<string, unknown>));
 		});
 	});
 
 const sendTokenCommand = new Command('send-token')
 	.description('Send a 6-digit verification token to a signer')
 	.argument('<id>', 'Document ID')
-	.requiredOption('--recipient <value>', 'Email address or phone number')
-	.option('--channel <channel>', 'email or whatsapp', 'email')
+	.addOption(
+		new Option('--email <email>', 'Email using the current published API payload').conflicts([
+			'recipient',
+			'channel',
+		]),
+	)
+	.addOption(
+		new Option(
+			'--recipient <value>',
+			'Email address or phone number (live legacy payload)',
+		).conflicts('email'),
+	)
+	.addOption(
+		new Option('--channel <channel>', 'email or whatsapp').default('email').conflicts('email'),
+	)
 	.action(async (id, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			if (!opts.email && !opts.recipient) {
+				throw new CliError('Pass --email <email> or --recipient <value>.');
+			}
+			const recipient = opts.email ? { email: opts.email } : (opts.recipient as string);
+			const channel = parseSendTokenChannel(opts.channel);
 			const result = await withSpinner('Sending token', config, () =>
-				client.documents.sendToken(id, opts.recipient, opts.channel),
+				client.documents.sendToken(id, recipient, channel),
 			);
-			printSuccess(`Token sent to ${opts.recipient}`, config);
+			printSuccess(`Token sent to ${opts.email ?? opts.recipient}`, config);
 			printData(result, config);
 		});
 	});
@@ -422,19 +462,9 @@ const waitCommand = new Command('wait')
 		});
 	});
 
-const ARTIFACT_NAMES: readonly DocumentArtifactName[] = [
-	'original',
-	'certificated',
-	'certificate-page',
-	'bundle',
-];
-
-/** Validate the --artifact flag against the known artifact names. */
-function parseArtifact(value: string): DocumentArtifactName {
-	if ((ARTIFACT_NAMES as readonly string[]).includes(value)) {
-		return value as DocumentArtifactName;
-	}
-	throw new CliError(`--artifact must be one of: ${ARTIFACT_NAMES.join(', ')}`);
+function parseSendTokenChannel(value: string): 'email' | 'whatsapp' {
+	if (value === 'email' || value === 'whatsapp') return value;
+	throw new CliError('--channel must be email or whatsapp');
 }
 
 /** Drop undefined/null entries so we never send empty params. */

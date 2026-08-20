@@ -1,18 +1,18 @@
-import { ValidationError } from '../errors';
+import { ValidationError } from '../errors.js';
 import type {
 	IAssignment,
+	IAssignmentListParams,
 	ICreateAssignmentPayload,
 	ICreateAssignmentResponse,
 	IEstimateCostResponse,
-	IListParams,
 	IResendCostEstimate,
 	IResendEmailResponse,
 	IWhatsAppNotification,
 	PaginatedResult,
 	SignerReference,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import { cleanParams, requireIso8601, requireSort } from '../utils.js';
+import { BaseResource } from './base.js';
 
 /**
  * Normalise an assignment payload into the shape the API expects:
@@ -36,13 +36,22 @@ export function buildAssignmentPayload(
 		method: payload.method ?? 'virtual',
 		signers: signers.map((ref) => normaliseSignerRef(ref, options)),
 		message: payload.message,
-		expires_at: payload.expires_at,
+		expires_at:
+			payload.expires_at === undefined
+				? undefined
+				: requireIso8601(payload.expires_at, 'expires_at'),
 		copy_receivers: payload.copy_receivers,
 		entries: payload.entries,
 	});
 }
 
 function extractSignerRefs(payload: ICreateAssignmentPayload): SignerReference[] {
+	const populatedAliases = [payload.signers, payload.signer_ids, payload.signerIds].filter(
+		(value) => Array.isArray(value) && value.length > 0,
+	);
+	if (populatedAliases.length > 1) {
+		throw new ValidationError('Provide only one of signers, signer_ids, or signerIds');
+	}
 	if (Array.isArray(payload.signers) && payload.signers.length > 0) {
 		return payload.signers;
 	}
@@ -100,12 +109,17 @@ export class AssignmentResource extends BaseResource {
 	 *
 	 * The endpoint is account-scoped via a required `accountId` query parameter
 	 * (note the camelCase — it differs from the path style used elsewhere).
-	 * Supports `page` / `per-page`.
+	 * Supports `page` / `per-page`; `created_at` sorting is live-verified.
 	 */
-	async list(params: IListParams = {}, accountId?: string): Promise<PaginatedResult<IAssignment>> {
+	async list(
+		params: IAssignmentListParams = {},
+		accountId?: string,
+	): Promise<PaginatedResult<IAssignment>> {
 		const id = this.accountId(accountId);
+		if ('search' in params) throw new ValidationError('assignment search is not supported');
+		requireSort(params.sort, ['created_at', '-created_at']);
 		return this.callList<IAssignment>('Failed to list assignments', () =>
-			this.http.get('/assignments', { params: cleanParams({ accountId: id, ...params }) }),
+			this.http.get('/assignments', { params: cleanParams({ ...params, accountId: id }) }),
 		);
 	}
 
@@ -155,6 +169,7 @@ export class AssignmentResource extends BaseResource {
 	): Promise<IAssignment> {
 		const docId = this.requireId(documentId, 'Document ID');
 		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		if (expiresAt !== null) requireIso8601(expiresAt, 'expiresAt');
 		// `null` is meaningful here ("no expiration"), so don't strip it.
 		return this.call('Failed to update assignment expiration', () =>
 			this.http.put(`/documents/${docId}/assignments/${asgId}/reset-expiration`, {

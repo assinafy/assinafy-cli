@@ -11,4 +11,3 @@ Options:
   --open      Open the documentation in your default browser
   -h, --help  display help for command
 ```
-

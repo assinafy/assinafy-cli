@@ -75,4 +75,3 @@ Options:
   -y, --yes   Skip the confirmation prompt
   -h, --help  display help for command
 ```
-

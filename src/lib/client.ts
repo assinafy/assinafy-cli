@@ -4,7 +4,7 @@ import { CliError } from './errors';
 
 interface CreateClientOptions {
 	allowUnauthenticated?: boolean;
-	preferToken?: boolean;
+	omitCredentials?: boolean;
 }
 
 /** Build an SDK client from resolved configuration, or throw a friendly CLI error. */
@@ -12,14 +12,8 @@ export function createClient(
 	config: ResolvedConfig,
 	options: CreateClientOptions = {},
 ): AssinafyClient {
-	const apiKey = options.preferToken ? undefined : config.apiKey;
-	const token = config.token;
-
-	if (options.preferToken && !token && !options.allowUnauthenticated) {
-		throw new CliError(
-			'This command requires a JWT access token. Run `assinafy auth login <email>` and pass the returned token with --token or ASSINAFY_TOKEN.',
-		);
-	}
+	const apiKey = options.omitCredentials ? undefined : config.apiKey;
+	const token = options.omitCredentials ? undefined : config.token;
 
 	if (!apiKey && !token && !options.allowUnauthenticated) {
 		throw new CliError(

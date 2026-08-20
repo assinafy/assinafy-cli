@@ -11,4 +11,3 @@ Store an API key and account ID in a profile (interactive). Reads the global
 Options:
   -h, --help  display help for command
 ```
-

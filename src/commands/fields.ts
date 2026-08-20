@@ -1,11 +1,10 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { ICreateFieldPayload, IFieldValidateMultipleEntry, IUpdateFieldPayload } from '../api';
 import { requireAccountId } from '../lib/client';
-import { CliError } from '../lib/errors';
 import { parseJsonArray } from '../lib/json';
 import { printData, printSuccess } from '../lib/output';
 import { confirmDestructive } from '../lib/prompts';
-import { runWithClient, runWithOptionalClient } from '../lib/run';
+import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
 
@@ -74,12 +73,12 @@ const updateCommand = new Command('update')
 	.argument('<id>', 'Field ID')
 	.option('--type <type>', 'Field type')
 	.option('--name <name>', 'Field name')
-	.option('--regex <regex>', 'Validation regex')
-	.option('--clear-regex', 'Remove the existing validation regex')
-	.option('--required', 'Mark as required')
-	.option('--optional', 'Mark as not required')
-	.option('--active', 'Activate the field')
-	.option('--inactive', 'Deactivate the field')
+	.addOption(new Option('--regex <regex>', 'Validation regex').conflicts('clearRegex'))
+	.addOption(new Option('--clear-regex', 'Remove the existing validation regex').conflicts('regex'))
+	.addOption(new Option('--required', 'Mark as required').conflicts('optional'))
+	.addOption(new Option('--optional', 'Mark as not required').conflicts('required'))
+	.addOption(new Option('--active', 'Activate the field').conflicts('inactive'))
+	.addOption(new Option('--inactive', 'Deactivate the field').conflicts('active'))
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
@@ -119,10 +118,15 @@ const validateCommand = new Command('validate')
 	.description('Validate a value against a field definition')
 	.argument('<id>', 'Field ID')
 	.argument('<value>', 'Value to validate')
-	.option('--signer-access-code <code>', 'Signer access code (for signer-side validation)')
+	.addOption(
+		new Option(
+			'--signer-access-code <code>',
+			'Signer access code (for signer-side validation)',
+		).env('ASSINAFY_SIGNER_ACCESS_CODE'),
+	)
 	.action(async (id, value, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
-			requireCredentialsOrSignerAccessCode(config, opts.signerAccessCode);
+		const run = opts.signerAccessCode ? runWithPublicClient : runWithClient;
+		await run(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const result = await withSpinner('Validating', config, () =>
 				client.fields.validate(id, value, { signerAccessCode: opts.signerAccessCode, accountId }),
@@ -136,10 +140,14 @@ const validateCommand = new Command('validate')
 const validateMultipleCommand = new Command('validate-multiple')
 	.description('Validate multiple field values at once')
 	.requiredOption('--entries <json>', 'JSON array of { field_id, value } entries')
-	.option('--signer-access-code <code>', 'Signer access code')
+	.addOption(
+		new Option('--signer-access-code <code>', 'Signer access code').env(
+			'ASSINAFY_SIGNER_ACCESS_CODE',
+		),
+	)
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
-			requireCredentialsOrSignerAccessCode(config, opts.signerAccessCode);
+		const run = opts.signerAccessCode ? runWithPublicClient : runWithClient;
+		await run(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const entries = parseJsonArray(opts.entries, '--entries') as IFieldValidateMultipleEntry[];
 			const result = await withSpinner('Validating', config, () =>
@@ -184,12 +192,3 @@ export const fieldsCommand = new Command('fields')
 	.addCommand(validateCommand)
 	.addCommand(validateMultipleCommand)
 	.addCommand(typesCommand);
-
-function requireCredentialsOrSignerAccessCode(
-	config: { apiKey?: string; token?: string },
-	signerAccessCode: string | undefined,
-): void {
-	if (!config.apiKey && !config.token && !signerAccessCode) {
-		throw new CliError('Provide credentials or --signer-access-code <code> for validation.');
-	}
-}

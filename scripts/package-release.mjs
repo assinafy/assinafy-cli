@@ -4,11 +4,14 @@ import { createHash } from 'node:crypto';
 import {
 	chmodSync,
 	copyFileSync,
+	cpSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
+	utimesSync,
 	writeFileSync,
 } from 'node:fs';
 import os from 'node:os';
@@ -19,6 +22,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 const bundle = path.join(root, 'dist', 'cli.cjs');
 const releaseDir = path.join(root, 'dist', 'release');
+const archiveTime = new Date('2000-01-01T00:00:00Z');
+const tarVersion = execFileSync('tar', ['--version'], { encoding: 'utf8' });
 
 const targets = [
 	{ name: 'darwin-arm64', type: 'posix' },
@@ -45,10 +50,11 @@ function assertBundle() {
 }
 
 function copyDocs(targetDir) {
-	for (const file of ['README.md', 'LICENSE']) {
+	for (const file of ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) {
 		const source = path.join(root, file);
 		if (existsSync(source)) copyFileSync(source, path.join(targetDir, file));
 	}
+	cpSync(path.join(root, 'docs'), path.join(targetDir, 'docs'), { recursive: true });
 	writeFileSync(path.join(targetDir, 'VERSION'), `${pkg.version}\n`);
 }
 
@@ -76,13 +82,58 @@ function preparePayload(target) {
 function archiveTarget(target) {
 	const { tmp, payload } = preparePayload(target);
 	const archive = path.join(releaseDir, `assinafy-${target.name}.tar.gz`);
+	const entries = archiveEntries(payload);
+	const reproducibleOptions = tarVersion.includes('GNU tar')
+		? ['--sort=name', '--mtime=@946684800', '--owner=0', '--group=0', '--numeric-owner']
+		: [
+				'--uid',
+				'0',
+				'--gid',
+				'0',
+				'--uname',
+				'root',
+				'--gname',
+				'root',
+				'--options',
+				'gzip:!timestamp',
+			];
 
 	try {
-		execFileSync('tar', ['-czf', archive, '-C', payload, '.'], { stdio: 'inherit' });
+		execFileSync(
+			'tar',
+			[
+				'-czf',
+				archive,
+				'--format',
+				'ustar',
+				'--no-xattrs',
+				...reproducibleOptions,
+				'-C',
+				payload,
+				...entries,
+			],
+			{ stdio: 'inherit' },
+		);
 		return archive;
 	} finally {
 		rmSync(tmp, { recursive: true, force: true });
 	}
+}
+
+function archiveEntries(directory, current = directory) {
+	const entries = [];
+	for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
+		a.name.localeCompare(b.name),
+	)) {
+		const absolute = path.join(current, entry.name);
+		if (entry.isDirectory()) {
+			entries.push(...archiveEntries(directory, absolute));
+		} else if (entry.isFile()) {
+			utimesSync(absolute, archiveTime, archiveTime);
+			entries.push(path.relative(directory, absolute).split(path.sep).join('/'));
+		}
+	}
+	return entries;
 }
 
 assertBundle();

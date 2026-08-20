@@ -1,4 +1,7 @@
 import pc from 'picocolors';
+import { sanitizeTerminalText } from './terminal';
+
+let reportingStreamError = false;
 
 /**
  * Install process-level guards so the CLI exits cleanly:
@@ -12,15 +15,36 @@ export function setupCliExitHandler(): void {
 
 	// Guard BOTH streams: a consumer that closes the pipe early (`| head`) breaks
 	// whichever stream we next write to. An unguarded 'error' event is fatal.
-	const onPipeError = (err: NodeJS.ErrnoException) => {
-		if (err.code === 'EPIPE') process.exit(0);
-	};
-	process.stdout.on('error', onPipeError);
-	process.stderr.on('error', onPipeError);
+	process.stdout.on('error', (err) => handleStreamError(err, process.stderr));
+	process.stderr.on('error', (err) => handleStreamError(err, process.stdout));
 
 	process.on('unhandledRejection', (reason) => {
-		const message = reason instanceof Error ? reason.message : String(reason);
+		const message = sanitizeTerminalText(reason instanceof Error ? reason.message : String(reason));
 		process.stderr.write(`${pc.red('error:')} ${message}\n`);
 		process.exit(1);
 	});
+}
+
+/** Preserve `head`/pipe ergonomics without hiding real output failures. */
+export function handleStreamError(
+	err: NodeJS.ErrnoException,
+	fallback: NodeJS.WritableStream,
+	exit: (code: number) => never = process.exit,
+): void {
+	if (err.code === 'EPIPE') {
+		exit(0);
+		return;
+	}
+	process.exitCode = 1;
+	if (reportingStreamError) return;
+	reportingStreamError = true;
+	try {
+		fallback.write(
+			`${pc.red('error:')} output stream failed (${sanitizeTerminalText(err.code ?? err.message)})\n`,
+		);
+	} catch {
+		// Both output streams are unavailable; the non-zero exit code is the fallback.
+	} finally {
+		reportingStreamError = false;
+	}
 }

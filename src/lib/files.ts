@@ -17,11 +17,18 @@ export function readBinary(inputPath: string): Buffer {
  * Write a downloaded binary artifact to disk and return the absolute path.
  * Throws a friendly error if the file cannot be written.
  */
-export function writeBinary(outputPath: string, data: Buffer): string {
+export function writeBinary(
+	outputPath: string,
+	data: Buffer,
+	options: { force?: boolean } = {},
+): string {
 	const resolved = path.resolve(outputPath);
 	try {
-		writeFileSync(resolved, data);
+		writeFileSync(resolved, data, { flag: options.force ? 'w' : 'wx' });
 	} catch (err) {
+		if (err && typeof err === 'object' && 'code' in err && err.code === 'EEXIST') {
+			throw new CliError(`File "${resolved}" already exists. Pass --force to overwrite it.`);
+		}
 		throw new CliError(
 			`Failed to write file "${resolved}": ${err instanceof Error ? err.message : String(err)}`,
 		);
@@ -31,6 +38,6 @@ export function writeBinary(outputPath: string, data: Buffer): string {
 
 /** Build a sensible default output filename for a document artifact download. */
 export function defaultArtifactFilename(documentId: string, artifact: string): string {
-	const ext = artifact === 'thumbnail' ? 'jpg' : 'pdf';
+	const ext = artifact === 'thumbnail' ? 'jpg' : artifact === 'bundle' ? 'zip' : 'pdf';
 	return `${documentId}-${artifact}.${ext}`;
 }

@@ -13,10 +13,12 @@ import { signerCommand } from './commands/signer';
 import { signersCommand } from './commands/signers';
 import { tagsCommand } from './commands/tags';
 import { templatesCommand } from './commands/templates';
+import { usersCommand } from './commands/users';
 import { webhooksCommand } from './commands/webhooks';
 import { whoamiCommand } from './commands/whoami';
 import { workspacesCommand } from './commands/workspaces';
 import { setupCliExitHandler } from './lib/cli-exit';
+import { sanitizeTerminalText } from './lib/terminal';
 import { PACKAGE_NAME, VERSION } from './lib/version';
 
 setupCliExitHandler();
@@ -26,7 +28,10 @@ const program = new Command()
 	.description('Assinafy CLI — the command-line interface for the Assinafy digital-signature API')
 	.configureHelp({ showGlobalOptions: true, styleTitle: (s) => pc.gray(s) })
 	.configureOutput({
-		writeErr: (str) => process.stderr.write(str.replace(/^error:/, () => pc.red('error:'))),
+		writeErr: (str) =>
+			process.stderr.write(
+				`${sanitizeTerminalText(str).replace(/^error:/, () => pc.red('error:'))}\n`,
+			),
 	})
 	.version(`${PACKAGE_NAME} v${VERSION}`, '-v, --version', 'Output the current version')
 	.option('--api-key <key>', 'API key (overrides env/config)')
@@ -60,6 +65,7 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	.addCommand(fieldsCommand)
 	.addCommand(webhooksCommand)
 	.addCommand(workspacesCommand)
+	.addCommand(usersCommand)
 	// Signer-side + auth
 	.addCommand(signerCommand)
 	.addCommand(authCommand)
@@ -71,6 +77,8 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	.addCommand(docsCommand);
 
 program.parseAsync().catch((err) => {
-	process.stderr.write(`${pc.red('error:')} ${err instanceof Error ? err.message : String(err)}\n`);
+	process.stderr.write(
+		`${pc.red('error:')} ${sanitizeTerminalText(err instanceof Error ? err.message : String(err))}\n`,
+	);
 	process.exit(1);
 });

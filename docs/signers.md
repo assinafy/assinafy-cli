@@ -47,8 +47,8 @@ List signers in the workspace
 Options:
   --page <n>        Page number to fetch
   --per-page <n>    Items per page
-  --search <query>  Filter results by a search query
-  --sort <field>    Sort by field (prefix with - for descending)
+  --search <query>  Filter by a search query
+  --sort <field>    Sort by full_name (prefix with - for descending)
   -h, --help        display help for command
 ```
 
@@ -112,4 +112,3 @@ Arguments:
 Options:
   -h, --help  display help for command
 ```
-

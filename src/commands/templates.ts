@@ -2,21 +2,23 @@ import { Command } from '@commander-js/extra-typings';
 import { requireAccountId } from '../lib/client';
 import { writeBinary } from '../lib/files';
 import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
+import { sanitizeTerminalText } from '../lib/terminal';
 
 const listCommand = addListOptions(
 	new Command('list').description('List templates in the workspace'),
+	'Sort by name (prefix with - for descending)',
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
 		const result = await withSpinner('Fetching templates', config, () =>
 			client.templates.list(listParams(opts), accountId),
 		);
-		printData(result.data, config, (rows) => {
+		printPaginatedData(result, config, (rows) => {
 			const table = renderTable(rows, [
 				{ header: 'ID', value: (r) => r.id },
 				{ header: 'NAME', value: (r) => r.name },
@@ -54,15 +56,20 @@ const downloadPageCommand = new Command('download-page')
 	.argument('<templateId>', 'Template ID')
 	.argument('<pageId>', 'Page ID')
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (templateId, pageId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const buffer = await withSpinner('Downloading page', config, () =>
 				client.templates.downloadPage(templateId, pageId, accountId),
 			);
-			const out = writeBinary(opts.output ?? `${templateId}-page-${pageId}.jpg`, buffer);
+			const out = writeBinary(opts.output ?? `${templateId}-page-${pageId}.jpg`, buffer, {
+				force: opts.force,
+			});
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 

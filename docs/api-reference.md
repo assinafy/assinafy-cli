@@ -1,2433 +1,7228 @@
-# Assinafy API — request / response reference
+# Assinafy API v1 — request/response reference
 
-> Auto-generated for the `@assinafy/cli` audit. Response bodies are **real payloads captured live** from the Assinafy **sandbox** (`https://sandbox.assinafy.com.br/v1`), most recently re-verified against the published [OpenAPI spec](https://api.assinafy.com.br/v1/docs/openapi.json) on 2026-08-08 (originally captured 2026-07-20), lightly trimmed. That re-verification pass corrected several endpoints previously mislabeled `_production-only_`/`_not exercised live_` — `workspaces.list/get/create/update/delete`, `documents.search`, and `documents.verify` all work against the sandbox with a plain API key. Endpoints that still require an interactive login (JWT), an existing user account, or a signer OTP access-code from a real emailed link were not exercised live and are documented from the API spec (marked _spec-only_ / _Not exercised live_).
+Generated from the official [Assinafy OpenAPI document](https://api.assinafy.com.br/v1/docs/openapi.json) and its native Markdown renderer. It contains every published operation and the complete examples supplied by Assinafy. Runtime-only SDK helpers are documented in [sdk-reference.md](./sdk-reference.md).
 
-## Conventions
+The renderer reuses a generic 400 envelope for several non-400 errors; top-level numeric `status` fields below are normalized to their documented HTTP response code. Example identifiers, contact details, and credentials are replaced with deterministic non-production placeholders.
 
-- **Base URL** — production `https://api.assinafy.com.br/v1`, sandbox `https://sandbox.assinafy.com.br/v1`. A sandbox key only works against the sandbox host. Override with `--base-url` / `ASSINAFY_BASE_URL`.
-- **Auth** — send `X-Api-Key: <key>` (preferred) or `Authorization: Bearer <jwt>` (legacy). Signer-side endpoints authenticate with a `signer-access-code` query parameter instead.
-- **Envelope** — every JSON response is wrapped as `{ "status": <http>, "message": "", "data": <payload> }`. List endpoints put the array in `data` and pagination in response headers.
-- **Pagination headers** (CORS-exposed) — `X-Pagination-Current-Page`, `X-Pagination-Page-Count` (last page), `X-Pagination-Per-Page`, `X-Pagination-Total-Count`. Rate limit: `X-Rate-Limit-*` (120/min).
-- **Errors** — non-2xx responses use the same envelope with a Portuguese `message`; the CLI prints `error: <message> (HTTP <code>)` and exits non-zero.
-- **DELETE** returns `200` with `data: []` (not `204`).
+- OpenAPI: 3.0.0
+- API document version: 1.0.0
+- Operations: 89
+- Contract SHA-256: `44da834c27173a3739d491fdacbb48decf9a170bd776a1c4edb4d0d4b108c22f`
 
+## Accounts
+
+### Get account
+
+`GET /v1/accounts/{accountId}`
+
+Retrieve a workspace account the user belongs to.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The account
+
+```json
+{
+    "data": {
+        "resource": "account",
+        "id": "example_id_1",
+        "name": "Acme Inc.",
+        "primary_color": "aabbcc",
+        "secondary_color": "112233",
+        "notification_sender_type": "User",
+        "roles": [
+            "owner"
+        ],
+        "is_delete_allowed": true,
+        "created_at": "2026-06-03T03:54:16Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update account
+
+`PUT /v1/accounts/{accountId}`
+
+Update a workspace account's profile.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string)
+- `notification_sender_type` (string) — Who signers see as the notification sender for documents in this account. `User` (default) shows the document owner's name; `Account` shows this account's name.
+
+Example:
+
+```json
+{
+    "name": "Acme Inc.",
+    "notification_sender_type": "Account"
+}
+```
+
+#### Responses
+
+##### 200 — The updated account
+
+```json
+{
+    "data": {
+        "resource": "account",
+        "id": "example_id_1",
+        "name": "Acme Inc.",
+        "primary_color": "aabbcc",
+        "secondary_color": "112233",
+        "notification_sender_type": "User",
+        "roles": [
+            "owner"
+        ],
+        "is_delete_allowed": true,
+        "created_at": "2026-06-03T03:54:16Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete account
+
+`DELETE /v1/accounts/{accountId}`
+
+Delete a workspace account.
+
+By default the request fails with `400` when the workspace has an active paid subscription — the `restrictions` array in the response lists each blocker by code so you can address them individually before retrying. Pass `force: true` to cancel any active paid subscription automatically and proceed with immediate deletion.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `force` (boolean) — When `true`, cancels any active paid subscription on this workspace and proceeds with deletion immediately. Defaults to `false`.
+
+Example:
+
+```json
+{
+    "force": false
+}
+```
+
+#### Responses
+
+##### 200 — Account deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Deletion blocked by active restrictions. Each `restrictions` entry describes one blocker; resolve them individually, or retry with `force: true` to cancel blocking subscriptions/documents automatically.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "restrictions": [
+        {
+            "code": "ActivePaidSubscription",
+            "message": "Account has an active paid subscription.",
+            "account_ids": [
+                "example_id_2"
+            ]
+        }
+    ],
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get account theme
+
+`GET /v1/accounts/{accountId}/theme`
+
+Retrieve account theme information (branding name, colors, and logo URL).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The theme
+
+```json
+{
+    "data": {
+        "account_name": "Account Name",
+        "primary_color": "aabbcc",
+        "secondary_color": "aabbcc",
+        "logo": "https://example.com/example-url-1"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download account logo
+
+`GET /v1/accounts/{accountId}/logo`
+
+Download the account logo image binary.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The logo image
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Upload account logo
+
+`POST /v1/accounts/{accountId}/logo`
+
+Upload or replace the account logo image.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`multipart/form-data`):
+
+- `file` (string, required)
+
+Example:
+
+```json
+{
+    "file": "string"
+}
+```
+
+#### Responses
+
+##### 200 — Logo updated
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete account logo
+
+`DELETE /v1/accounts/{accountId}/logo`
+
+Remove the account logo image.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — Logo deleted
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List my accounts
+
+`GET /v1/accounts`
+
+List the workspace accounts the authenticated user belongs to.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The user's accounts
+
+```json
+{
+    "data": [
+        {
+            "resource": "account",
+            "id": "example_id_1",
+            "name": "Acme Inc.",
+            "primary_color": "aabbcc",
+            "secondary_color": "112233",
+            "notification_sender_type": "User",
+            "roles": [
+                "owner"
+            ],
+            "is_delete_allowed": true,
+            "created_at": "2026-06-03T03:54:16Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create account
+
+`POST /v1/accounts`
+
+Create a new workspace account owned by the authenticated user.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required)
+- `notification_sender_type` (string) — Who signers see as the notification sender for documents in this account. `User` (default) shows the document owner's name; `Account` shows this account's name.
+
+Example:
+
+```json
+{
+    "name": "Acme Inc.",
+    "notification_sender_type": "Account"
+}
+```
+
+#### Responses
+
+##### 200 — The created account
+
+```json
+{
+    "data": {
+        "resource": "account",
+        "id": "example_id_1",
+        "name": "Acme Inc.",
+        "primary_color": "aabbcc",
+        "secondary_color": "112233",
+        "notification_sender_type": "User",
+        "roles": [
+            "owner"
+        ],
+        "is_delete_allowed": true,
+        "created_at": "2026-06-03T03:54:16Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Account document KPIs
+
+`GET /v1/accounts/{accountId}/stats`
+
+Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `granularity` | query | string | no | `monthly` (default) or `daily`. |
+| `month` | query | string | no | Target month `YYYY-MM` (required when `granularity=daily`). |
+
+#### Responses
+
+##### 200 — KPI series
+
+```json
+{
+    "data": [
+        {
+            "period": "2026-06",
+            "documents_uploaded": 42,
+            "documents_sent": 37,
+            "signature_requests": 61,
+            "signature_requests_email": "user1@example.com",
+            "signature_requests_whatsapp": 18,
+            "signature_requests_viewed": 44,
+            "signature_requests_completed": 52,
+            "documents_certified": 30
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
 
 ## Documents
 
-### `GET /v1/accounts/{accountId}/documents`
-SDK `documents.list` · CLI `assinafy documents list`
+### List document activities
 
-**Query params**
+`GET /v1/documents/{documentId}/activities`
+
+List the activities recorded for a document. Each entry carries an event-specific `payload` snapshot (keys vary per event) and the request `origin` (`ip`, `user-agent`).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — Document activities
+
 ```json
 {
-  "per-page": 3
+    "data": [
+        {
+            "id": 4,
+            "event": "assignment_created",
+            "message": "Assignment created by John Smith.",
+            "payload": {},
+            "origin": {
+                "ip": "192.0.2.1",
+                "user-agent": "string"
+            },
+            "created_at": "2022-07-19T19:28:13Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 401 — Missing or invalid credentials.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b095958259ae33cd4c7164df9",
-      "account_id": "102d25a489f34a275d31a16045fd",
-      "template_id": null,
-      "name": "audit-rename.pdf",
-      "status": "metadata_ready",
-      "artifacts": {
-        "original": "https://sandbox.assinafy.com.br/v1/documents/103b095958259ae33cd4c7164df9/download/original",
-        "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103b095958259ae33cd4c7164df9/thumbnail"
-      },
-      "is_closed": false,
-      "signing_url": "https://app-sandbox.assinafy.com.br/sign/103b095958259ae33cd4c7164df9",
-      "decline_reason": null,
-      "declined_by": null,
-      "tags": [],
-      "created_at": "2026-07-20T19:09:56Z",
-      "updated_at": "2026-07-20T20:05:57Z",
-      "assignment": null,
-      "pages": [
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List documents
+
+`GET /v1/accounts/{accountId}/documents`
+
+List documents of the workspace.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `status` | query | string | no | Status filter, e.g. `pending_signature`. |
+| `method` | query | string | no | Signature method filter. |
+| `search` | query | string | no | Partial match on document.name, signer.full_name, signer.email. |
+| `tags` | query | string | no | Comma-separated tag IDs; returns documents having ALL listed tags. |
+| `sort` | query | string | no | Sort by `name` or `updated_at`. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — A page of documents
+
+```json
+{
+    "data": [
         {
-          "id": "103b09598a31cbd6af3c2faf8d4a",
-          "number": 1,
-          "height": 1651,
-          "width": 1275,
-          "download_url": "https://sandbox.assinafy.com.br/v1/documents/103b095958259ae33cd4c7164df9/pages/103b09598a31cbd6af3c2faf8d4a/download"
+            "resource": "document",
+            "id": "example_id_3",
+            "account_id": "example_id_4",
+            "template_id": null,
+            "name": "document.pdf",
+            "status": "metadata_ready",
+            "artifacts": {
+                "original": "https://example.com/example-url-2"
+            },
+            "is_closed": false,
+            "signing_url": "https://example.com/example-url-3",
+            "decline_reason": null,
+            "declined_by": null,
+            "tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "assignment": {
+                "resource": "assignment",
+                "id": "example_id_6",
+                "sender_email": "user2@example.com",
+                "method": "virtual",
+                "expires_at": null,
+                "message": "string",
+                "signers": [
+                    {
+                        "verification_method": "Email",
+                        "notification_methods": [
+                            "Email"
+                        ],
+                        "step": 1,
+                        "notified": true,
+                        "completed": true,
+                        "notification_history": [
+                            {
+                                "event": "signature_request",
+                                "status": "sent",
+                                "error_code": "string",
+                                "error_message": "string",
+                                "sent_at": "2026-07-07T12:00:00Z",
+                                "failed_at": null
+                            }
+                        ],
+                        "resource": "signer",
+                        "id": "example_id_7",
+                        "full_name": "Example User",
+                        "email": "user3@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "has_accepted_terms": false
+                    }
+                ],
+                "copy_receivers": [
+                    {}
+                ],
+                "items": [
+                    {
+                        "id": "example_id_5",
+                        "page": null,
+                        "signer": {},
+                        "field": {},
+                        "display_settings": null,
+                        "value": null,
+                        "completed": true
+                    }
+                ],
+                "summary": {
+                    "signer_count": 0,
+                    "completed_count": 0,
+                    "signers": [
+                        {}
+                    ]
+                },
+                "signing_urls": [
+                    {
+                        "signer_id": "example_id_5",
+                        "url": "https://example.com/example-url-4"
+                    }
+                ]
+            },
+            "pages": [
+                {
+                    "id": "example_id_8",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-5"
+                }
+            ],
+            "created_at": "2026-06-03T03:54:16Z",
+            "updated_at": "2026-06-03T03:54:16Z"
         }
-      ]
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Upload and create document
+
+`POST /v1/accounts/{accountId}/documents`
+
+Create a document from an uploaded file. Maximum file size 25MB; maximum 2000 pages.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`multipart/form-data`):
+
+- `file` (string, required) — The PDF file to upload.
+
+Example:
+
+```json
+{
+    "file": "string"
+}
+```
+
+#### Responses
+
+##### 200 — The created document
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
-    {
-      "id": "19f80dc86e3cce2d39d7edc9e28",
-      "account_id": "102d25a489f34a275d31a16045fd",
-      "template_id": null,
-      "name": "rename-me.pdf",
-      "status": "metadata_ready",
-      "artifacts": {
-        "original": "https://sandbox.assinafy.com.br/v1/documents/19f80dc86e3cce2d39d7edc9e28/download/original",
-        "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/19f80dc86e3cce2d39d7edc9e28/thumbnail"
-      },
-      "is_closed": false,
-      "signing_url": "https://app-sandbox.assinafy.com.br/sign/19f80dc86e3cce2d39d7edc9e28",
-      "decline_reason": null,
-      "declined_by": null,
-      "tags": [],
-      "created_at": "2026-07-20T18:49:23Z",
-      "updated_at": "2026-07-20T19:04:05Z",
-      "assignment": null,
-      "pages": [
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Search documents (lightweight)
+
+`GET /v1/accounts/{accountId}/documents/search`
+
+Search documents of the workspace, returning a compact representation (no expanded assignment/pages).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `search` | query | string | no | Search term. |
+| `status` | query | string | no |  |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — Matching documents
+
+```json
+{
+    "data": [
         {
-          "id": "103b089d7a414c8491c3a59a06bc",
-          "number": 1,
-          "height": 1651,
-          "width": 1275,
-          "download_url": "https://sandbox.assinafy.com.br/v1/documents/19f80dc86e3cce2d39d7edc9e28/pages/103b089d7a414c8491c3a59a06bc/download"
+            "resource": "document",
+            "id": "example_id_3",
+            "account_id": "example_id_4",
+            "template_id": null,
+            "name": "document.pdf",
+            "status": "metadata_ready",
+            "artifacts": {
+                "original": "https://example.com/example-url-2"
+            },
+            "is_closed": false,
+            "signing_url": "https://example.com/example-url-3",
+            "decline_reason": null,
+            "declined_by": null,
+            "tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "assignment": {
+                "resource": "assignment",
+                "id": "example_id_6",
+                "sender_email": "user2@example.com",
+                "method": "virtual",
+                "expires_at": null,
+                "message": "string",
+                "signers": [
+                    {
+                        "verification_method": "Email",
+                        "notification_methods": [
+                            "Email"
+                        ],
+                        "step": 1,
+                        "notified": true,
+                        "completed": true,
+                        "notification_history": [
+                            {
+                                "event": "signature_request",
+                                "status": "sent",
+                                "error_code": "string",
+                                "error_message": "string",
+                                "sent_at": "2026-07-07T12:00:00Z",
+                                "failed_at": null
+                            }
+                        ],
+                        "resource": "signer",
+                        "id": "example_id_7",
+                        "full_name": "Example User",
+                        "email": "user3@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "has_accepted_terms": false
+                    }
+                ],
+                "copy_receivers": [
+                    {}
+                ],
+                "items": [
+                    {
+                        "id": "example_id_5",
+                        "page": null,
+                        "signer": {},
+                        "field": {},
+                        "display_settings": null,
+                        "value": null,
+                        "completed": true
+                    }
+                ],
+                "summary": {
+                    "signer_count": 0,
+                    "completed_count": 0,
+                    "signers": [
+                        {}
+                    ]
+                },
+                "signing_urls": [
+                    {
+                        "signer_id": "example_id_5",
+                        "url": "https://example.com/example-url-4"
+                    }
+                ]
+            },
+            "pages": [
+                {
+                    "id": "example_id_8",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-5"
+                }
+            ],
+            "created_at": "2026-06-03T03:54:16Z",
+            "updated_at": "2026-06-03T03:54:16Z"
         }
-      ]
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List document statuses
+
+`GET /v1/documents/statuses`
+
+The supported document statuses and whether a document in each status can be deleted.
+
+| Status | Deletable | Description |
+|--------|-----------|-------------|
+| `uploading` | no | The document upload is in process. |
+| `uploaded` | no | The document has been uploaded. |
+| `metadata_processing` | no | The initial processing is under way. |
+| `metadata_ready` | yes | The initial processing has been completed. |
+| `expired` | yes | The signature deadline has been reached. |
+| `certificating` | no | The document has been signed and is being certificated. |
+| `certificated` | no | The document is certificated. |
+| `rejected_by_signer` | yes | A signer declined signing the document. |
+| `pending_signature` | yes | The document is waiting for signatures. |
+| `rejected_by_user` | yes | The signature process was cancelled by a user. |
+| `failed` | yes | The document processing has failed. |
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — Supported statuses
+
+```json
+{
+    "data": [
+        {
+            "code": "metadata_ready",
+            "deletable": true
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get document
+
+`GET /v1/documents/{documentId}`
+
+Get a document by its ID. `decline_reason` is only present when the access token belongs to the document's creator.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — The document
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
-    {
-      "id": "103b08fc5b88cfaea7415cd43220",
-      "account_id": "102d25a489f34a275d31a16045fd",
-      "template_id": null,
-      "name": "sdk-audit-signing-flow.pdf",
-      "status": "pending_signature",
-      "artifacts": {
-        "original": "https://sandbox.assinafy.com.br/v1/documents/103b08fc5b88cfaea7415cd43220/download/original",
-        "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103b08fc5b88cfaea7415cd43220/thumbnail"
-      },
-      "is_closed": false,
-      "signing_url": "https://app-sandbox.assinafy.com.br/sign/103b08fc5b88cfaea7415cd43220",
-      "decline_reason": null,
-      "declined_by": null,
-      "tags": [],
-      "created_at": "2026-07-20T18:59:47Z",
-      "updated_at": "2026-07-20T18:59:50Z",
-      "assignment": {
-        "id": "103b08fcd80621f8a804cffdd164",
-        "sender_email": "bill@febacapital.com",
-        "method": "virtual",
-        "expires_at": null,
-        "message": "SDK audit signing-flow test — safe to sign",
-        "signers": [
-          {
-            "id": "19e6b92e7895332ed9708535d8c",
-            "full_name": "Audit Bill A2",
-            "email": "bill@febacapital.com",
-            "whatsapp_phone_number": null,
-            "has_accepted_terms": false,
-            "completed": false,
-            "notification_history": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete document
+
+`DELETE /v1/documents/{documentId}`
+
+Delete a document by its ID. Only documents in a deletable status can be removed (see GET /v1/documents/statuses).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — Document deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Rename document
+
+`PATCH /v1/documents/{documentId}`
+
+Update a document's name. Only allowed before any assignment is created (i.e. while the document is in `uploaded` or `metadata_ready` status and has no signers yet); once the signature process has started or the document is certificated, the name is locked. The name is normalized: diacritics are removed and unsupported characters are replaced with dashes.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required)
+
+Example:
+
+```json
+{
+    "name": "Service agreement.pdf"
+}
+```
+
+#### Responses
+
+##### 200 — The updated document
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download document artifact
+
+`GET /v1/documents/{documentId}/download/{artifactName}`
+
+Download a document artifact. Artifact types: original, certificated, certificate-page, pades, bundle. The pades artifact (signers' ICP-Brasil signatures + platform certification box) is only present on documents that had digital-certificate signers; `bundle` is a zip of the original, certificated and certificate-page artifacts, plus the pades artifact on documents that have one.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `artifactName` | path | string | yes | Artifact type. |
+
+#### Responses
+
+##### 200 — The artifact binary
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Verify a signed document
+
+`GET /v1/documents/{documentSignatureHash}/verify`
+
+Verify a document by its signature hash (found on a signed document) and return its certification details. Always returns `200`: when the hash is not found or the document is not signed, `is_valid` is `false`, the other fields are `null`, and `message` explains why. Public endpoint.
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentSignatureHash` | path | string | yes | The document signature hash. |
+
+#### Responses
+
+##### 200 — Verification result
+
+```json
+{
+    "data": {
+        "hash": "example_id_9",
+        "id": "example_id_10",
+        "status": "certificated",
+        "page_count": "1",
+        "signer_count": "1",
+        "completed_count": 1,
+        "completed_at": "2023-01-27T19:27:44Z",
+        "verified_at": "2023-01-27T19:27:46Z",
+        "is_valid": true,
+        "message": ""
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List document tags
+
+`GET /v1/accounts/{accountId}/documents/{documentId}/tags`
+
+List the tags attached to a document.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | The document ID. |
+
+#### Responses
+
+##### 200 — Attached tags
+
+```json
+{
+    "data": [
+        {
+            "resource": "tag",
+            "id": "example_id_11",
+            "name": "Contracts",
+            "color": "ff8800",
+            "created_at": "2026-05-14T12:00:00Z",
+            "updated_at": "2026-05-14T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Replace document tags
+
+`PUT /v1/accounts/{accountId}/documents/{documentId}/tags`
+
+Replace the full set of tags attached to a document.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | The document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `tags` (array) — Tag IDs.
+
+Example:
+
+```json
+{
+    "tags": [
+        "string"
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — Updated tags
+
+```json
+{
+    "data": [
+        {
+            "resource": "tag",
+            "id": "example_id_11",
+            "name": "Contracts",
+            "color": "ff8800",
+            "created_at": "2026-05-14T12:00:00Z",
+            "updated_at": "2026-05-14T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Attach document tags
+
+`POST /v1/accounts/{accountId}/documents/{documentId}/tags`
+
+Attach one or more tags to a document.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | The document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `tags` (array) — Tag IDs.
+
+Example:
+
+```json
+{
+    "tags": [
+        "string"
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — Attached tags
+
+```json
+{
+    "data": [
+        {
+            "resource": "tag",
+            "id": "example_id_11",
+            "name": "Contracts",
+            "color": "ff8800",
+            "created_at": "2026-05-14T12:00:00Z",
+            "updated_at": "2026-05-14T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Detach document tag
+
+`DELETE /v1/accounts/{accountId}/documents/{documentId}/tags/{tagId}`
+
+Detach a single tag from a document.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | The document ID. |
+| `tagId` | path | string | yes | The tag ID. |
+
+#### Responses
+
+##### 200 — Tag detached
+
+```json
+{
+    "data": {
+        "detached": true
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download document thumbnail
+
+`GET /v1/documents/{documentId}/thumbnail`
+
+Download the thumbnail image of a document's first page.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — The thumbnail image
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download document page
+
+`GET /v1/documents/{documentId}/pages/{pageId}/download`
+
+Download the rendered image of a specific document page.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `pageId` | path | string | yes | The page ID. |
+
+#### Responses
+
+##### 200 — The page image
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create document from template
+
+`POST /v1/accounts/{accountId}/templates/{templateId}/documents`
+
+Generate a new document from a template, creating its assignment in the same call. Provide one signer entry per template role; the signers must already exist in the account.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `templateId` | path | string | yes | The template ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `signers` (array, required) — One entry per template role.
+- `editor_fields` (array) — Editor field values to bake into the generated document.
+- `name` (string) — Title for the document. Defaults to the template name.
+- `message` (string) — Optional message sent to signers.
+- `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default.
+- `tags` (array) — Tag names to attach to the new document. Names that don't exist are auto-created. The template's default-document-tags are always applied; values here are merged on top (duplicates removed).
+
+Example:
+
+```json
+{
+    "signers": [
+        {
+            "role_id": "example_id_12",
+            "id": "example_id_13",
             "verification_method": "Email",
             "notification_methods": [
-              "Email"
+                "Email"
             ],
-            "step": 1,
-            "notified": true
-          }
-        ],
-        "copy_receivers": [],
-        "items": [
-          {
-            "id": "19f80e615a03f3f729aaaba7991",
-            "page": null,
-            "signer": {
-              "id": "19e6b92e7895332ed9708535d8c",
-              "full_name": "Audit Bill A2",
-              "email": "bill@febacapital.com",
-              "whatsapp_phone_number": null,
-              "has_accepted_terms": false
-            },
-            "field": {
-              "id": "102d25a48bc7357b93f9b8e01b24",
-              "name": "Virtual",
-              "type": "virtual",
-              "regex": null,
-              "is_pre_defined": true,
-              "is_active": true,
-              "is_required": false,
-              "is_standard": false,
-              "is_read_only": false,
-              "is_visible": true
-            },
-            "display_settings": [],
-            "value": null,
-            "completed": false
-          }
-        ],
-        "summary": {
-          "signer_count": 1,
-          "completed_count": 0,
-          "signers": [
-            {
-              "id": "19e6b92e7895332ed9708535d8c",
-              "full_name": "Audit Bill A2",
-              "email": "bill@febacapital.com",
-              "whatsapp_phone_number": null,
-              "has_accepted_terms": false,
-              "completed": false
-            }
-          ]
-        },
-        "signing_urls": [
-          {
-            "signer_id": "19e6b92e7895332ed9708535d8c",
-            "url": "https://app-sandbox.assinafy.com.br/sign/103b08fc5b88cfaea7415cd43220?email=bill%40febacapital.com"
-          }
-        ]
-      },
-      "pages": [
-        {
-          "id": "103b08fc914aa41826dbca394b0d",
-          "number": 1,
-          "height": 1651,
-          "width": 1275,
-          "download_url": "https://sandbox.assinafy.com.br/v1/documents/103b08fc5b88cfaea7415cd43220/pages/103b08fc914aa41826dbca394b0d/download"
+            "step": 1
         }
-      ]
-    }
-  ]
+    ],
+    "editor_fields": [
+        {
+            "field_id": "example_id_14",
+            "value": "Field value"
+        }
+    ],
+    "name": "sample-contract-one-page.pdf",
+    "message": "Message to the signers",
+    "expires_at": "2024-07-30T23:59:00Z",
+    "tags": [
+        "string"
+    ]
 }
 ```
 
-### `POST /v1/accounts/{accountId}/documents`
-SDK `documents.upload` · CLI `assinafy documents upload`
+#### Responses
 
-**Request body** — `multipart/form-data` with `file` (PDF) + `name`.
+##### 200 — The created document
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "document",
-    "id": "103b0beff2fabee48849e2a07aba",
-    "account_id": "102d25a489f34a275d31a16045fd",
-    "template_id": null,
-    "name": "audit-audit0720.pdf",
-    "status": "uploaded",
-    "artifacts": {
-      "original": "https://sandbox.assinafy.com.br/v1/documents/103b0beff2fabee48849e2a07aba/download/original"
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
-    "is_closed": false,
-    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103b0beff2fabee48849e2a07aba",
-    "decline_reason": null,
-    "declined_by": null,
-    "tags": [],
-    "created_at": "2026-07-20T20:22:18Z",
-    "updated_at": "2026-07-20T20:22:19Z",
-    "pages": []
-  }
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `GET /v1/accounts/{accountId}/documents/{documentId}/tags`
-SDK `documents.listTags` · CLI `assinafy documents tags`
+##### 400 — One or more fields failed validation.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b0befba1a60a208722043f168",
-      "name": "audit-audit0720",
-      "color": "ff3366",
-      "created_at": "2026-07-20T20:22:17Z",
-      "updated_at": "2026-07-20T20:22:17Z"
-    }
-  ]
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `POST /v1/accounts/{accountId}/documents/{documentId}/tags`
-SDK `documents.addTags` · CLI `assinafy documents tags-add`
+##### 401 — Missing or invalid credentials.
 
-**Request body**
 ```json
 {
-  "tags": [
-    "audit-audit0720"
-  ]
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Response 200**
+##### 500 — Unexpected server error.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b0befba1a60a208722043f168",
-      "name": "audit-audit0720",
-      "color": "ff3366",
-      "created_at": "2026-07-20T20:22:17Z",
-      "updated_at": "2026-07-20T20:22:17Z"
-    }
-  ]
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `PUT /v1/accounts/{accountId}/documents/{documentId}/tags`
-SDK `documents.replaceTags` · CLI `assinafy documents tags-set`
+### Estimate document-from-template cost
 
-**Request body**
+`POST /v1/accounts/{accountId}/templates/{templateId}/documents/estimate-cost`
+
+Estimate the cost of creating a document from a template without creating it. Contact information is not required — only the role_id and optionally a verification or notification method are needed. Each document always consumes 1 document from the plan's monthly allowance; if exhausted, the ExtraDocument cost is charged from credits (needs_extra_document = true). blocking_reason may be PendingPayment, InsufficientDocuments, or InsufficientCredits.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `templateId` | path | string | yes | The template ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `signers` (array, required) — One entry per template role (editor roles are ignored for cost calculation).
+
+Example:
+
 ```json
 {
-  "tags": [
-    "audit-audit0720"
-  ]
+    "signers": [
+        {
+            "role_id": "example_id_12",
+            "verification_method": "Whatsapp",
+            "notification_methods": [
+                "Whatsapp"
+            ]
+        }
+    ]
 }
 ```
 
-**Response 200**
+#### Responses
+
+##### 200 — Cost estimate
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b0befba1a60a208722043f168",
-      "name": "audit-audit0720",
-      "color": "ff3366",
-      "created_at": "2026-07-20T20:22:17Z",
-      "updated_at": "2026-07-20T20:22:17Z"
-    }
-  ]
-}
-```
-
-### `DELETE /v1/accounts/{accountId}/documents/{documentId}/tags/{tagId}`
-SDK `documents.detachTag` · CLI `assinafy documents tags-remove`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/accounts/{accountId}/documents/search`
-SDK `documents.search` · CLI `assinafy documents search`
-
-**Query params**
-```json
-{
-  "per-page": 3
-}
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103e4af8c99c19de9cabda1d22c4",
-      "account_id": "102d25a489f34a275d31a16045fd",
-      "template_id": null,
-      "name": "asn-sdk-khqs4ilsgu7n4lIRa8I.pdf",
-      "status": "metadata_ready",
-      "artifacts": {
-        "original": "https://sandbox.assinafy.com.br/v1/documents/103e4af8c99c19de9cabda1d22c4/download/original",
-        "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103e4af8c99c19de9cabda1d22c4/thumbnail"
-      },
-      "is_closed": false,
-      "signing_url": "https://app-sandbox.assinafy.com.br/sign/103e4af8c99c19de9cabda1d22c4",
-      "decline_reason": null,
-      "declined_by": null,
-      "tags": [],
-      "created_at": "2026-08-05T23:39:43Z",
-      "updated_at": "2026-08-05T23:39:45Z"
-    }
-  ]
-}
-```
-
-Pagination metadata is returned in headers as usual. `sort` is accepted and
-functional here (live-verified: `sort=name` changes the returned order/set)
-even though the published OpenAPI spec only documents `search`, `status`,
-`page`, `per-page` for this endpoint — the CLI's `--sort` flag is intentional,
-not a bug.
-
-### `POST /v1/accounts/{accountId}/templates/{templateId}/documents`
-SDK `documents.createFromTemplate` · CLI `assinafy documents create-from-template`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "document",
-    "id": "103b0c051d758b83b92366ec437c",
-    "account_id": "102d25a489f34a275d31a16045fd",
-    "template_id": "103b0716216a0a1d57f5a6ac63a4",
-    "name": "Audit From Template",
-    "status": "uploaded",
-    "artifacts": {
-      "original": "https://sandbox.assinafy.com.br/v1/documents/103b0c051d758b83b92366ec437c/download/original"
+    "data": {
+        "documents": 1,
+        "credits": 0,
+        "needs_extra_document": true,
+        "extra_document_cost": 1,
+        "total_credits": 0,
+        "breakdown": [
+            {
+                "code": "NotificationWhatsapp",
+                "name": "Whatsapp Notification",
+                "cost": 0.9,
+                "quantity": 2,
+                "unit_cost": 0.45
+            }
+        ],
+        "document_balance": 0,
+        "credit_balance": 0,
+        "has_sufficient_resources": true,
+        "blocking_reason": null,
+        "message": "string"
     },
-    "is_closed": false,
-    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103b0c051d758b83b92366ec437c",
-    "decline_reason": null,
-    "declined_by": null,
-    "tags": [],
-    "created_at": "2026-07-20T20:24:37Z",
-    "updated_at": "2026-07-20T20:24:38Z",
-    "assignment": null,
-    "pages": []
-  }
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `POST /v1/accounts/{accountId}/templates/{templateId}/documents/estimate-cost`
-SDK `documents.estimateCostFromTemplate` · CLI `assinafy documents estimate-template-cost`
+##### 401 — Missing or invalid credentials.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "documents": 1,
-    "credits": 0,
-    "needs_extra_document": false,
-    "extra_document_cost": 0,
-    "total_credits": 0,
-    "breakdown": [],
-    "document_balance": 66,
-    "credit_balance": 0,
-    "has_sufficient_resources": true,
-    "blocking_reason": null,
-    "message": null
-  }
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `DELETE /v1/documents/{documentId}`
-SDK `documents.delete` · CLI `assinafy documents delete`
+##### 500 — Unexpected server error.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": []
-}
-```
-
-### `GET /v1/documents/{documentId}`
-SDK `documents.details` · CLI `assinafy documents get`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "document",
-    "id": "103ee2156b2e79aeb01e4d7b50d5",
-    "account_id": "102d25a489f34a275d31a16045fd",
-    "template_id": null,
-    "name": "audit-live-1786226707046.pdf",
-    "status": "metadata_processing",
-    "artifacts": {
-      "original": "https://sandbox.assinafy.com.br/v1/documents/103ee2156b2e79aeb01e4d7b50d5/download/original"
-    },
-    "is_closed": false,
-    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103ee2156b2e79aeb01e4d7b50d5",
-    "decline_reason": null,
-    "declined_by": null,
-    "tags": [],
-    "created_at": "2026-08-08T22:05:07Z",
-    "updated_at": "2026-08-08T22:05:07Z",
-    "assignment": null,
-    "pages": []
-  }
-}
-```
-
-### `PATCH /v1/documents/{documentId}`
-SDK `documents.rename` · CLI `assinafy documents rename`
-
-Only allowed once the document has finished processing (`metadata_ready` or
-later) **and** before any assignment is active — the API returns the same
-400 message for both "not ready yet" and "already has an assignment".
-
-**Request body**
-```json
-{ "name": "audit-renamed-ready-1786226819392.pdf" }
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "document",
-    "id": "103ee2260ce5d7264e6aeb8c8302",
-    "account_id": "102d25a489f34a275d31a16045fd",
-    "template_id": null,
-    "name": "audit-renamed-ready-1786226819392.pdf",
-    "status": "metadata_ready",
-    "artifacts": {
-      "original": "https://sandbox.assinafy.com.br/v1/documents/103ee2260ce5d7264e6aeb8c8302/download/original",
-      "thumbnail": "https://sandbox.assinafy.com.br/v1/documents/103ee2260ce5d7264e6aeb8c8302/thumbnail"
-    },
-    "is_closed": false,
-    "signing_url": "https://app-sandbox.assinafy.com.br/sign/103ee2260ce5d7264e6aeb8c8302",
-    "decline_reason": null,
-    "declined_by": null,
-    "tags": [],
-    "created_at": "2026-08-08T22:06:56Z",
-    "updated_at": "2026-08-08T22:06:59Z"
-  }
-}
-```
-
-**Response 400** — once an assignment is active (or before the document reaches `metadata_ready`)
-```json
-{
-  "status": 400,
-  "data": null,
-  "message": "Document cannot be renamed after the signature process has started."
-}
-```
-
-### `GET /v1/documents/{documentId}/activities`
-SDK `documents.activities` · CLI `assinafy documents activities`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": 15728,
-      "event": "document_metadata_ready",
-      "message": "Documento processado.",
-      "payload": [],
-      "origin": null,
-      "created_at": "2026-07-20T20:22:21Z"
-    },
-    {
-      "id": 15727,
-      "event": "document_uploaded",
-      "message": "Documento criado.",
-      "payload": [],
-      "origin": {
-        "ip": "99.75.13.162",
-        "user-agent": "assinafy-cli"
-      },
-      "created_at": "2026-07-20T20:22:19Z"
-    }
-  ]
-}
-```
-
-### `GET /v1/documents/{documentId}/download/{artifactName}`
-SDK `documents.download` · CLI `assinafy documents download`
-
-**Response 200** — binary 599 bytes
-
-### `GET /v1/documents/{documentId}/pages/{pageId}/download`
-SDK `documents.downloadPage` · CLI `assinafy documents download-page`
-
-**Response 200** — binary 41809 bytes
-
-### `GET /v1/documents/{documentId}/thumbnail`
-SDK `documents.thumbnail` · CLI `assinafy documents thumbnail`
-
-**Response 200** — binary 4950 bytes
-
-### `GET /v1/documents/{documentSignatureHash}/verify`
-SDK `documents.verify` · CLI `assinafy documents verify`
-
-Public, unauthenticated endpoint. Always returns `200`, even for an unknown
-hash — `is_valid` is `false` and every other field but `hash`/`verified_at`
-is `null`.
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "hash": "FE32EDDADE7CBDDCBB934E7402047450B0E59C02",
-    "id": null,
-    "status": null,
-    "page_count": null,
-    "signer_count": null,
-    "completed_count": null,
-    "completed_at": null,
-    "verified_at": "2026-08-08T22:22:53Z",
-    "is_valid": false,
-    "message": "Documento não assinado ou não encontrado."
-  }
-}
-```
-
-### `GET /v1/documents/statuses`
-SDK `documents.statuses` · CLI `assinafy documents statuses`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "code": "uploading",
-      "deletable": false
-    },
-    {
-      "code": "uploaded",
-      "deletable": false
-    },
-    {
-      "code": "metadata_processing",
-      "deletable": false
-    },
-    {
-      "code": "metadata_ready",
-      "deletable": true
-    },
-    {
-      "code": "expired",
-      "deletable": true
-    },
-    {
-      "code": "certificating",
-      "deletable": false
-    },
-    {
-      "code": "certificated",
-      "deletable": false
-    },
-    {
-      "code": "rejected_by_signer",
-      "deletable": true
-    },
-    {
-      "code": "pending_signature",
-      "deletable": true
-    },
-    {
-      "code": "rejected_by_user",
-      "deletable": true
-    },
-    {
-      "code": "failed",
-      "deletable": true
-    }
-  ]
-}
-```
-
-## Signers
-
-### `GET /v1/accounts/{accountId}/signers`
-SDK `signers.list` · CLI `assinafy signers list`
-
-**Query params**
-```json
-{
-  "search": "bill@febacapital.com",
-  "per-page": 100
-}
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "19e6b92e7895332ed9708535d8c",
-      "full_name": "Audit Bill A2",
-      "email": "bill@febacapital.com",
-      "whatsapp_phone_number": null,
-      "has_accepted_terms": false
-    }
-  ]
-}
-```
-
-### `POST /v1/accounts/{accountId}/signers`
-SDK `signers.create` · CLI `assinafy signers create`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `DELETE /v1/accounts/{accountId}/signers/{signerId}`
-SDK `signers.delete` · CLI `assinafy signers delete`
-
-**Response 400**
-```json
-{
-  "status": 400,
-  "data": null,
-  "message": "Signatário associado a document ativo (sdk-audit-signing-flow.pdf)."
-}
-```
-
-### `GET /v1/accounts/{accountId}/signers/{signerId}`
-SDK `signers.get` · CLI `assinafy signers get`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "signer",
-    "id": "19e6b92e7895332ed9708535d8c",
-    "full_name": "Audit Bill A2",
-    "email": "bill@febacapital.com",
-    "whatsapp_phone_number": null,
-    "has_accepted_terms": false
-  }
-}
-```
-
-### `PUT /v1/accounts/{accountId}/signers/{signerId}`
-SDK `signers.update` · CLI `assinafy signers update`
-
-**Request body**
-```json
-{
-  "full_name": "Audit Bill A2"
-}
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "signer",
-    "id": "19e6b92e7895332ed9708535d8c",
-    "full_name": "Audit Bill A2",
-    "email": "bill@febacapital.com",
-    "whatsapp_phone_number": null,
-    "has_accepted_terms": false
-  }
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
 ## Assignments
 
-### `GET /v1/assignments`
+### List assignments
 
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
+`GET /v1/assignments`
 
-### `POST /v1/documents/{documentId}/assignments`
-SDK `assignments.create` · CLI `assinafy assignments create`
+List the assignments belonging to the authenticated user's current account.
 
-**Request body**
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — A page of assignments
+
 ```json
 {
-  "method": "virtual",
-  "signers": [
-    {
-      "id": "19e6b92e7895332ed9708535d8c",
-      "verification_method": "Email",
-      "notification_methods": [
-        "Email"
-      ]
-    }
-  ]
+    "data": [
+        {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        }
+    ],
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 401 — Missing or invalid credentials.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "assignment",
-    "id": "103b0bf0f0884d7e0d7265f4402f",
-    "sender_email": "bill@febacapital.com",
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create assignment (request signatures)
+
+`POST /v1/documents/{documentId}/assignments`
+
+Request signatures on a document. Use `method: virtual` to sign without input fields, or `method: collect` to place input fields on specific pages.
+
+For **virtual**, the document may be in `uploaded`, `metadata_processing` or `metadata_ready`; it is promoted to `pending_signature` automatically once metadata processing completes. For **collect**, the document must be in `metadata_ready` (fields reference specific pages).
+
+`step` controls signing order: signers sharing a step sign in parallel, and the next step is notified only after the previous step completes. If supplied, every signer must supply it and values must be contiguous starting at 1.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `method` (string, required)
+- `signers` (array, required)
+- `entries` (array) — Required for `collect`: field placements per page.
+- `message` (string) — Text included in the invitation email.
+- `expires_at` (string) — ISO 8601; default is no expiration.
+- `copy_receivers` (array) — Signer IDs that only receive a copy.
+
+Example — Create without input (method: virtual, with verification & notification methods):
+
+```json
+{
     "method": "virtual",
-    "expires_at": null,
-    "message": null,
     "signers": [
-      {
-        "id": "19e6b92e7895332ed9708535d8c",
-        "full_name": "Audit Bill A2",
-        "email": "bill@febacapital.com",
-        "whatsapp_phone_number": null,
-        "has_accepted_terms": false,
-        "completed": false,
-        "notification_history": [],
-        "verification_method": "Email",
-        "notification_methods": [
-          "Email"
-        ],
-        "step": 1,
-        "notified": true
-      }
-    ],
-    "copy_receivers": [],
-    "items": [
-      {
-        "id": "19f8131b1ae81bdabcd552a598a",
-        "page": null,
-        "signer": {
-          "id": "19e6b92e7895332ed9708535d8c",
-          "full_name": "Audit Bill A2",
-          "email": "bill@febacapital.com",
-          "whatsapp_phone_number": null,
-          "has_accepted_terms": false
-        },
-        "field": {
-          "id": "102d25a48bc7357b93f9b8e01b24",
-          "name": "Virtual",
-          "type": "virtual",
-          "regex": null,
-          "is_pre_defined": true,
-          "is_active": true,
-          "is_required": false,
-          "is_standard": false,
-          "is_read_only": false,
-          "is_visible": true
-        },
-        "display_settings": [],
-        "value": null,
-        "completed": false
-      }
-    ],
-    "summary": {
-      "signer_count": 1,
-      "completed_count": 0,
-      "signers": [
         {
-          "id": "19e6b92e7895332ed9708535d8c",
-          "full_name": "Audit Bill A2",
-          "email": "bill@febacapital.com",
-          "whatsapp_phone_number": null,
-          "has_accepted_terms": false,
-          "completed": false
+            "id": "example_id_15",
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "step": 1
+        },
+        {
+            "id": "example_id_16",
+            "verification_method": "Whatsapp",
+            "notification_methods": [
+                "Whatsapp"
+            ],
+            "step": 2
         }
-      ]
-    },
-    "signing_urls": [
-      {
-        "signer_id": "19e6b92e7895332ed9708535d8c",
-        "url": "https://app-sandbox.assinafy.com.br/sign/103b0beff2fabee48849e2a07aba?email=bill%40febacapital.com"
-      }
-    ]
-  }
+    ],
+    "expires_at": "2021-09-30T21:00:00Z"
 }
 ```
 
-### `PUT /v1/documents/{documentId}/assignments/{assignmentId}/reset-expiration`
-SDK `assignments.resetExpiration` · CLI `assinafy assignments reset-expiration`
+Example — Create with input fields (method: collect, with verification & notification methods):
 
-**Request body**
 ```json
 {
-  "expires_at": "2027-01-01T00:00:00Z"
+    "method": "collect",
+    "signers": [
+        {
+            "id": "example_id_17",
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "step": 1
+        },
+        {
+            "id": "example_id_18",
+            "verification_method": "Whatsapp",
+            "notification_methods": [
+                "Whatsapp"
+            ],
+            "step": 2
+        }
+    ],
+    "entries": [
+        {
+            "page_id": "example_id_19",
+            "fields": [
+                {
+                    "signer_id": "example_id_17",
+                    "field_id": "example_id_20",
+                    "display_settings": {
+                        "left": 69,
+                        "top": 282,
+                        "width": 421,
+                        "height": 45.86,
+                        "fontFamily": "Arial",
+                        "fontSize": 18,
+                        "backgroundColor": "rgb(185, 218, 255)"
+                    }
+                },
+                {
+                    "signer_id": "example_id_18",
+                    "field_id": "example_id_20",
+                    "display_settings": {
+                        "left": 639,
+                        "top": 285,
+                        "width": 421,
+                        "height": 45.86,
+                        "fontFamily": "Arial",
+                        "fontSize": 18,
+                        "backgroundColor": "rgb(195, 230, 203)"
+                    }
+                }
+            ]
+        }
+    ],
+    "expires_at": "2021-09-30T21:00:00Z"
 }
 ```
 
-**Response 200**
+Example — Create without input (method: virtual):
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "assignment",
-    "id": "103b0bf0f0884d7e0d7265f4402f",
-    "sender_email": "bill@febacapital.com",
     "method": "virtual",
-    "expires_at": "2027-01-01T00:00:00Z",
-    "message": null,
     "signers": [
-      {
-        "id": "19e6b92e7895332ed9708535d8c",
-        "full_name": "Audit Bill A2",
-        "email": "bill@febacapital.com",
-        "whatsapp_phone_number": null,
-        "has_accepted_terms": false,
-        "completed": false,
-        "notification_history": [],
-        "verification_method": "Email",
-        "notification_methods": [
-          "Email"
+        {
+            "id": "example_id_15",
+            "step": 1
+        },
+        {
+            "id": "example_id_16",
+            "step": 2
+        }
+    ],
+    "expires_at": "2021-09-30T21:00:00Z"
+}
+```
+
+Example — Create with input fields (method: collect):
+
+```json
+{
+    "method": "collect",
+    "signers": [
+        {
+            "id": "example_id_17",
+            "step": 1
+        },
+        {
+            "id": "example_id_18",
+            "step": 2
+        }
+    ],
+    "entries": [
+        {
+            "page_id": "example_id_19",
+            "fields": [
+                {
+                    "signer_id": "example_id_17",
+                    "field_id": "example_id_20",
+                    "display_settings": {
+                        "left": 69,
+                        "top": 282,
+                        "width": 421,
+                        "height": 45.86,
+                        "fontFamily": "Arial",
+                        "fontSize": 18,
+                        "backgroundColor": "rgb(185, 218, 255)"
+                    }
+                },
+                {
+                    "signer_id": "example_id_18",
+                    "field_id": "example_id_20",
+                    "display_settings": {
+                        "left": 639,
+                        "top": 285,
+                        "width": 421,
+                        "height": 45.86,
+                        "fontFamily": "Arial",
+                        "fontSize": 18,
+                        "backgroundColor": "rgb(195, 230, 203)"
+                    }
+                }
+            ]
+        }
+    ],
+    "expires_at": "2021-09-30T21:00:00Z"
+}
+```
+
+#### Responses
+
+##### 200 — The created assignment
+
+**Virtual assignment created**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "assignment",
+        "id": "example_id_21",
+        "sender_email": "user2@example.com",
+        "method": "virtual",
+        "expires_at": "2021-09-30T21:00:00Z",
+        "message": null,
+        "signers": [
+            {
+                "id": "example_id_15",
+                "full_name": "Example User",
+                "email": "user4@example.com",
+                "verification_method": "Email",
+                "notification_methods": [
+                    "Email"
+                ],
+                "step": 1,
+                "notified": true,
+                "completed": false
+            },
+            {
+                "id": "example_id_16",
+                "full_name": "Example User",
+                "email": "user5@example.com",
+                "verification_method": "Whatsapp",
+                "notification_methods": [
+                    "Whatsapp"
+                ],
+                "step": 2,
+                "notified": false,
+                "completed": false
+            }
         ],
-        "step": 1,
-        "notified": true
-      }
-    ],
-    "copy_receivers": [],
-    "items": [
-      {
-        "id": "19f8131b1ae81bdabcd552a598a",
-        "page": null,
-        "signer": {
-          "id": "19e6b92e7895332ed9708535d8c",
-          "full_name": "Audit Bill A2",
-          "email": "bill@febacapital.com",
-          "whatsapp_phone_number": null,
-          "has_accepted_terms": false
+        "copy_receivers": [],
+        "items": [
+            {
+                "id": "example_id_22",
+                "page": null,
+                "signer": {
+                    "id": "example_id_15",
+                    "full_name": "Example User",
+                    "email": "user4@example.com"
+                },
+                "field": {
+                    "id": "example_id_23",
+                    "name": "Virtual",
+                    "type": "virtual"
+                },
+                "display_settings": [],
+                "value": null,
+                "completed": false
+            }
+        ],
+        "summary": {
+            "signer_count": 2,
+            "completed_count": 0,
+            "signers": [
+                {
+                    "id": "example_id_15",
+                    "full_name": "Example User",
+                    "email": "user4@example.com",
+                    "completed": false
+                },
+                {
+                    "id": "example_id_16",
+                    "full_name": "Example User",
+                    "email": "user5@example.com",
+                    "completed": false
+                }
+            ]
         },
-        "field": {
-          "id": "102d25a48bc7357b93f9b8e01b24",
-          "name": "Virtual",
-          "type": "virtual",
-          "regex": null,
-          "is_pre_defined": true,
-          "is_active": true,
-          "is_required": false,
-          "is_standard": false,
-          "is_read_only": false,
-          "is_visible": true
+        "signing_urls": [
+            {
+                "signer_id": "example_id_15",
+                "url": "https://example.com/example-url-6"
+            },
+            {
+                "signer_id": "example_id_16",
+                "url": "https://example.com/example-url-7"
+            }
+        ]
+    }
+}
+```
+
+**Collect assignment created**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "assignment",
+        "id": "example_id_6",
+        "sender_email": "user2@example.com",
+        "method": "collect",
+        "expires_at": "2021-09-30T21:00:00Z",
+        "message": null,
+        "signers": [
+            {
+                "id": "example_id_17",
+                "full_name": "Example User",
+                "email": "user6@example.com",
+                "verification_method": "Email",
+                "notification_methods": [
+                    "Email"
+                ],
+                "step": 1,
+                "notified": true,
+                "completed": false
+            },
+            {
+                "id": "example_id_18",
+                "full_name": "Example User",
+                "email": "user7@example.com",
+                "verification_method": "Whatsapp",
+                "notification_methods": [
+                    "Whatsapp"
+                ],
+                "step": 2,
+                "notified": false,
+                "completed": false
+            }
+        ],
+        "copy_receivers": [],
+        "items": [
+            {
+                "id": "example_id_24",
+                "page": {
+                    "id": "example_id_19",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-8"
+                },
+                "signer": {
+                    "id": "example_id_17",
+                    "full_name": "Example User",
+                    "email": "user6@example.com"
+                },
+                "field": {
+                    "id": "example_id_20",
+                    "name": "Signature",
+                    "type": "signature"
+                },
+                "display_settings": {
+                    "top": 282,
+                    "left": 69,
+                    "width": 421,
+                    "height": 45.86,
+                    "fontSize": 18,
+                    "fontFamily": "Arial",
+                    "backgroundColor": "rgb(185, 218, 255)"
+                },
+                "value": null,
+                "completed": false
+            },
+            {
+                "id": "example_id_25",
+                "page": {
+                    "id": "example_id_19",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-8"
+                },
+                "signer": {
+                    "id": "example_id_18",
+                    "full_name": "Example User",
+                    "email": "user7@example.com"
+                },
+                "field": {
+                    "id": "example_id_20",
+                    "name": "Signature",
+                    "type": "signature"
+                },
+                "display_settings": {
+                    "top": 285,
+                    "left": 639,
+                    "width": 421,
+                    "height": 45.86,
+                    "fontSize": 18,
+                    "fontFamily": "Arial",
+                    "backgroundColor": "rgb(195, 230, 203)"
+                },
+                "value": null,
+                "completed": false
+            }
+        ],
+        "summary": {
+            "signer_count": 2,
+            "completed_count": 0,
+            "signers": [
+                {
+                    "id": "example_id_17",
+                    "full_name": "Example User",
+                    "email": "user6@example.com",
+                    "completed": false
+                },
+                {
+                    "id": "example_id_18",
+                    "full_name": "Example User",
+                    "email": "user7@example.com",
+                    "completed": false
+                }
+            ]
         },
-        "display_settings": [],
-        "value": null,
-        "completed": false
-      }
-    ],
-    "summary": {
-      "signer_count": 1,
-      "completed_count": 0,
-      "signers": [
+        "signing_urls": [
+            {
+                "signer_id": "example_id_17",
+                "url": "https://example.com/example-url-9"
+            },
+            {
+                "signer_id": "example_id_18",
+                "url": "https://example.com/example-url-10"
+            }
+        ]
+    }
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Estimate assignment cost
+
+`POST /v1/documents/{documentId}/assignments/estimate-cost`
+
+Estimate the cost of creating an assignment without creating it, returning a cost breakdown and the current account balances. Signer IDs are not required — only the verification/notification method affects cost. Each assignment consumes 1 document from the plan allowance; if exhausted, an extra document is charged from credits (`needs_extra_document` = true). `blocking_reason` may be `PendingPayment`, `InsufficientDocuments` or `InsufficientCredits`.
+
+##### Pricing
+
+Per-unit costs (in credits) used to build the estimate:
+
+| Item | Cost |
+|------|------|
+| Extra document | 1 credit |
+| Email notification | 0 credits |
+| WhatsApp notification | 0.45 credits |
+| Digital certificate signature (per signer) | 2 credits |
+
+A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `method` (string)
+- `signers` (array) — Required for `virtual`; each entry may be `{}` to default to Email.
+- `entries` (array) — Required for `collect`.
+
+Example:
+
+```json
+{
+    "method": "virtual",
+    "signers": [
         {
-          "id": "19e6b92e7895332ed9708535d8c",
-          "full_name": "Audit Bill A2",
-          "email": "bill@febacapital.com",
-          "whatsapp_phone_number": null,
-          "has_accepted_terms": false,
-          "completed": false
+            "verification_method": "Whatsapp",
+            "notification_methods": [
+                "Email"
+            ]
         }
-      ]
-    },
-    "signing_urls": [
-      {
-        "signer_id": "19e6b92e7895332ed9708535d8c",
-        "url": "https://app-sandbox.assinafy.com.br/sign/103b0beff2fabee48849e2a07aba?email=bill%40febacapital.com"
-      }
+    ],
+    "entries": [
+        {}
     ]
-  }
 }
 ```
 
-### `POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/estimate-resend-cost`
-SDK `assignments.estimateResendCost` · CLI `assinafy assignments estimate-resend-cost`
+#### Responses
 
-Re-verified live on 2026-08-08: still returns the smaller shape below, not the
-larger `estimate-cost`-style schema (`documents`, `needs_extra_document`,
-`total_credits`, …) that the published OpenAPI spec's schema for this specific
-operation documents — that schema appears to be copy-pasted from the sibling
-`estimate-cost` endpoint. The SDK's `IResendCostEstimate` type follows the
-live-verified shape.
+##### 200 — Cost estimate and balances
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "total": 0,
-    "breakdown": [
-      {
-        "code": "NotificationEmailResend",
-        "name": "Email Notification Resend",
-        "cost": 0
-      }
+    "data": {
+        "documents": 1,
+        "credits": 0,
+        "needs_extra_document": true,
+        "extra_document_cost": 1,
+        "total_credits": 0,
+        "breakdown": [
+            {
+                "code": "NotificationWhatsapp",
+                "name": "Whatsapp Notification",
+                "cost": 0.9,
+                "quantity": 2,
+                "unit_cost": 0.45
+            }
+        ],
+        "document_balance": 0,
+        "credit_balance": 0,
+        "has_sufficient_resources": true,
+        "blocking_reason": null,
+        "message": "string"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Resend signature request
+
+`PUT /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/resend`
+
+Resend the signature-request notification to a specific signer of an assignment.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — Resend result
+
+```json
+{
+    "data": {
+        "is_sent": true,
+        "document_id": "example_id_5",
+        "signer_id": "example_id_5"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Estimate resend cost
+
+`POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/estimate-resend-cost`
+
+Estimate the cost of resending the signature request to a signer.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — Cost estimate
+
+```json
+{
+    "data": {
+        "documents": 1,
+        "credits": 0,
+        "needs_extra_document": true,
+        "extra_document_cost": 1,
+        "total_credits": 0,
+        "breakdown": [
+            {
+                "code": "NotificationWhatsapp",
+                "name": "Whatsapp Notification",
+                "cost": 0.9,
+                "quantity": 2,
+                "unit_cost": 0.45
+            }
+        ],
+        "document_balance": 0,
+        "credit_balance": 0,
+        "has_sufficient_resources": true,
+        "blocking_reason": null,
+        "message": "string"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Reset assignment expiration
+
+`PUT /v1/documents/{documentId}/assignments/{assignmentId}/reset-expiration`
+
+Set a new expiration date for an assignment.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `expires_at` (string) — New expiration date (ISO 8601).
+
+Example:
+
+```json
+{
+    "expires_at": "2026-12-31T23:59:59Z"
+}
+```
+
+#### Responses
+
+##### 200 — The updated assignment
+
+```json
+{
+    "data": {
+        "resource": "assignment",
+        "id": "example_id_6",
+        "sender_email": "user2@example.com",
+        "method": "virtual",
+        "expires_at": null,
+        "message": "string",
+        "signers": [
+            {
+                "verification_method": "Email",
+                "notification_methods": [
+                    "Email"
+                ],
+                "step": 1,
+                "notified": true,
+                "completed": true,
+                "notification_history": [
+                    {
+                        "event": "signature_request",
+                        "status": "sent",
+                        "error_code": "string",
+                        "error_message": "string",
+                        "sent_at": "2026-07-07T12:00:00Z",
+                        "failed_at": null
+                    }
+                ],
+                "resource": "signer",
+                "id": "example_id_7",
+                "full_name": "Example User",
+                "email": "user3@example.com",
+                "whatsapp_phone_number": "+5500000000000",
+                "has_accepted_terms": false
+            }
+        ],
+        "copy_receivers": [
+            {}
+        ],
+        "items": [
+            {
+                "id": "example_id_5",
+                "page": null,
+                "signer": {},
+                "field": {},
+                "display_settings": null,
+                "value": null,
+                "completed": true
+            }
+        ],
+        "summary": {
+            "signer_count": 0,
+            "completed_count": 0,
+            "signers": [
+                {}
+            ]
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-4"
+            }
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List WhatsApp notifications
+
+`GET /v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
+
+List all WhatsApp notification messages sent for an assignment. The response includes the rendered template text split into `header`, `body` and `buttons` — exactly what the signer would see. In sandbox/stage, WhatsApp messages are simulated (no real delivery) and button URLs include access/verification codes you can use to simulate the signing flow.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+
+#### Responses
+
+##### 200 — WhatsApp notifications
+
+```json
+{
+    "data": [
+        {
+            "sent_at": 1710000000,
+            "header": "Documento para assinatura: Contrato de Servico",
+            "body": "string",
+            "buttons": [
+                {
+                    "text": "Abrir documento"
+                }
+            ],
+            "phone_number": "+5500000000000",
+            "signer_id": "example_id_26"
+        }
     ],
-    "credit_balance": 0,
-    "has_sufficient_credits": true
-  }
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `PUT /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/resend`
-SDK `assignments.resendNotification` · CLI `assinafy assignments resend`
+##### 401 — Missing or invalid credentials.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "is_sent": true,
-    "document_id": "103b0beff2fabee48849e2a07aba",
-    "signer_id": "19e6b92e7895332ed9708535d8c"
-  }
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `GET /v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
-SDK `assignments.listWhatsAppNotifications` · CLI `assinafy assignments whatsapp-notifications`
+##### 500 — Unexpected server error.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": []
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `POST /v1/documents/{documentId}/assignments/estimate-cost`
-SDK `assignments.estimateCost` · CLI `assinafy assignments estimate-cost`
+## Authentication
 
-Live-verified for `method: "collect"` with real `entries` (field placements) —
-CLI: `assinafy assignments estimate-cost <documentId> --method collect --entries <json>`.
+### Login
 
-**Request body**
+`POST /v1/login`
+
+Authenticate with email and password and receive a JWT access token.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `email` (string, required)
+- `password` (string, required)
+
+Example:
+
 ```json
 {
-  "method": "collect",
-  "signers": [
-    { "id": "19e6b92e7895332ed9708535d8c" }
-  ],
-  "entries": [
-    {
-      "page_id": "103ee3806b47c84cbb6514254d52",
-      "fields": [
-        { "signer_id": "19e6b92e7895332ed9708535d8c", "field_id": "102d25a48bcf142065f2b06cf821" }
-      ]
-    }
-  ]
+    "email": "user8@example.com",
+    "password": "example_secret"
 }
 ```
 
-**Response 200**
+#### Responses
+
+##### 200 — Access token, user and accounts
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "documents": 1,
-    "credits": 0,
-    "needs_extra_document": false,
-    "extra_document_cost": 0,
-    "total_credits": 0,
-    "breakdown": [],
-    "document_balance": 44,
-    "credit_balance": 0,
-    "has_sufficient_resources": true,
-    "blocking_reason": null,
-    "message": null
-  }
+    "data": {
+        "access_token": "example_credential",
+        "user": {
+            "id": "example_id_27",
+            "name": "John Smith",
+            "email": "user9@example.com",
+            "telephone": "+5500000000000",
+            "government_id": "00000000000",
+            "is_email_verified": false,
+            "has_accepted_terms": true,
+            "created_at": "2023-03-03T11:51:34Z",
+            "to_be_deleted_at": null
+        },
+        "accounts": [
+            {
+                "id": "example_id_1",
+                "name": "JS",
+                "roles": [
+                    "owner"
+                ],
+                "is_delete_allowed": true,
+                "created_at": "2023-03-03T11:51:34Z"
+            }
+        ]
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-## Templates
+##### 400 — One or more fields failed validation.
 
-### `GET /v1/accounts/{accountId}/templates`
-SDK `templates.list` · CLI `assinafy templates list`
-
-**Query params**
 ```json
 {
-  "per-page": 3
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Response 200**
+##### 500 — Unexpected server error.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b0716216a0a1d57f5a6ac63a4",
-      "name": "sdk-live-4763.pdf",
-      "document_name": "sdk-live-4763.pdf",
-      "message": null,
-      "status": "Ready",
-      "pages": [
-        {
-          "id": "103b07167080eeee6abb709dfa0e",
-          "number": 1,
-          "height": 1651,
-          "width": 1275,
-          "download_url": "https://sandbox.assinafy.com.br/v1/accounts/102d25a489f34a275d31a16045fd/templates/103b0716216a0a1d57f5a6ac63a4/pages/103b07167080eeee6abb709dfa0e/download",
-          "fields": []
-        }
-      ],
-      "roles": [
-        {
-          "id": "103b0716357cccee66f6047f3577",
-          "name": "TemplateEditor",
-          "assignment_type": "Editor",
-          "created_at": "2026-07-20T18:06:41Z",
-          "updated_at": "2026-07-20T18:06:41Z"
-        }
-      ],
-      "tags": [],
-      "created_at": "2026-07-20T18:06:40Z",
-      "updated_at": "2026-07-20T18:06:43Z"
-    },
-    {
-      "id": "103b049520c0ee1a3ce53b1a61af",
-      "name": "rust-tpl-5039ca9d.pdf",
-      "document_name": "rust-tpl-5039ca9d.pdf",
-      "message": null,
-      "status": "Ready",
-      "pages": [
-        {
-          "id": "103b04957252a242575e64f0a6f8",
-          "number": 1,
-          "height": 1651,
-          "width": 1275,
-          "download_url": "https://sandbox.assinafy.com.br/v1/accounts/102d25a489f34a275d31a16045fd/templates/103b049520c0ee1a3ce53b1a61af/pages/103b04957252a242575e64f0a6f8/download",
-          "fields": []
-        }
-      ],
-      "roles": [
-        {
-          "id": "103b04953b5ff446a508cfad2d43",
-          "name": "TemplateEditor",
-          "assignment_type": "Editor",
-          "created_at": "2026-07-20T16:56:40Z",
-          "updated_at": "2026-07-20T16:56:40Z"
-        }
-      ],
-      "tags": [],
-      "created_at": "2026-07-20T16:56:39Z",
-      "updated_at": "2026-07-20T16:56:43Z"
-    }
-  ]
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-## Tags
+### Request password reset
 
-### `GET /v1/accounts/{accountId}/tags`
-SDK `tags.list` · CLI `assinafy tags list`
+`PUT /v1/authentication/request-password-reset`
 
-**Response 200**
+Send the user an email with instructions to reset their password. Used when the password was forgotten or never set.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `email` (string, required)
+
+Example:
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103aa221874346e6b3de41688526",
-      "name": "103aa22178d23e45c0b2834ec21f",
-      "color": null,
-      "created_at": "2026-07-18T19:03:45Z",
-      "updated_at": "2026-07-18T19:03:45Z"
-    },
-    {
-      "id": "103aa252123d3bf1843a317ee0e6",
-      "name": "103aa251f5e1d1a93beb82985b0d",
-      "color": null,
-      "created_at": "2026-07-18T19:09:03Z",
-      "updated_at": "2026-07-18T19:09:03Z"
-    },
-    {
-      "id": "103b0befba1a60a208722043f168",
-      "name": "audit-audit0720",
-      "color": "3366ff",
-      "created_at": "2026-07-20T20:22:17Z",
-      "updated_at": "2026-07-20T20:22:17Z"
-    },
-    {
-      "id": "1031f6544019bafc410c6c5317f4",
-      "name": "audit-doc-tag",
-      "color": null,
-      "created_at": "2026-06-05T16:33:35Z",
-      "updated_at": "2026-06-05T16:33:35Z"
-    },
-    {
-      "id": "103b091793180ce6263a2ff837f1",
-      "name": "audit-flow-tag",
-      "color": null,
-      "created_at": "2026-07-20T19:02:45Z",
-      "updated_at": "2026-07-20T19:02:45Z"
-    },
-    {
-      "id": "103b09179c5d3bd512c0d44ecc90",
-      "name": "audit-flow-tag2",
-      "color": null,
-      "created_at": "2026-07-20T19:02:45Z",
-      "updated_at": "2026-07-20T19:02:45Z"
-    },
-    {
-      "id": "1031ff85779c8ff727799331a11f",
-      "name": "audit-tag-1780692632720-doc2",
-      "color": null,
-      "created_at": "2026-06-05T20:50:37Z",
-      "updated_at": "2026-06-05T20:50:37Z"
-    },
-    {
-      "id": "19e6f495aaf89c08cb9a751a74e",
-      "name": "cs-test-1779983538112-extra",
-      "color": null,
-      "created_at": "2026-05-28T15:52:18Z",
-      "updated_at": "2026-05-28T15:52:18Z"
-    },
-    {
-      "id": "103058e7c602462cce9cfc952516",
-      "name": "cs-test-1779983605172-extra",
-      "color": null,
-      "created_at": "2026-05-28T15:53:25Z",
-      "updated_at": "2026-05-28T15:53:25Z"
-    },
-    {
-      "id": "103058ed00f4c3965d0fd479bcd7",
-      "name": "cs-test-1779983639506-extra",
-      "color": null,
-      "created_at": "2026-05-28T15:54:00Z",
-      "updated_at": "2026-05-28T15:54:00Z"
-    },
-    {
-      "id": "1030596cd53e178f1a120fffcad4",
-      "name": "cs-test-1779984476736-extra",
-      "color": null,
-      "created_at": "2026-05-28T16:07:57Z",
-      "updated_at": "2026-05-28T16:07:57Z"
-    },
-    {
-      "id": "10305a7f5ab23e4d6655b68e99e4",
-      "name": "cs-test-1779986276436-extra",
-      "color": null,
-      "created_at": "2026-05-28T16:37:57Z",
-      "updated_at": "2026-05-28T16:37:57Z"
-    },
-    {
-      "id": "19e6f75546169dfd436a00e55f4",
-      "name": "cs-test-1779986420280-extra",
-      "color": null,
-      "created_at": "2026-05-28T16:40:20Z",
-      "updated_at": "2026-05-28T16:40:20Z"
-    },
-    {
-      "id": "1031f730a2996dbc49175f559d80",
-      "name": "cs-test-1780678659730-extra",
-      "color": null,
-      "created_at": "2026-06-05T16:57:40Z",
-      "updated_at": "2026-06-05T16:57:40Z"
-    },
-    {
-      "id": "1031f7c4217fa43b370751f0be0c",
-      "name": "cs-test-1780679626365-extra",
-      "color": null,
-      "created_at": "2026-06-05T17:13:46Z",
-      "updated_at": "2026-06-05T17:13:46Z"
-    },
-    {
-      "id": "1031f7eb7a7aef884e76f99ca965",
-      "name": "cs-test-1780679884174-extra",
-      "color": null,
-      "created_at": "2026-06-05T17:18:04Z",
-      "updated_at": "2026-06-05T17:18:04Z"
-    },
-    {
-      "id": "103a6dc93c941e526bcef2354842",
-      "name": "cs-test-1784313604547-extra",
-      "color": null,
-      "created_at": "2026-07-17T18:40:05Z",
-      "updated_at": "2026-07-17T18:40:05Z"
-    },
-    {
-      "id": "103a6dcfa885d1d5d004b2afd439",
-      "name": "cs-test-1784313646669-extra",
-      "color": null,
-      "created_at": "2026-07-17T18:40:47Z",
-      "updated_at": "2026-07-17T18:40:47Z"
-    },
-    {
-      "id": "103b03a53c0b5c0ddd885c0391c8",
-      "name": "null",
-      "color": null,
-      "created_at": "2026-07-20T16:30:27Z",
-      "updated_at": "2026-07-20T16:30:27Z"
-    },
-    {
-      "id": "103a09822ecde8ca61249d417deb",
-      "name": "probe-autocreated-1",
-      "color": null,
-      "created_at": "2026-07-15T19:56:07Z",
-      "updated_at": "2026-07-15T19:56:07Z"
-    }
-  ]
+    "email": "user8@example.com"
 }
 ```
 
-### `POST /v1/accounts/{accountId}/tags`
-SDK `tags.create` · CLI `assinafy tags create`
+#### Responses
 
-**Request body**
+##### 200 — Reset email sent
+
 ```json
 {
-  "name": "audit-audit0720",
-  "color": "3366ff"
+    "data": {
+        "email": "user8@example.com"
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 500 — Unexpected server error.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "tag",
-    "id": "103b0befba1a60a208722043f168",
-    "name": "audit-audit0720",
-    "color": "3366ff",
-    "created_at": "2026-07-20T20:22:17Z",
-    "updated_at": "2026-07-20T20:22:17Z"
-  }
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `DELETE /v1/accounts/{accountId}/tags/{tagId}`
-SDK `tags.delete` · CLI `assinafy tags delete`
+### Reset password
 
-**Response 409**
+`PUT /v1/authentication/reset-password`
+
+Reset the user's password using the token received by email.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `email` (string, required)
+- `token` (string) — Token received by email.
+- `new_password` (string, required)
+
+Example:
+
 ```json
 {
-  "status": 409,
-  "data": null,
-  "message": "A tag está em uso. Passe force=true para desvincular e excluir."
+    "email": "user8@example.com",
+    "token": "example_secret",
+    "new_password": "example_secret"
 }
 ```
 
-### `PUT /v1/accounts/{accountId}/tags/{tagId}`
-SDK `tags.update` · CLI `assinafy tags update`
+#### Responses
 
-**Request body**
+##### 200 — Password reset
+
 ```json
 {
-  "color": "ff3366"
+    "data": {
+        "email": "user8@example.com"
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 400 — One or more fields failed validation.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "tag",
-    "id": "103b0befba1a60a208722043f168",
-    "name": "audit-audit0720",
-    "color": "ff3366",
-    "created_at": "2026-07-20T20:22:17Z",
-    "updated_at": "2026-07-20T20:22:17Z"
-  }
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Change password
+
+`PUT /v1/authentication/change-password`
+
+Change the authenticated user's password.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `email` (string, required)
+- `password` (string, required) — The current password.
+- `new_password` (string, required) — The new password.
+
+Example:
+
+```json
+{
+    "email": "user8@example.com",
+    "password": "example_secret",
+    "new_password": "example_secret"
+}
+```
+
+#### Responses
+
+##### 200 — Password changed
+
+```json
+{
+    "data": {
+        "email": "user8@example.com"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Social login
+
+`POST /v1/authentication/social-login`
+
+Exchange a token from a social login provider (currently only `google`) for an Assinafy access token.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `provider` (string, required)
+- `token` (string, required) — Access/ID token from the provider.
+- `has_accepted_terms` (boolean, required)
+
+Example:
+
+```json
+{
+    "provider": "google",
+    "token": "example_secret",
+    "has_accepted_terms": true
+}
+```
+
+#### Responses
+
+##### 200 — Access token, user and accounts
+
+```json
+{
+    "data": {
+        "access_token": "example_credential",
+        "user": {
+            "id": "example_id_27",
+            "name": "John Smith",
+            "email": "user9@example.com",
+            "telephone": "+5500000000000",
+            "government_id": "00000000000",
+            "is_email_verified": false,
+            "has_accepted_terms": true,
+            "created_at": "2023-03-03T11:51:34Z",
+            "to_be_deleted_at": null
+        },
+        "accounts": [
+            {
+                "id": "example_id_1",
+                "name": "JS",
+                "roles": [
+                    "owner"
+                ],
+                "is_delete_allowed": true,
+                "created_at": "2023-03-03T11:51:34Z"
+            }
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Link social login
+
+`POST /v1/auth/link-social-login`
+
+Link a social-login provider account to the authenticated user.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `provider` (string, required)
+- `token` (string, required) — Token from the provider.
+
+Example:
+
+```json
+{
+    "provider": "google",
+    "token": "example_secret"
+}
+```
+
+#### Responses
+
+##### 200 — Provider linked
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get API key
+
+`GET /v1/users/api-keys`
+
+Retrieve a masked version of the existing API key. The full key cannot be retrieved. Returns `null` when no key has been generated yet.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The masked API key
+
+```json
+{
+    "data": {
+        "api_key": "example_credential"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create API key
+
+`POST /v1/users/api-keys`
+
+Generate an API key for the user, used via the `X-Api-Key` header. Generating a new key deletes the previous one. Never use an API key from a front-end application.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `password` (string, required) — The user's password.
+
+Example:
+
+```json
+{
+    "password": "example_secret"
+}
+```
+
+#### Responses
+
+##### 200 — The generated API key (shown in full only once)
+
+```json
+{
+    "data": {
+        "api_key": "example_credential"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete API key
+
+`DELETE /v1/users/api-keys`
+
+Delete the existing API key.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — API key deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
 ## Fields
 
-### `GET /v1/accounts/{accountId}/fields`
-SDK `fields.list` · CLI `assinafy fields list`
+### List fields
 
-**Query params**
+`GET /v1/accounts/{accountId}/fields`
+
+List the field definitions of a workspace.
+
+When `include_standard` is enabled, records of type `signature`, `initial` and `signatureDate` are also returned.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `include_inactive` | query | boolean | no | Include inactive field definitions. |
+| `include_standard` | query | boolean | no | Include standard field types (signature, initial, signatureDate). |
+
+#### Responses
+
+##### 200 — Field definitions
+
 ```json
 {
-  "include_standard": true
+    "data": [
+        {
+            "resource": "field",
+            "id": "example_id_20",
+            "name": "Signature",
+            "type": "signature",
+            "regex": "string",
+            "is_pre_defined": true,
+            "is_active": true,
+            "is_required": true,
+            "is_standard": true,
+            "is_read_only": true,
+            "is_visible": true
+        }
+    ],
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 401 — Missing or invalid credentials.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "102d25a48bcf142065f2b06cf821",
-      "name": "Assinatura",
-      "type": "signature",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": true,
-      "is_standard": true,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48bda4bdadde1b8a25991",
-      "name": "Iniciais",
-      "type": "initial",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": true,
-      "is_standard": true,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48be34910f816a334b715",
-      "name": "Data de Assinatura",
-      "type": "signatureDate",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": true,
-      "is_standard": true,
-      "is_read_only": true,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48bec03ebcf3b5f651998",
-      "name": "Nome",
-      "type": "personName",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48bf5816b9029b0ca6043",
-      "name": "CPF",
-      "type": "cpf",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c0696b8eb3930ed7328",
-      "name": "CEP",
-      "type": "postalCode",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c0e2d4e79477d673896",
-      "name": "E-mail",
-      "type": "email",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c167c598ba72cf8de7b",
-      "name": "CNPJ",
-      "type": "cnpj",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c1eba4b8bbe539fee47",
-      "name": "Nome da empresa",
-      "type": "companyName",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c289d354aae9a660dc3",
-      "name": "Campo Texto",
-      "type": "text",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "102d25a48c38c5e8f8e47da33fd0",
-      "name": "Data",
-      "type": "date",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "103b039c7f87786dab7e9bbc926f",
-      "name": "AuditField",
-      "type": "text",
-      "regex": null,
-      "is_pre_defined": false,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "19e1d5d413384a5b41793814b69",
-      "name": "Número de Telefone",
-      "type": "phoneNumber",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    },
-    {
-      "id": "19e1d5d413844a943708cefde68",
-      "name": "Número",
-      "type": "number",
-      "regex": null,
-      "is_pre_defined": true,
-      "is_active": true,
-      "is_required": false,
-      "is_standard": false,
-      "is_read_only": false,
-      "is_visible": true
-    }
-  ]
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `POST /v1/accounts/{accountId}/fields`
-SDK `fields.create` · CLI `assinafy fields create`
+##### 500 — Unexpected server error.
 
-`regex` must be a **PCRE pattern with delimiters** (e.g. `/^[0-9]+$/`), not a
-bare pattern — live-verified: `"^[0-9]+$"` (no delimiters) is rejected with
-`400 Padrão RegEx inválido.` while `"/^[0-9]+$/"` succeeds. The SDK passes the
-string through unchanged; supply the delimiters yourself.
-
-**Request body**
 ```json
 {
-  "type": "text",
-  "name": "audit-field-audit0720",
-  "is_required": false
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Response 200**
+### Create field
+
+`POST /v1/accounts/{accountId}/fields`
+
+Create a field definition in the workspace.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required)
+- `type` (string, required)
+- `regex` (string)
+- `is_required` (boolean)
+
+Example:
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "field_definition",
-    "id": "103b0befc7f0554d7c660c028229",
-    "name": "audit-field-audit0720",
+    "name": "Full name",
     "type": "text",
-    "regex": null,
-    "is_pre_defined": false,
-    "is_active": true,
-    "is_required": false,
-    "is_standard": false,
-    "is_read_only": false,
-    "is_visible": true
-  }
+    "regex": "string",
+    "is_required": true
 }
 ```
 
-### `DELETE /v1/accounts/{accountId}/fields/{fieldId}`
-SDK `fields.delete` · CLI `assinafy fields delete`
+#### Responses
 
-**Response 200**
+##### 200 — The created field
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": []
+    "data": {
+        "resource": "field",
+        "id": "example_id_20",
+        "name": "Signature",
+        "type": "signature",
+        "regex": "string",
+        "is_pre_defined": true,
+        "is_active": true,
+        "is_required": true,
+        "is_standard": true,
+        "is_read_only": true,
+        "is_visible": true
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `GET /v1/accounts/{accountId}/fields/{fieldId}`
-SDK `fields.get` · CLI `assinafy fields get`
+##### 400 — One or more fields failed validation.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "field_definition",
-    "id": "103b0befc7f0554d7c660c028229",
-    "name": "audit-field-audit0720",
-    "type": "text",
-    "regex": null,
-    "is_pre_defined": false,
-    "is_active": true,
-    "is_required": false,
-    "is_standard": false,
-    "is_read_only": false,
-    "is_visible": true
-  }
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `PUT /v1/accounts/{accountId}/fields/{fieldId}`
-SDK `fields.update` · CLI `assinafy fields update` (also `--clear-regex`, live-verified)
+##### 401 — Missing or invalid credentials.
 
-**Request body**
 ```json
 {
-  "name": "audit-field-audit0720-v2"
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Response 200**
+##### 500 — Unexpected server error.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "field_definition",
-    "id": "103b0befc7f0554d7c660c028229",
-    "name": "audit-field-audit0720-v2",
-    "type": "text",
-    "regex": null,
-    "is_pre_defined": false,
-    "is_active": true,
-    "is_required": false,
-    "is_standard": false,
-    "is_read_only": false,
-    "is_visible": true
-  }
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Clearing a regex** — pass `{ "regex": null }` (`assinafy fields update <id> --clear-regex`):
+### Get field
+
+`GET /v1/accounts/{accountId}/fields/{fieldId}`
+
+Retrieve a single field definition.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `fieldId` | path | string | yes | The field ID. |
+
+#### Responses
+
+##### 200 — The field
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "field_definition",
-    "id": "103ee388025db5ab059e7c25163b",
-    "name": "audit-clear-regex-1786229135707",
-    "type": "text",
-    "regex": null,
-    "is_pre_defined": false,
-    "is_active": true,
-    "is_required": true,
-    "is_standard": false,
-    "is_read_only": false,
-    "is_visible": true
-  }
+    "data": {
+        "resource": "field",
+        "id": "example_id_20",
+        "name": "Signature",
+        "type": "signature",
+        "regex": "string",
+        "is_pre_defined": true,
+        "is_active": true,
+        "is_required": true,
+        "is_standard": true,
+        "is_read_only": true,
+        "is_visible": true
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `POST /v1/accounts/{accountId}/fields/{fieldId}/validate`
-SDK `fields.validate` · CLI `assinafy fields validate`
+##### 404 — The requested resource does not exist.
 
-The `signer-access-code` query parameter (for signer-side validation) is not
-in the published spec for this endpoint, but is live-verified: a bogus code
-returns `401` ("Credenciais inválidas."), the same behavior as every other
-`signer-access-code`-gated endpoint.
-
-**Request body**
 ```json
 {
-  "value": "some-value"
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-**Response 200**
+##### 401 — Missing or invalid credentials.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "type": "text",
-    "success": true,
-    "error_message": ""
-  }
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `POST /v1/accounts/{accountId}/fields/validate-multiple`
-SDK `fields.validateMultiple` · CLI `assinafy fields validate-multiple`
+##### 500 — Unexpected server error.
 
-**Request body**
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update field
+
+`PUT /v1/accounts/{accountId}/fields/{fieldId}`
+
+Update a field definition.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `fieldId` | path | string | yes | The field ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string)
+- `regex` (string)
+- `is_active` (boolean)
+
+Example:
+
+```json
+{
+    "name": "string",
+    "regex": "string",
+    "is_active": true
+}
+```
+
+#### Responses
+
+##### 200 — The updated field
+
+```json
+{
+    "data": {
+        "resource": "field",
+        "id": "example_id_20",
+        "name": "Signature",
+        "type": "signature",
+        "regex": "string",
+        "is_pre_defined": true,
+        "is_active": true,
+        "is_required": true,
+        "is_standard": true,
+        "is_read_only": true,
+        "is_visible": true
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete field
+
+`DELETE /v1/accounts/{accountId}/fields/{fieldId}`
+
+Delete a field definition.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `fieldId` | path | string | yes | The field ID. |
+
+#### Responses
+
+##### 200 — Field deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Validate field value
+
+`POST /v1/accounts/{accountId}/fields/{fieldId}/validate`
+
+Validate an input value against a field definition. Typically called with a signer access code during the signing flow.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `fieldId` | path | string | yes | The field ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `value` (object, required) — The input value to validate.
+
+Example:
+
+```json
+{
+    "value": "400.676.228-36"
+}
+```
+
+#### Responses
+
+##### 200 — Validation result
+
+```json
+{
+    "data": {
+        "type": "cpf",
+        "success": true,
+        "error_message": ""
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Validate multiple field values
+
+`POST /v1/accounts/{accountId}/fields/validate-multiple`
+
+Validate multiple input values at once. The request body is a JSON array of `{field_id, value}` objects.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Example:
+
 ```json
 [
-  {
-    "field_id": "103b0befc7f0554d7c660c028229",
-    "value": "x"
-  }
+    {
+        "field_id": "example_id_28",
+        "value": "1111111111111"
+    }
 ]
 ```
 
-**Response 200**
+#### Responses
+
+##### 200 — Validation results
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "field_id": "103b0befc7f0554d7c660c028229",
-      "type": "text",
-      "success": true,
-      "error_message": ""
-    }
-  ]
+    "data": [
+        {
+            "field_id": "example_id_28",
+            "type": "cpf",
+            "success": false,
+            "error_message": "Invalid CPF."
+        }
+    ],
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `GET /v1/field-types`
-SDK `fields.listTypes` · CLI `assinafy fields types`
+##### 401 — Missing or invalid credentials.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "type": "personName",
-      "name": "Nome"
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List field types
+
+`GET /v1/field-types`
+
+List the possible field types. `cpf` expects 11 digits; `cnpj` accepts 14-char values (letters A-Z allowed in positions 1–12 per the CNPJ Alfanumérico rule; check digits 13–14 stay numeric). Punctuation is ignored during validation.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — Field types
+
+```json
+{
+    "data": [
+        {
+            "type": "cpf",
+            "name": "CPF"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+## Users
+
+### Get my notification preferences
+
+`GET /v1/users/self/notification-preferences`
+
+Which owner-facing document notifications the authenticated user receives by e-mail. All nine keys are always returned; everything defaults to `true`. Account and security e-mail (welcome, password reset, invitations, account deletion) is not configurable and never appears here.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The current preferences
+
+```json
+{
+    "data": {
+        "DocumentCompleted": true,
+        "SignerDeclined": true,
+        "DocumentCancelled": true,
+        "DocumentAboutToExpire": true,
+        "DocumentExpired": true,
+        "DocumentExpirationReset": true,
+        "DocumentProcessingFailed": true,
+        "TemplateProcessingFailed": true,
+        "SignerWhatsappFailed": true
     },
-    {
-      "type": "cpf",
-      "name": "CPF"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update my notification preferences
+
+`PUT /v1/users/self/notification-preferences`
+
+Merges the supplied map into the authenticated user's preferences. Send only the keys you want to change — omitted keys keep their current value. Setting a key to `false` stops that e-mail for this user in every account they belong to. Returns the full map. An unknown code, a non-boolean value, or an empty body is rejected with 400 and nothing is written.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `DocumentCompleted` (boolean) — Every signer has signed and the document is certified.
+- `SignerDeclined` (boolean) — A signer declined to sign.
+- `DocumentCancelled` (boolean) — The document was cancelled.
+- `DocumentAboutToExpire` (boolean) — The signature deadline is approaching.
+- `DocumentExpired` (boolean) — The signature deadline passed.
+- `DocumentExpirationReset` (boolean) — The signature deadline was extended.
+- `DocumentProcessingFailed` (boolean) — An uploaded document could not be processed.
+- `TemplateProcessingFailed` (boolean) — A template could not be processed.
+- `SignerWhatsappFailed` (boolean) — A WhatsApp notification to a signer could not be delivered.
+
+Example:
+
+```json
+{
+    "DocumentCompleted": true,
+    "SignerDeclined": true,
+    "DocumentCancelled": true,
+    "DocumentAboutToExpire": true,
+    "DocumentExpired": true,
+    "DocumentExpirationReset": true,
+    "DocumentProcessingFailed": true,
+    "TemplateProcessingFailed": true,
+    "SignerWhatsappFailed": true
+}
+```
+
+#### Responses
+
+##### 200 — The updated preferences
+
+```json
+{
+    "data": {
+        "DocumentCompleted": true,
+        "SignerDeclined": true,
+        "DocumentCancelled": true,
+        "DocumentAboutToExpire": true,
+        "DocumentExpired": true,
+        "DocumentExpirationReset": true,
+        "DocumentProcessingFailed": true,
+        "TemplateProcessingFailed": true,
+        "SignerWhatsappFailed": true
     },
-    {
-      "type": "phoneNumber",
-      "name": "Número de Telefone"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### My cross-account document KPIs
+
+`GET /v1/users/self/stats`
+
+The authenticated user's document-funnel KPIs summed across all accounts they currently belong to. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `granularity` | query | string | no | `monthly` (default) or `daily`. |
+| `month` | query | string | no | Target month `YYYY-MM` (required when `granularity=daily`). |
+
+#### Responses
+
+##### 200 — KPI series
+
+```json
+{
+    "data": [
+        {
+            "period": "2026-06",
+            "documents_uploaded": 42,
+            "documents_sent": 37,
+            "signature_requests": 61,
+            "signature_requests_email": "user1@example.com",
+            "signature_requests_whatsapp": 18,
+            "signature_requests_viewed": 44,
+            "signature_requests_completed": 52,
+            "documents_certified": 30
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get the authenticated user
+
+`GET /v1/users/self`
+
+Returns the profile of the user owning the access token.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The current user
+
+```json
+{
+    "data": {
+        "id": "example_id_27",
+        "name": "John Smith",
+        "email": "user9@example.com",
+        "telephone": "+5500000000000",
+        "government_id": "00000000000",
+        "is_email_verified": false,
+        "has_accepted_terms": true,
+        "created_at": "2023-03-03T11:51:34Z",
+        "to_be_deleted_at": null
     },
-    {
-      "type": "postalCode",
-      "name": "CEP"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+## Signing
+
+### View public document
+
+`GET /v1/public/documents/{documentId}`
+
+Retrieve a publicly shared document by ID. Public endpoint.
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | The document ID. |
+
+#### Responses
+
+##### 200 — The public document
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
-    {
-      "type": "email",
-      "name": "E-mail"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Send access token for public document
+
+`PUT /v1/public/documents/{documentId}/send-token`
+
+Send a one-time access token (email/WhatsApp) to view a public document. Public endpoint.
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | The document ID. |
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `email` (string)
+
+Example:
+
+```json
+{
+    "email": "user10@example.com"
+}
+```
+
+#### Responses
+
+##### 200 — Token sent
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get current signer
+
+`GET /v1/signers/self`
+
+Return the signer identified by the signer access code, including the `has_signature`/`has_initial`/`is_signature_reusable` flags.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Responses
+
+##### 200 — The signer
+
+```json
+{
+    "data": {
+        "has_signature": true,
+        "has_initial": false,
+        "is_signature_reusable": false,
+        "resource": "signer",
+        "id": "example_id_7",
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "whatsapp_phone_number": "+5500000000000",
+        "has_accepted_terms": false
     },
-    {
-      "type": "cnpj",
-      "name": "CNPJ"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get signer's document
+
+`GET /v1/signers/{signerId}/document`
+
+Return the document and the signer's assignment items, scoped to the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — The document with the signer's items
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
-    {
-      "type": "companyName",
-      "name": "Nome da empresa"
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### View document to sign
+
+`GET /v1/sign`
+
+Retrieve the document a signer has been invited to sign, using the signer access code. Marks the document as viewed. Returns 409 while the document is still being prepared (retry with backoff).
+
+**Signers whose verification method is `DigitalCertificate`** must have confirmed their data *and* accepted the terms before this returns the document; otherwise it is `400`. Both are satisfied in one call to `PUT /v1/documents/{documentId}/signers/confirm-data` with `has_accepted_terms: true`, so send that before this endpoint — the `has_accepted_terms` query parameter here is too late to open the gate. `PUT /v1/signers/accept-terms` also works and is never gated.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `has_accepted_terms` | query | boolean | no | Set true to record terms acceptance. |
+
+#### Responses
+
+##### 200 — The document with the signer's assignment
+
+```json
+{
+    "data": {
+        "resource": "document",
+        "id": "example_id_3",
+        "account_id": "example_id_4",
+        "template_id": null,
+        "name": "document.pdf",
+        "status": "metadata_ready",
+        "artifacts": {
+            "original": "https://example.com/example-url-2"
+        },
+        "is_closed": false,
+        "signing_url": "https://example.com/example-url-3",
+        "decline_reason": null,
+        "declined_by": null,
+        "tags": [
+            {
+                "id": "example_id_5",
+                "name": "string"
+            }
+        ],
+        "assignment": {
+            "resource": "assignment",
+            "id": "example_id_6",
+            "sender_email": "user2@example.com",
+            "method": "virtual",
+            "expires_at": null,
+            "message": "string",
+            "signers": [
+                {
+                    "verification_method": "Email",
+                    "notification_methods": [
+                        "Email"
+                    ],
+                    "step": 1,
+                    "notified": true,
+                    "completed": true,
+                    "notification_history": [
+                        {
+                            "event": "signature_request",
+                            "status": "sent",
+                            "error_code": "string",
+                            "error_message": "string",
+                            "sent_at": "2026-07-07T12:00:00Z",
+                            "failed_at": null
+                        }
+                    ],
+                    "resource": "signer",
+                    "id": "example_id_7",
+                    "full_name": "Example User",
+                    "email": "user3@example.com",
+                    "whatsapp_phone_number": "+5500000000000",
+                    "has_accepted_terms": false
+                }
+            ],
+            "copy_receivers": [
+                {}
+            ],
+            "items": [
+                {
+                    "id": "example_id_5",
+                    "page": null,
+                    "signer": {},
+                    "field": {},
+                    "display_settings": null,
+                    "value": null,
+                    "completed": true
+                }
+            ],
+            "summary": {
+                "signer_count": 0,
+                "completed_count": 0,
+                "signers": [
+                    {}
+                ]
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-4"
+                }
+            ]
+        },
+        "pages": [
+            {
+                "id": "example_id_8",
+                "number": 1,
+                "height": 2100,
+                "width": 1275,
+                "download_url": "https://example.com/example-url-5"
+            }
+        ],
+        "created_at": "2026-06-03T03:54:16Z",
+        "updated_at": "2026-06-03T03:54:16Z"
     },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — A digital-certificate signer has not yet confirmed their data or accepted the terms.
+
+##### 409 — The document is not ready to be viewed yet.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Sign assignment items
+
+`POST /v1/documents/{documentId}/assignments/{assignmentId}`
+
+Sign a document with input fields (collect method): submit the signer's item values, completing their items. For **virtual** assignments the signer must first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`, otherwise this returns `400` (Signer data must be confirmed before signing). Signers whose verification method is `DigitalCertificate` cannot use this endpoint — their signature must be produced through `POST /v1/signers/certificate/start` + `/complete`, and this returns `400`. The request body is a JSON array of item entries. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+
+#### Request Body (required)
+
+Example:
+
+```json
+[
     {
-      "type": "email",
-      "name": "E-mail"
-    },
-    {
-      "type": "text",
-      "name": "Texto"
-    },
-    {
-      "type": "number",
-      "name": "Número"
-    },
-    {
-      "type": "date",
-      "name": "Data"
+        "itemId": "example_id_25",
+        "fieldId": "example_id_20",
+        "pageId": "example_id_19",
+        "value": "Signed by Sonny Bayer"
     }
-  ]
+]
+```
+
+#### Responses
+
+##### 200 — Signing result
+
+```json
+{
+    "data": {},
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Signer data must be confirmed before signing (virtual assignments), or the signer must sign with a digital certificate through the digital certificate endpoints.
+
+##### 409 — The document is not ready to be signed yet.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Reject (decline) assignment
+
+`PUT /v1/documents/{documentId}/assignments/{assignmentId}/reject`
+
+The signer declines to sign the document, giving a reason. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `decline_reason` (string, required) — Descriptive reason for declining.
+
+Example:
+
+```json
+{
+    "decline_reason": "I do not agree with clause 2."
+}
+```
+
+#### Responses
+
+##### 200 — Assignment declined
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Sign multiple documents
+
+`PUT /v1/signers/documents/sign-multiple`
+
+Sign several documents in one request, for a signer with multiple pending documents. Each document must be prepared for the **virtual** signature method. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `document_ids` (array, required) — IDs of the documents to sign.
+
+Example:
+
+```json
+{
+    "document_ids": [
+        "example_id_29",
+        "example_id_30"
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — Signing result
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Decline multiple documents
+
+`PUT /v1/signers/documents/decline-multiple`
+
+Decline several documents in one request. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `document_ids` (array, required) — IDs of the documents to decline.
+- `decline_reason` (string, required) — Reason for declining.
+
+Example:
+
+```json
+{
+    "document_ids": [
+        "example_id_29",
+        "example_id_30"
+    ],
+    "decline_reason": "Unfavorable terms."
+}
+```
+
+#### Responses
+
+##### 200 — Decline result
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Verify signer code (OTP)
+
+`POST /v1/verify`
+
+Submit the verification code (OTP) sent to the signer to unlock the signing flow. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `verification-code` (string, required)
+
+Example:
+
+```json
+{
+    "verification-code": "example_secret"
+}
+```
+
+#### Responses
+
+##### 200 — Code verified
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Confirm signer data
+
+`PUT /v1/documents/{documentId}/signers/confirm-data`
+
+The signer confirms or updates their data before signing. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `full_name` (string)
+- `email` (string)
+- `government_id` (string)
+
+Example:
+
+```json
+{
+    "full_name": "Example User",
+    "email": "user10@example.com",
+    "government_id": "00000000000"
+}
+```
+
+#### Responses
+
+##### 200 — Data confirmed
+
+```json
+{
+    "data": {
+        "resource": "signer",
+        "id": "example_id_7",
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "whatsapp_phone_number": "+5500000000000",
+        "has_accepted_terms": false
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Accept terms (signer)
+
+`PUT /v1/signers/accept-terms`
+
+Record that the signer accepted the terms of use. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Responses
+
+##### 200 — Terms accepted
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Upload signature image
+
+`POST /v1/signature`
+
+Upload the signer's signature (or initials) image as the raw request body. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `type` | query | string | no | Image type, e.g. `signature` or `initial`. |
+| `reuse` | query | boolean | no | Whether the signer opted to reuse this signature in future processes. When set, updates the signer's `is_signature_reusable` flag; when omitted, the flag is left unchanged. |
+
+#### Request Body (required)
+
+Example:
+
+```json
+"string"
+```
+
+#### Responses
+
+##### 200 — Signature stored
+
+```json
+{
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download signature image
+
+`GET /v1/signature/{signatureType}`
+
+Download the signer's stored signature/initials image. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `signatureType` | path | string | yes | Image type (e.g. `signature`, `initial`). |
+
+#### Responses
+
+##### 200 — The signature image
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List signer's documents
+
+`GET /v1/signers/{signerId}/documents`
+
+List the documents a signer is party to. Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `signerId` | path | string | yes | The signer ID. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — The signer's documents
+
+```json
+{
+    "data": [
+        {
+            "resource": "document",
+            "id": "example_id_3",
+            "account_id": "example_id_4",
+            "template_id": null,
+            "name": "document.pdf",
+            "status": "metadata_ready",
+            "artifacts": {
+                "original": "https://example.com/example-url-2"
+            },
+            "is_closed": false,
+            "signing_url": "https://example.com/example-url-3",
+            "decline_reason": null,
+            "declined_by": null,
+            "tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "assignment": {
+                "resource": "assignment",
+                "id": "example_id_6",
+                "sender_email": "user2@example.com",
+                "method": "virtual",
+                "expires_at": null,
+                "message": "string",
+                "signers": [
+                    {
+                        "verification_method": "Email",
+                        "notification_methods": [
+                            "Email"
+                        ],
+                        "step": 1,
+                        "notified": true,
+                        "completed": true,
+                        "notification_history": [
+                            {
+                                "event": "signature_request",
+                                "status": "sent",
+                                "error_code": "string",
+                                "error_message": "string",
+                                "sent_at": "2026-07-07T12:00:00Z",
+                                "failed_at": null
+                            }
+                        ],
+                        "resource": "signer",
+                        "id": "example_id_7",
+                        "full_name": "Example User",
+                        "email": "user3@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "has_accepted_terms": false
+                    }
+                ],
+                "copy_receivers": [
+                    {}
+                ],
+                "items": [
+                    {
+                        "id": "example_id_5",
+                        "page": null,
+                        "signer": {},
+                        "field": {},
+                        "display_settings": null,
+                        "value": null,
+                        "completed": true
+                    }
+                ],
+                "summary": {
+                    "signer_count": 0,
+                    "completed_count": 0,
+                    "signers": [
+                        {}
+                    ]
+                },
+                "signing_urls": [
+                    {
+                        "signer_id": "example_id_5",
+                        "url": "https://example.com/example-url-4"
+                    }
+                ]
+            },
+            "pages": [
+                {
+                    "id": "example_id_8",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-5"
+                }
+            ],
+            "created_at": "2026-06-03T03:54:16Z",
+            "updated_at": "2026-06-03T03:54:16Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Search signer's documents
+
+`GET /v1/signers/{signerId}/documents/search`
+
+Search the documents a signer is party to (compact representation). Uses the signer access code.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `signerId` | path | string | yes | The signer ID. |
+| `search` | query | string | no | Search term. |
+
+#### Responses
+
+##### 200 — Matching documents
+
+```json
+{
+    "data": [
+        {
+            "resource": "document",
+            "id": "example_id_3",
+            "account_id": "example_id_4",
+            "template_id": null,
+            "name": "document.pdf",
+            "status": "metadata_ready",
+            "artifacts": {
+                "original": "https://example.com/example-url-2"
+            },
+            "is_closed": false,
+            "signing_url": "https://example.com/example-url-3",
+            "decline_reason": null,
+            "declined_by": null,
+            "tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "assignment": {
+                "resource": "assignment",
+                "id": "example_id_6",
+                "sender_email": "user2@example.com",
+                "method": "virtual",
+                "expires_at": null,
+                "message": "string",
+                "signers": [
+                    {
+                        "verification_method": "Email",
+                        "notification_methods": [
+                            "Email"
+                        ],
+                        "step": 1,
+                        "notified": true,
+                        "completed": true,
+                        "notification_history": [
+                            {
+                                "event": "signature_request",
+                                "status": "sent",
+                                "error_code": "string",
+                                "error_message": "string",
+                                "sent_at": "2026-07-07T12:00:00Z",
+                                "failed_at": null
+                            }
+                        ],
+                        "resource": "signer",
+                        "id": "example_id_7",
+                        "full_name": "Example User",
+                        "email": "user3@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "has_accepted_terms": false
+                    }
+                ],
+                "copy_receivers": [
+                    {}
+                ],
+                "items": [
+                    {
+                        "id": "example_id_5",
+                        "page": null,
+                        "signer": {},
+                        "field": {},
+                        "display_settings": null,
+                        "value": null,
+                        "completed": true
+                    }
+                ],
+                "summary": {
+                    "signer_count": 0,
+                    "completed_count": 0,
+                    "signers": [
+                        {}
+                    ]
+                },
+                "signing_urls": [
+                    {
+                        "signer_id": "example_id_5",
+                        "url": "https://example.com/example-url-4"
+                    }
+                ]
+            },
+            "pages": [
+                {
+                    "id": "example_id_8",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-5"
+                }
+            ],
+            "created_at": "2026-06-03T03:54:16Z",
+            "updated_at": "2026-06-03T03:54:16Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Download signer's document artifact
+
+`GET /v1/signers/{signerId}/documents/{documentId}/download/{artifactName}`
+
+Download an artifact of a document the signer is party to. Public (signer-link) endpoint. Artifact types: original, certificated, certificate-page, pades, bundle. The pades artifact (signers' ICP-Brasil signatures + platform certification box) is only present on documents that had digital-certificate signers; `bundle` is a zip of the original, certificated and certificate-page artifacts, plus the pades artifact on documents that have one.
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `signerId` | path | string | yes | The signer ID. |
+| `documentId` | path | string | yes | Document ID. |
+| `artifactName` | path | string | yes | Artifact type. |
+
+#### Responses
+
+##### 200 — The artifact binary
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+## Signers
+
+### List signers
+
+`GET /v1/accounts/{accountId}/signers`
+
+List the signers of a workspace.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `search` | query | string | no | Filter by full_name or email. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — A page of signers
+
+```json
+{
+    "data": [
+        {
+            "resource": "signer",
+            "id": "example_id_7",
+            "full_name": "Example User",
+            "email": "user3@example.com",
+            "whatsapp_phone_number": "+5500000000000",
+            "has_accepted_terms": false
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create signer
+
+`POST /v1/accounts/{accountId}/signers`
+
+Create a signer in the workspace.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `full_name` (string, required)
+- `email` (string)
+- `whatsapp_phone_number` (string) — E.164; normalized on save.
+
+Example:
+
+```json
+{
+    "full_name": "Example User",
+    "email": "user3@example.com",
+    "whatsapp_phone_number": "+5500000000000"
+}
+```
+
+#### Responses
+
+##### 200 — The created signer
+
+```json
+{
+    "data": {
+        "resource": "signer",
+        "id": "example_id_7",
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "whatsapp_phone_number": "+5500000000000",
+        "has_accepted_terms": false
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get signer
+
+`GET /v1/accounts/{accountId}/signers/{signerId}`
+
+Retrieve a signer's information.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — The signer
+
+```json
+{
+    "data": {
+        "resource": "signer",
+        "id": "example_id_7",
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "whatsapp_phone_number": "+5500000000000",
+        "has_accepted_terms": false
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update signer
+
+`PUT /v1/accounts/{accountId}/signers/{signerId}`
+
+Update a signer's information.
+
+**Verification integrity:** `email` / `whatsapp_phone_number` cannot be changed while the signer has verified that channel on an in-flight (not yet certificated) document — the response is `400` naming the offending document(s). Already-certificated documents do not block updates. Changing a channel that has *unverified* in-flight requests rotates their access/verification codes (invalidating previously sent links/OTPs); use the resend endpoint to redeliver. `full_name` can always be updated.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `full_name` (string)
+- `email` (string)
+- `whatsapp_phone_number` (string) — E.164; normalized on save.
+- `government_id` (string) — Signer's CPF/CNPJ; digits only on save.
+
+Example:
+
+```json
+{
+    "full_name": "Example User",
+    "email": "user3@example.com",
+    "whatsapp_phone_number": "+5500000000000",
+    "government_id": "00000000000"
+}
+```
+
+#### Responses
+
+##### 200 — The updated signer
+
+```json
+{
+    "data": {
+        "resource": "signer",
+        "id": "example_id_7",
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "whatsapp_phone_number": "+5500000000000",
+        "has_accepted_terms": false
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete signer
+
+`DELETE /v1/accounts/{accountId}/signers/{signerId}`
+
+Delete a signer.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — Signer deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+## Tags
+
+### List tags
+
+`GET /v1/accounts/{accountId}/tags`
+
+List the tags of a workspace.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `search` | query | string | no | Search term. |
+
+#### Responses
+
+##### 200 — The workspace tags
+
+```json
+{
+    "data": [
+        {
+            "resource": "tag",
+            "id": "example_id_11",
+            "name": "Contracts",
+            "color": "ff8800",
+            "created_at": "2026-05-14T12:00:00Z",
+            "updated_at": "2026-05-14T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create tag
+
+`POST /v1/accounts/{accountId}/tags`
+
+Create a tag in the workspace. Names are unique per workspace (case-insensitive); a collision returns 409.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required) — Trimmed; whitespace collapsed; max 64 chars.
+- `color` (string) — 6-char hex (with or without leading #).
+
+Example:
+
+```json
+{
+    "name": "Contracts",
+    "color": "ff8800"
+}
+```
+
+#### Responses
+
+##### 200 — The created tag
+
+```json
+{
+    "data": {
+        "resource": "tag",
+        "id": "example_id_11",
+        "name": "Contracts",
+        "color": "ff8800",
+        "created_at": "2026-05-14T12:00:00Z",
+        "updated_at": "2026-05-14T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 409 — A tag with the same name already exists.
+
+```json
+{
+    "status": 409,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update tag
+
+`PUT /v1/accounts/{accountId}/tags/{tagId}`
+
+Update a tag's name or color.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `tagId` | path | string | yes | The tag ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string)
+- `color` (string)
+
+Example:
+
+```json
+{
+    "name": "Signed Contracts",
+    "color": "00aa55"
+}
+```
+
+#### Responses
+
+##### 200 — The updated tag
+
+```json
+{
+    "data": {
+        "resource": "tag",
+        "id": "example_id_11",
+        "name": "Contracts",
+        "color": "ff8800",
+        "created_at": "2026-05-14T12:00:00Z",
+        "updated_at": "2026-05-14T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete tag
+
+`DELETE /v1/accounts/{accountId}/tags/{tagId}`
+
+Delete a tag. Pass `?force=true` to detach it from any documents/templates it is attached to.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `tagId` | path | string | yes | The tag ID. |
+| `force` | query | boolean | no | Detach from resources before deleting. |
+
+#### Responses
+
+##### 200 — Tag deleted
+
+```json
+{
+    "data": {
+        "deleted": true
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+## Templates
+
+### List templates
+
+`GET /v1/accounts/{accountId}/templates`
+
+List the templates of a workspace.
+
+The `status` field of a template is one of:
+
+| Status | Description |
+|--------|-------------|
+| `uploading` | The template is being uploaded. |
+| `uploaded` | The template has been uploaded. |
+| `processing` | The template is being processed. |
+| `ready` | The template is ready to use. |
+| `failed` | The template processing has failed. |
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `search` | query | string | no | Search term. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — A page of templates (default_document_tags omitted in the list)
+
+```json
+{
+    "data": [
+        {
+            "resource": "template",
+            "id": "example_id_31",
+            "name": "template.pdf",
+            "document_name": "string",
+            "message": "string",
+            "status": "ready",
+            "pages": [
+                {
+                    "id": "example_id_5",
+                    "number": 1,
+                    "height": 2100,
+                    "width": 1275,
+                    "download_url": "https://example.com/example-url-11",
+                    "fields": [
+                        {
+                            "id": "example_id_5",
+                            "field_id": "example_id_5",
+                            "role_id": "example_id_5",
+                            "label": "string",
+                            "display_settings": null,
+                            "created_at": "2026-01-01T00:00:00Z",
+                            "updated_at": "2026-01-01T00:00:00Z"
+                        }
+                    ]
+                }
+            ],
+            "roles": [
+                {
+                    "id": "example_id_5",
+                    "name": "Editor",
+                    "assignment_type": "Editor",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-01T00:00:00Z"
+                }
+            ],
+            "tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "default_document_tags": [
+                {
+                    "id": "example_id_5",
+                    "name": "string"
+                }
+            ],
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
 ## Webhooks
 
-### `GET /v1/accounts/{accountId}/webhooks`
-SDK `webhooks.listDispatches` · CLI `assinafy webhooks dispatches`
+### Get webhook subscription
 
-**Query params**
+`GET /v1/accounts/{accountId}/webhooks/subscriptions`
+
+Retrieve the current webhook subscription for the account — which events it is subscribed to and the delivery configuration.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The subscription
+
 ```json
 {
-  "per-page": 2
-}
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "103b0a5544d99b6ab16b044c63e0",
-      "event": "signature_requested",
-      "activity_id": 15715,
-      "endpoint": "https://webhook.site/arp-assinafy-sandbox",
-      "payload": {
-        "id": 15715,
-        "event": "signature_requested",
-        "object": {
-          "type": "Document"
-        },
-        "origin": null,
-        "message": null,
-        "payload": {
-          "signer_email": "bill@febacapital.com",
-          "signer_full_name": "Audit Bill A2",
-          "notification_method": "email",
-          "signer_whatsapp_phone_number": null
-        },
-        "subject": {
-          "id": "md3j6p9w8b7y6qvqaoy5er42",
-          "name": "Multica Test",
-          "type": "User",
-          "email": "bill@febacapital.com",
-          "telephone": null,
-          "created_at": "2026-05-12T18:05:11Z",
-          "government_id": "",
-          "is_password_set": true,
-          "to_be_deleted_at": null,
-          "is_email_verified": true,
-          "has_accepted_terms": true
-        },
-        "account_id": "102d25a489f34a275d31a16045fd",
-        "created_at": "2026-07-20T19:37:08Z"
-      },
-      "delivered": false,
-      "http_status": 404,
-      "response_body": "{\"success\":false,\"error\":{\"message\":\"Token \\\"arp-assinafy-sandbox\\\" not found\",\"id\":\"\"}}",
-      "error": "Client error: `POST https://webhook.site/arp-assinafy-sandbox` resulted in a `404 Not Found` response:\n{\"success\":false,\"error\":{\"message\":\"Token \\\"arp-assinafy-sandbox\\\" not found\",\"id\":\"\"}}\n",
-      "created_at": "2026-07-20T19:37:27Z",
-      "updated_at": "2026-07-20T19:37:27Z"
+    "data": {
+        "events": [
+            "document_ready",
+            "document_prepared"
+        ],
+        "is_active": true,
+        "url": "https://example.com/example-url-12",
+        "email": "user11@example.com",
+        "updated_at": "2023-05-10T14:58:24Z"
     },
-    {
-      "id": "103b0a54c3eb49adf475f3760573",
-      "event": "signature_requested",
-      "activity_id": 15715,
-      "endpoint": "https://webhook.site/arp-assinafy-sandbox",
-      "payload": {
-        "id": 15715,
-        "event": "signature_requested",
-        "object": {
-          "type": "Document"
-        },
-        "origin": null,
-        "message": null,
-        "payload": {
-          "signer_email": "bill@febacapital.com",
-          "signer_full_name": "Audit Bill A2",
-          "notification_method": "email",
-          "signer_whatsapp_phone_number": null
-        },
-        "subject": {
-          "id": "md3j6p9w8b7y6qvqaoy5er42",
-          "name": "Multica Test",
-          "type": "User",
-          "email": "bill@febacapital.com",
-          "telephone": null,
-          "created_at": "2026-05-12T18:05:11Z",
-          "government_id": "",
-          "is_password_set": true,
-          "to_be_deleted_at": null,
-          "is_email_verified": true,
-          "has_accepted_terms": true
-        },
-        "account_id": "102d25a489f34a275d31a16045fd",
-        "created_at": "2026-07-20T19:37:08Z"
-      },
-      "delivered": false,
-      "http_status": 404,
-      "response_body": "{\"success\":false,\"error\":{\"message\":\"Token \\\"arp-assinafy-sandbox\\\" not found\",\"id\":\"\"}}",
-      "error": "Client error: `POST https://webhook.site/arp-assinafy-sandbox` resulted in a `404 Not Found` response:\n{\"success\":false,\"error\":{\"message\":\"Token \\\"arp-assinafy-sandbox\\\" not found\",\"id\":\"\"}}\n",
-      "created_at": "2026-07-20T19:37:24Z",
-      "updated_at": "2026-07-20T19:37:24Z"
-    }
-  ]
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `POST /v1/accounts/{accountId}/webhooks/{historyId}/retry`
-SDK `webhooks.retryDispatch` · CLI `assinafy webhooks retry`
+##### 401 — Missing or invalid credentials.
 
-**Response 400**
 ```json
 {
-  "status": 400,
-  "data": null,
-  "message": "A assinatura do webhook não está ativa."
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `PUT /v1/accounts/{accountId}/webhooks/inactivate`
-SDK `webhooks.inactivate` · CLI `assinafy webhooks inactivate`
+##### 500 — Unexpected server error.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update webhook subscription
+
+`PUT /v1/accounts/{accountId}/webhooks/subscriptions`
+
+Update the webhook subscription settings for the account — which events are monitored, whether delivery is enabled, and the delivery/contact details.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `events` (array, required) — Event type codes to subscribe to (see `GET /v1/webhooks/event-types`).
+- `is_active` (boolean, required) — Whether events should be delivered to the webhook.
+- `url` (string, required) — The URL that will receive events.
+- `email` (string, required) — Email that receives important webhook-communication notices.
+
+Example:
+
+```json
+{
     "events": [
-      "document_uploaded"
-    ],
-    "is_active": false,
-    "url": "https://example.com/assinafy-audit-hook",
-    "email": "bill@febacapital.com",
-    "updated_at": "2026-07-20T20:22:29Z"
-  }
-}
-```
-
-### `GET /v1/accounts/{accountId}/webhooks/subscriptions`
-SDK `webhooks.get` · CLI `assinafy webhooks get`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "events": [
-      "document_ready",
-      "signer_signed_document",
-      "signer_rejected_document",
-      "document_processing_failed",
-      "signature_requested",
-      "document_prepared",
-      "assignment_created"
+        "document_ready",
+        "document_prepared"
     ],
     "is_active": true,
-    "url": "https://webhook.site/arp-assinafy-sandbox",
-    "email": "sandbox@assinafy.com.br",
-    "updated_at": "2026-07-20T18:58:37Z"
-  }
+    "url": "https://example.com/example-url-12",
+    "email": "user11@example.com"
 }
 ```
 
-### `PUT /v1/accounts/{accountId}/webhooks/subscriptions`
-SDK `webhooks.register` · CLI `assinafy webhooks register`
+#### Responses
 
-**Request body**
+##### 200 — The updated subscription
+
 ```json
 {
-  "url": "https://example.com/assinafy-audit-hook",
-  "email": "bill@febacapital.com",
-  "events": [
-    "document_uploaded"
-  ],
-  "is_active": false
+    "data": {
+        "events": [
+            "document_ready",
+            "document_prepared"
+        ],
+        "is_active": true,
+        "url": "https://example.com/example-url-12",
+        "email": "user11@example.com",
+        "updated_at": "2023-05-10T14:58:24Z"
+    },
+    "status": 200,
+    "message": ""
 }
 ```
 
-**Response 200**
+##### 400 — One or more fields failed validation.
+
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "events": [
-      "document_uploaded"
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Inactivate webhook subscription
+
+`PUT /v1/accounts/{accountId}/webhooks/inactivate`
+
+Deactivate the webhook integration for the account. While inactive, no events are sent to the configured endpoint.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The inactivated subscription
+
+```json
+{
+    "data": {
+        "events": [
+            "document_ready",
+            "document_prepared"
+        ],
+        "is_active": true,
+        "url": "https://example.com/example-url-12",
+        "email": "user11@example.com",
+        "updated_at": "2023-05-10T14:58:24Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List webhook event types
+
+`GET /v1/webhooks/event-types`
+
+List all available event types that can be subscribed to via webhooks.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — Event types
+
+```json
+{
+    "data": [
+        {
+            "id": "document_ready",
+            "description": "Triggered when the last Signer of the assignment signs the Document."
+        }
     ],
-    "is_active": false,
-    "url": "https://example.com/assinafy-audit-hook",
-    "email": "bill@febacapital.com",
-    "updated_at": "2026-07-20T20:22:29Z"
-  }
+    "status": 200,
+    "message": ""
 }
 ```
 
-### `GET /v1/webhooks/event-types`
-SDK `webhooks.listEventTypes` · CLI `assinafy webhooks event-types`
+##### 401 — Missing or invalid credentials.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "document_uploaded",
-      "description": "Triggered when the User has uploaded a Document"
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List webhook deliveries
+
+`GET /v1/accounts/{accountId}/webhooks`
+
+Retrieve the delivery history for webhooks sent to the account's configured endpoint — use it to monitor status, debug failures, and verify payloads. Pagination is returned in the `X-Pagination-*` response headers.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `event` | query | string | no | Filter by event type (e.g. `document_ready`). |
+| `delivered` | query | string | no | Filter by delivery status: `true` or `false`. |
+| `from` | query | integer | no | Unix timestamp — only entries after this time. |
+| `to` | query | integer | no | Unix timestamp — only entries before this time. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Items per page (default: 20). |
+
+#### Responses
+
+##### 200 — Delivery history
+
+```json
+{
+    "data": [
+        {
+            "resource": "activity_dispatching_history",
+            "id": "example_id_32",
+            "event": "document_ready",
+            "activity_id": 456,
+            "endpoint": "https://example.com/example-url-13",
+            "payload": {},
+            "delivered": true,
+            "http_status": 200,
+            "response_body": "OK",
+            "error": null,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Retry webhook delivery
+
+`POST /v1/accounts/{accountId}/webhooks/{historyId}/retry`
+
+Manually retry a webhook delivery for a specific entry, without waiting for automatic retries. Returns the newly created dispatch entry.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `historyId` | path | string | yes | The webhook dispatch entry ID to retry. |
+
+#### Responses
+
+##### 200 — The new dispatch entry
+
+```json
+{
+    "data": {
+        "resource": "activity_dispatching_history",
+        "id": "example_id_32",
+        "event": "document_ready",
+        "activity_id": 456,
+        "endpoint": "https://example.com/example-url-13",
+        "payload": {},
+        "delivered": true,
+        "http_status": 200,
+        "response_body": "OK",
+        "error": null,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T10:30:00Z"
     },
-    {
-      "id": "document_metadata_ready",
-      "description": "Triggered when the document is ready to be prepared. The the document has been normalized to PDF and its pages are available."
-    },
-    {
-      "id": "document_prepared",
-      "description": "Triggered when the User as subject prepares a Document."
-    },
-    {
-      "id": "assignment_created",
-      "description": "Triggered when the User created an assignment for a Document. Includes a snapshot of the creator profile (name, email, telephone) and origin IP/user-agent."
-    },
-    {
-      "id": "signature_requested",
-      "description": "Triggered when the User requested signature of a Document"
-    },
-    {
-      "id": "document_ready",
-      "description": "Triggered when the last Signer of the assignment signs the Document, as a result, the document status becomes ready."
-    },
-    {
-      "id": "signer_created",
-      "description": "Triggered when the User created a Signer"
-    },
-    {
-      "id": "signer_email_verified",
-      "description": "Triggered when Signer's email has been verified by a verification code linked to a Document"
-    },
-    {
-      "id": "signer_whatsapp_verified",
-      "description": "Triggered when Signer's WhatsApp phone number has been verified by a verification code linked to a Document"
-    },
-    {
-      "id": "signer_data_confirmed",
-      "description": "Triggered when Signer's data has been confirmed"
-    },
-    {
-      "id": "signer_signed_document",
-      "description": "Triggered when the Signer signed a Document"
-    },
-    {
-      "id": "signer_viewed_document",
-      "description": "Triggered when the Signer viewed a Document for the first time"
-    },
-    {
-      "id": "signer_rejected_document",
-      "description": "Triggered when the Signer rejected signing a Document"
-    },
-    {
-      "id": "user_rejected_document",
-      "description": "Triggered when document has been cancelled."
-    },
-    {
-      "id": "document_processing_failed",
-      "description": "Unprocessable document, either invalid or the system couldn't process it"
-    }
-  ]
+    "status": 200,
+    "message": ""
 }
 ```
 
-## Workspaces / Accounts
+##### 400 — One or more fields failed validation.
 
-> `list`/`get`/`create`/`update`/`delete` were previously (incorrectly) marked
-> _production-only_ in this doc. All five were re-verified live against the
-> sandbox on 2026-08-08 with a plain API key — none of them are restricted to
-> production. Only the logo/stats/theme endpoints below remain out of CLI
-> scope / unverified.
-
-### `GET /v1/accounts`
-SDK `workspaces.list` · CLI `assinafy workspaces list`
-
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": [
-    {
-      "id": "102d25a489f34a275d31a16045fd",
-      "name": "MT",
-      "roles": [
-        "owner"
-      ],
-      "is_delete_allowed": true,
-      "created_at": "2026-05-12T18:05:11Z"
-    }
-  ]
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `POST /v1/accounts`
-SDK `workspaces.create` · CLI `assinafy workspaces create`
+##### 404 — The requested resource does not exist.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "id": "103ee217b741cf6de6d751a45477",
-    "name": "Audit Live Workspace 1786226722112",
-    "primary_color": null,
-    "secondary_color": null,
-    "created_at": "2026-08-08T22:05:22Z"
-  }
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `DELETE /v1/accounts/{accountId}`
-SDK `workspaces.delete` · CLI `assinafy workspaces delete`
+##### 401 — Missing or invalid credentials.
 
-Optional request body `{ "force": true }` cancels an active paid subscription
-automatically; otherwise deleting a workspace with one active returns `400`.
-
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": []
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
-### `GET /v1/accounts/{accountId}`
-SDK `workspaces.get` · CLI `assinafy workspaces get`
+##### 500 — Unexpected server error.
 
-**Response 200**
 ```json
 {
-  "status": 200,
-  "message": "",
-  "data": {
-    "id": "102d25a489f34a275d31a16045fd",
-    "name": "MT",
-    "primary_color": null,
-    "secondary_color": null,
-    "created_at": "2026-05-12T18:05:11Z"
-  }
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
 }
 ```
-
-### `PUT /v1/accounts/{accountId}`
-SDK `workspaces.update` · CLI `assinafy workspaces update`
-
-**Request body**
-```json
-{ "name": "Audit Live Workspace 1786226722112 (updated)" }
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "id": "103ee217b741cf6de6d751a45477",
-    "name": "Audit Live Workspace 1786226722112 (updated)",
-    "primary_color": null,
-    "secondary_color": null,
-    "created_at": "2026-08-08T22:05:22Z"
-  }
-}
-```
-
-### `DELETE /v1/accounts/{accountId}/logo`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/accounts/{accountId}/logo`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `POST /v1/accounts/{accountId}/logo`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/accounts/{accountId}/stats`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/accounts/{accountId}/theme`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-## Authentication
-
-### `POST /v1/auth/link-social-login`
-_out-of-scope for the CLI_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/authentication/change-password`
-SDK `auth.changePassword` · CLI `assinafy auth change-password`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/authentication/request-password-reset`
-SDK `auth.requestPasswordReset` · CLI `assinafy auth request-password-reset`
-
-**Response 404** — for an email with no Assinafy user account (live-verified;
-note the API distinguishes "no such user" from success here, rather than
-returning a uniform response — factor this in if building enumeration-safe UX)
-```json
-{
-  "status": 404,
-  "data": null,
-  "message": "Usuário não localizado."
-}
-```
-
-### `PUT /v1/authentication/reset-password`
-SDK `auth.resetPassword` · CLI `assinafy auth reset-password`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `POST /v1/authentication/social-login`
-SDK `auth.socialLogin` · CLI `assinafy auth social-login`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `POST /v1/login`
-SDK `auth.login` · CLI `assinafy auth login`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `DELETE /v1/users/api-keys`
-SDK `auth.deleteApiKey` · CLI `assinafy auth api-keys delete`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/users/api-keys`
-SDK `auth.getApiKey` · CLI `assinafy auth api-keys get`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "api_key": "************************************************************NEWq"
-  }
-}
-```
-
-### `POST /v1/users/api-keys`
-SDK `auth.createApiKey` · CLI `assinafy auth api-keys create`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-## Users
-
-### `GET /v1/users/self`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/users/self/stats`
-_out-of-scope for the CLI_ · _production-only_
-
-_Not exercised live (out of CLI scope); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-## Signer-side (access-code) flows
-
-### `POST /v1/documents/{documentId}/assignments/{assignmentId}`
-SDK `signerDocuments.sign` · CLI `assinafy signer sign`
-
-Sign a document with input fields (`collect` method): submit the signer's item
-values, completing their items. For **virtual** assignments the signer must
-first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`,
-otherwise this returns `400` ("Signer data must be confirmed before signing").
-The request body is a bare JSON **array** of item entries (not an object).
-
-_Not exercised live (requires a real signer OTP access-code from an emailed
-signing link); request/response derived from the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-**Request body**
-```json
-[
-  {
-    "itemId": "615606efcde1a39c9d21e30e",
-    "fieldId": "6152120297080d55bdd13197",
-    "pageId": "615213ed81b071f4293b2fc2",
-    "value": "Signed by Sonny Bayer"
-  }
-]
-```
-
-**Response 200** — `data` is an opaque object on success (the spec doesn't document its fields)
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {}
-}
-```
-
-**Response 400** — virtual assignment, signer hasn't confirmed their data yet
-```json
-{
-  "status": 400,
-  "data": null,
-  "message": "Signer data must be confirmed before signing"
-}
-```
-
-### `PUT /v1/documents/{documentId}/assignments/{assignmentId}/reject`
-SDK `signerDocuments.decline` · CLI `assinafy signer decline`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/documents/{documentId}/signers/confirm-data`
-SDK `signerDocuments.confirmData` · CLI `assinafy signer confirm-data`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/public/documents/{documentId}`
-SDK `documents.getPublic` · CLI `assinafy documents public`
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "resource": "document",
-    "id": "103b0beff2fabee48849e2a07aba",
-    "name": "audit-audit0720.pdf",
-    "page_count": "1",
-    "created_by": "Multica Test"
-  }
-}
-```
-
-### `PUT /v1/public/documents/{documentId}/send-token`
-SDK `documents.sendToken` · CLI `assinafy documents send-token`
-
-Requires the document to be in `pending_signature` status (i.e. a signature
-request/assignment is already active) — returns 400 ("O documento não está
-com status de assinatura pendente.") otherwise.
-
-**Request body**
-```json
-{
-  "recipient": "bill@febacapital.com",
-  "channel": "email"
-}
-```
-
-**Response 200**
-```json
-{
-  "status": 200,
-  "message": "",
-  "data": {
-    "document": {
-      "resource": "document",
-      "id": "103b0beff2fabee48849e2a07aba",
-      "name": "audit-audit0720.pdf",
-      "page_count": "1",
-      "created_by": "Multica Test"
-    },
-    "channel": "email",
-    "recipient": "bill@febacapital.com"
-  }
-}
-```
-
-### `GET /v1/sign`
-SDK `signerDocuments.getAssignment` · CLI `assinafy signer assignment`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `POST /v1/signature`
-SDK `signerDocuments.uploadSignature` · CLI `assinafy signer upload-signature`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/signature/{signatureType}`
-SDK `signerDocuments.downloadSignature` · CLI `assinafy signer download-signature`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/signers/{signerId}/document`
-SDK `signerDocuments.getCurrent` · CLI `assinafy signer document`
-
-**Query params**
-```json
-{
-  "signer-access-code": "bogus-access-code-000"
-}
-```
-
-**Response 401**
-```json
-{
-  "status": 401,
-  "data": null,
-  "message": "Credenciais inválidas."
-}
-```
-
-### `GET /v1/signers/{signerId}/documents`
-SDK `signerDocuments.list` · CLI `assinafy signer documents`
-
-**Query params**
-```json
-{
-  "signer-access-code": "bogus-access-code-000"
-}
-```
-
-**Response 401**
-```json
-{
-  "status": 401,
-  "data": null,
-  "message": "Credenciais inválidas."
-}
-```
-
-### `GET /v1/signers/{signerId}/documents/{documentId}/download/{artifactName}`
-SDK `signerDocuments.download` · CLI `assinafy signer download`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/signers/{signerId}/documents/search`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/signers/accept-terms`
-SDK `signerDocuments.acceptTerms` · CLI `assinafy signer accept-terms`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/signers/documents/decline-multiple`
-SDK `signerDocuments.declineMultiple` · CLI `assinafy signer decline-multiple`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `PUT /v1/signers/documents/sign-multiple`
-SDK `signerDocuments.signMultiple` · CLI `assinafy signer sign-multiple`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._
-
-### `GET /v1/signers/self`
-SDK `signerDocuments.self` · CLI `assinafy signer self`
-
-**Query params**
-```json
-{
-  "signer-access-code": "bogus-access-code-000"
-}
-```
-
-**Response 401**
-```json
-{
-  "status": 401,
-  "data": null,
-  "message": "Credenciais inválidas."
-}
-```
-
-### `POST /v1/verify`
-SDK `signerDocuments.verifyEmail` · CLI `assinafy signer verify-email`
-
-_Not exercised live (requires interactive login or a signer OTP access-code); see the [OpenAPI spec](https://api.assinafy.com.br/v1/docs)._

@@ -13,7 +13,7 @@ Arguments:
 Options:
   --signer <spec>         Signer as "Name <email-or-phone>" (repeatable)
                           (default: [])
-  --signers <json>        JSON array of signer objects (overrides --signer)
+  --signers <json>        JSON array of signer objects
   --message <message>     Message shown to signers
   --expires-at <iso8601>  Expiration timestamp
   --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
@@ -22,4 +22,3 @@ Options:
   --no-wait               Do not wait for the document to finish processing
   -h, --help              display help for command
 ```
-

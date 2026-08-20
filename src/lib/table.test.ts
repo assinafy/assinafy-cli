@@ -45,6 +45,19 @@ describe('renderTable', () => {
 		expect(out).toContain('a, b');
 		expect(out).toContain('—');
 	});
+
+	it('removes terminal controls and flattens newlines in remote cell values', () => {
+		const payload =
+			'\u001b]52;c;copied\u0007\u001b[31mspoof\nrow\u202efdp.exe\u2066x\u2069\u2028next';
+		const out = plain(
+			renderTable([{ value: payload }], [{ header: 'VALUE', value: (r) => r.value }]),
+		);
+		expect(out).toContain('spoof rowfdp.exex next');
+		expect(out).not.toContain('\u001b');
+		expect(out).not.toContain('\u202e');
+		expect(out).not.toContain('\u2066');
+		expect(out.split('\n')).toHaveLength(2);
+	});
 });
 
 describe('renderKeyValue', () => {
@@ -57,5 +70,18 @@ describe('renderKeyValue', () => {
 
 	it('shows a placeholder when nothing is present', () => {
 		expect(plain(renderKeyValue({ a: undefined }))).toBe('(empty)');
+	});
+
+	it('sanitizes dynamic keys and values', () => {
+		const out = plain(renderKeyValue({ 'bad\nkey': '\u001b]52;c;x\u0007value\nnext' }));
+		expect(out).toContain('bad key:');
+		expect(out).toContain('value next');
+		expect(out).not.toContain('\u001b');
+	});
+
+	it('sanitizes controls nested in object values', () => {
+		const out = plain(renderKeyValue({ payload: { value: '\u009d52;c;x\u009c' } }));
+		expect(out).not.toContain('\u009d');
+		expect(out).not.toContain('\u009c');
 	});
 });

@@ -12,6 +12,7 @@ import { CliError } from '../../lib/errors';
 import { printData, printSuccess } from '../../lib/output';
 import { getGlobals, runAction } from '../../lib/run';
 import { renderKeyValue, renderTable } from '../../lib/table';
+import { sanitizeTerminalText } from '../../lib/terminal';
 
 /** Show only the last 4 characters of a secret. */
 function mask(secret: string | undefined): string | undefined {
@@ -36,7 +37,7 @@ const setCommand = new Command('set')
 				webhookSecret?: string;
 			};
 
-			const file = readConfigFile();
+			const file = readConfigFile({ strict: true });
 			const profileName = activeProfileName(getGlobals(command), file);
 			const profiles = file.profiles ?? {};
 			const profile: ProfileConfig = { ...profiles[profileName] };
@@ -129,7 +130,7 @@ const useCommand = new Command('use')
 	.argument('<profile>', 'Profile name to make default')
 	.action(async (profileArg, _opts, command) => {
 		await runAction(command, async ({ config }) => {
-			const file = readConfigFile();
+			const file = readConfigFile({ strict: true });
 			if (!file.profiles?.[profileArg]) {
 				throw new CliError(
 					`Profile "${profileArg}" does not exist. Create it with \`assinafy config set --profile ${profileArg} ...\`.`,
@@ -148,7 +149,7 @@ const removeCommand = new Command('remove')
 	.argument('<profile>', 'Profile name to delete')
 	.action(async (profileArg, _opts, command) => {
 		await runAction(command, async ({ config }) => {
-			const file = readConfigFile();
+			const file = readConfigFile({ strict: true });
 			if (!file.profiles?.[profileArg]) {
 				throw new CliError(`Profile "${profileArg}" does not exist.`);
 			}
@@ -166,7 +167,7 @@ const pathCommand = new Command('path')
 	.description('Print the config file path')
 	.action(async (_opts, command) => {
 		await runAction(command, async ({ config }) => {
-			printData({ path: configPath() }, config, (data) => data.path);
+			printData({ path: configPath() }, config, (data) => sanitizeTerminalText(data.path));
 		});
 	});
 

@@ -8,7 +8,7 @@ export const logoutCommand = new Command('logout')
 	.description('Remove stored credentials from the active profile')
 	.action(async (_opts, command) => {
 		await runAction(command, async ({ config }) => {
-			const file = readConfigFile();
+			const file = readConfigFile({ strict: true });
 			const profileName = activeProfileName(getGlobals(command), file);
 			const profile = file.profiles?.[profileName];
 			if (!profile || (!profile.api_key && !profile.token)) {

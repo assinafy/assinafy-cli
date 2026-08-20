@@ -66,8 +66,8 @@ Options:
   --tags <ids>       Comma-separated tag IDs (AND semantics)
   --page <n>         Page number to fetch
   --per-page <n>     Items per page
-  --search <query>   Filter results by a search query
-  --sort <field>     Sort by field (prefix with - for descending)
+  --search <query>   Filter by a search query
+  --sort <field>     Sort by field
   -h, --help         display help for command
 ```
 
@@ -85,8 +85,8 @@ Options:
   --status <status>  Filter by document status
   --page <n>         Page number to fetch
   --per-page <n>     Items per page
-  --search <query>   Filter results by a search query
-  --sort <field>     Sort by field (prefix with - for descending)
+  --search <query>   Filter by a search query
+  --sort <field>     Sort by field
   -h, --help         display help for command
 ```
 
@@ -130,9 +130,10 @@ Arguments:
   id                   Document ID
 
 Options:
-  --artifact <name>    original | certificated | certificate-page | bundle
-                       (default: "certificated")
+  --artifact <name>    original | certificated | certificate-page | pades |
+                       bundle (default: "certificated")
   -o, --output <path>  Output file path
+  --force              Overwrite the output file if it already exists
   -h, --help           display help for command
 ```
 
@@ -148,6 +149,7 @@ Arguments:
 
 Options:
   -o, --output <path>  Output file path
+  --force              Overwrite the output file if it already exists
   -h, --help           display help for command
 ```
 
@@ -164,6 +166,7 @@ Arguments:
 
 Options:
   -o, --output <path>  Output file path
+  --force              Overwrite the output file if it already exists
   -h, --help           display help for command
 ```
 
@@ -341,7 +344,8 @@ Arguments:
   id                   Document ID
 
 Options:
-  --recipient <value>  Email address or phone number
+  --email <email>      Email using the current published API payload
+  --recipient <value>  Email address or phone number (live legacy payload)
   --channel <channel>  email or whatsapp (default: "email")
   -h, --help           display help for command
 ```
@@ -375,4 +379,3 @@ Options:
   --interval <ms>  Poll interval in milliseconds (default: "2000")
   -h, --help       display help for command
 ```
-

@@ -72,6 +72,9 @@ export function parseInteger(
 		throw new CliError(`${flag} must be an integer.`);
 	}
 	const n = Number(trimmed);
+	if (!Number.isSafeInteger(n)) {
+		throw new CliError(`${flag} must be a safe integer.`);
+	}
 	if (options.min !== undefined && n < options.min) {
 		throw new CliError(`${flag} must be ${options.min} or greater.`);
 	}

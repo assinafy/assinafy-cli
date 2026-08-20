@@ -2,7 +2,7 @@
 // Generate per-command reference docs from the CLI's own --help output.
 // Accuracy by construction: the docs are exactly what `assinafy <cmd> --help` prints.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -52,12 +52,21 @@ function section(pathParts, depth) {
 const topLevel = subcommands(help([]));
 mkdirSync(docsDir, { recursive: true });
 
-let index = '# Command reference\n\nAuto-generated from `assinafy <command> --help`.\n\n';
+// Command pages are wholly generated. Remove the previous owned set so deleted
+// commands cannot leave stale documentation behind.
+for (const file of readdirSync(docsDir)) {
+	if (!file.endsWith('.md')) continue;
+	const target = path.join(docsDir, file);
+	if (readFileSync(target, 'utf8').startsWith('# `assinafy ')) rmSync(target);
+}
+
+let index =
+	'# Command reference\n\nCommand pages are auto-generated from `assinafy <command> --help`.\n\n';
 index +=
-	'See [`api-reference.md`](./api-reference.md) for the HTTP endpoint and real request/response payloads behind each command.\n\n## Commands\n\n';
+	'- [`api-reference.md`](./api-reference.md) — all 89 published HTTP operations with official request/response payloads\n- [`sdk-reference.md`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [`migration-v2.md`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [`releasing.md`](./releasing.md) — mirrored-tag release and registry-publishing runbook\n\n## Commands\n\n';
 
 for (const name of topLevel) {
-	const md = `# \`assinafy ${name}\`\n\n${section([name], 0)}`;
+	const md = `${`# \`assinafy ${name}\`\n\n${section([name], 0)}`.trimEnd()}\n`;
 	const file = `${name}.md`;
 	writeFileSync(path.join(docsDir, file), md);
 	index += `- [${name}](./${file})\n`;

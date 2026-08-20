@@ -1,4 +1,4 @@
-import { ValidationError } from '../errors';
+import { ValidationError } from '../errors.js';
 import type {
 	IWebhookDispatch,
 	IWebhookDispatchListParams,
@@ -7,9 +7,9 @@ import type {
 	IWebhookSubscription,
 	PaginatedResult,
 	WebhookEventType,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import { cleanParams, requireSort } from '../utils.js';
+import { BaseResource } from './base.js';
 
 const DEFAULT_EVENTS: WebhookEventType[] = [
 	'document_ready',
@@ -38,7 +38,7 @@ export class WebhookResource extends BaseResource {
 			is_active: payload.is_active ?? true,
 		};
 
-		this.logger.info('Registering webhook', { url: payload.url });
+		this.logger.info('Registering webhook', { eventCount: body.events.length });
 
 		return this.call('Failed to register webhook', () =>
 			this.http.put(`/accounts/${id}/webhooks/subscriptions`, body),
@@ -75,6 +75,8 @@ export class WebhookResource extends BaseResource {
 		accountId?: string,
 	): Promise<PaginatedResult<IWebhookDispatch>> {
 		const id = this.accountId(accountId);
+		if ('search' in params) throw new ValidationError('webhook dispatch search is not supported');
+		requireSort(params.sort, ['created_at', '-created_at']);
 		return this.callList<IWebhookDispatch>('Failed to list webhook dispatches', () =>
 			this.http.get(`/accounts/${id}/webhooks`, {
 				params: cleanParams(params as unknown as Record<string, unknown>),

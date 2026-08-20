@@ -3,7 +3,7 @@ import type { ICreateSignerPayload, IUpdateSignerPayload } from '../api';
 import { requireAccountId } from '../lib/client';
 import { parseJsonObject } from '../lib/json';
 import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
@@ -53,13 +53,14 @@ const createCommand = new Command('create')
 
 const listCommand = addListOptions(
 	new Command('list').description('List signers in the workspace'),
+	'Sort by full_name (prefix with - for descending)',
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
 		const result = await withSpinner('Fetching signers', config, () =>
 			client.signers.list(listParams(opts), accountId),
 		);
-		printData(result.data, config, (rows) => {
+		printPaginatedData(result, config, (rows) => {
 			const table = renderTable(rows, signerColumns);
 			const footer = paginationFooter(result);
 			return footer ? `${table}\n${footer}` : table;

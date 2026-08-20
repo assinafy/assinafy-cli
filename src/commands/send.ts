@@ -1,4 +1,4 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { IUploadAndRequestSignaturesSigner } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
@@ -32,6 +32,9 @@ export function resolveSigners(
 	signerSpecs: string[],
 	signersJson?: string,
 ): IUploadAndRequestSignaturesSigner[] {
+	if (signerSpecs.length > 0 && signersJson) {
+		throw new CliError('Provide either --signer or --signers, not both.');
+	}
 	if (signersJson) {
 		return parseJsonArray(signersJson, '--signers') as IUploadAndRequestSignaturesSigner[];
 	}
@@ -44,8 +47,13 @@ export function resolveSigners(
 export const sendCommand = new Command('send')
 	.description('Upload a PDF, create signers, and request signatures in one step')
 	.argument('<file>', 'Path to the PDF file')
-	.option('--signer <spec>', 'Signer as "Name <email-or-phone>" (repeatable)', collect, [])
-	.option('--signers <json>', 'JSON array of signer objects (overrides --signer)')
+	.addOption(
+		new Option('--signer <spec>', 'Signer as "Name <email-or-phone>" (repeatable)')
+			.argParser(collect)
+			.default([] as string[])
+			.conflicts('signers'),
+	)
+	.addOption(new Option('--signers <json>', 'JSON array of signer objects').conflicts('signer'))
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
 	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')

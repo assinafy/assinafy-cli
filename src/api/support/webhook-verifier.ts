@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { IWebhookPayload } from '../types';
+import type { IWebhookPayload } from '../types.js';
 
 /** Tunables for {@link WebhookVerifier} so the scheme can match the platform. */
 export interface WebhookVerifierOptions {
@@ -19,6 +19,10 @@ export interface WebhookVerifierOptions {
  * whatever the platform actually sends. Confirm the exact header name and
  * encoding against a real delivered webhook before relying on it, and treat a
  * failed {@link WebhookVerifier.verify} as "unverified", not proof of forgery.
+ *
+ * @deprecated Assinafy does not publish a signing contract. Keep this helper
+ * disabled in security-sensitive code until Assinafy confirms the header,
+ * algorithm, encoding, and replay protections for your account.
  */
 export class WebhookVerifier {
 	private readonly algorithm: string;
@@ -74,19 +78,17 @@ export class WebhookVerifier {
 	/**
 	 * Extract the event data from an event envelope.
 	 *
-	 * Verified against a real delivered webhook: the per-event data (signer
-	 * email, document id, etc.) lives under `payload`; `object` is just a
-	 * `{ type: "Document" }` resource marker, and `data` is a legacy/alternate
-	 * key some integrations use. Check `payload` first.
+	 * The per-event data may live under `payload`, `data`, or `object`; only a
+	 * non-array JSON object is returned.
 	 */
 	getEventData(event: IWebhookPayload | null | undefined): Record<string, unknown> {
 		if (!event || typeof event !== 'object') return {};
 		const e = event as IWebhookPayload & { object?: Record<string, unknown> };
-		return (
-			(e.payload as Record<string, unknown> | undefined) ??
-			(e.data as Record<string, unknown> | undefined) ??
-			e.object ??
-			{}
-		);
+		for (const candidate of [e.payload, e.data, e.object]) {
+			if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+				return candidate;
+			}
+		}
+		return {};
 	}
 }

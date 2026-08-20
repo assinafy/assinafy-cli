@@ -42,4 +42,10 @@ describe('resolveSigners', () => {
 	it('throws when no signers are given', () => {
 		expect(() => resolveSigners([])).toThrow(/At least one/);
 	});
+
+	it('rejects ambiguous signer sources', () => {
+		expect(() => resolveSigners(['A <a@b.com>'], '[{"name":"B","email":"b@b.com"}]')).toThrow(
+			/not both/,
+		);
+	});
 });

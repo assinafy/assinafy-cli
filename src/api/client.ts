@@ -1,16 +1,17 @@
 import axios, { type AxiosInstance } from 'axios';
-import { ValidationError } from './errors';
-import { AssignmentResource } from './resources/assignments';
-import { AuthenticationResource } from './resources/authentication';
-import { DocumentResource, type DocumentUploadSource } from './resources/documents';
-import { FieldsResource } from './resources/fields';
-import { SignerDocumentsResource } from './resources/signer-documents';
-import { SignerResource } from './resources/signers';
-import { TagResource } from './resources/tags';
-import { TemplateResource } from './resources/templates';
-import { WebhookResource } from './resources/webhooks';
-import { WorkspaceResource } from './resources/workspaces';
-import { WebhookVerifier } from './support/webhook-verifier';
+import { ValidationError } from './errors.js';
+import { AssignmentResource } from './resources/assignments.js';
+import { AuthenticationResource } from './resources/authentication.js';
+import { DocumentResource, type DocumentUploadSource } from './resources/documents.js';
+import { FieldsResource } from './resources/fields.js';
+import { SignerDocumentsResource } from './resources/signer-documents.js';
+import { SignerResource, validateCreateSignerPayload } from './resources/signers.js';
+import { TagResource } from './resources/tags.js';
+import { TemplateResource } from './resources/templates.js';
+import { UsersResource } from './resources/users.js';
+import { WebhookResource } from './resources/webhooks.js';
+import { WorkspaceResource } from './resources/workspaces.js';
+import { WebhookVerifier } from './support/webhook-verifier.js';
 import type {
 	AssinafyClientOptions,
 	ICreateAssignmentPayload,
@@ -18,8 +19,9 @@ import type {
 	IUploadAndRequestSignaturesResult,
 	IUploadAndRequestSignaturesSigner,
 	Logger,
-} from './types';
-import { createNoopLogger, normalizeBaseUrl } from './utils';
+	SignerReference,
+} from './types.js';
+import { createNoopLogger, normalizeBaseUrl, requireIso8601 } from './utils.js';
 
 /** Flexible input accepted by {@link AssinafyClient.fromConfig} (snake_case or camelCase). */
 export interface ClientConfigInput {
@@ -38,6 +40,8 @@ export interface ClientConfigInput {
 	logger?: Logger;
 	allow_unauthenticated?: boolean;
 	allowUnauthenticated?: boolean;
+	allow_insecure_http?: boolean;
+	allowInsecureHttp?: boolean;
 }
 
 const DEFAULT_BASE_URL = 'https://api.assinafy.com.br/v1';
@@ -71,6 +75,7 @@ export class AssinafyClient {
 	public readonly tags: TagResource;
 	public readonly auth: AuthenticationResource;
 	public readonly fields: FieldsResource;
+	public readonly users: UsersResource;
 	public readonly signerDocuments: SignerDocumentsResource;
 	public readonly webhookVerifier: WebhookVerifier;
 
@@ -86,6 +91,26 @@ export class AssinafyClient {
 		this.webhookSecret = options.webhookSecret;
 
 		const baseURL = normalizeBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
+		let parsedBaseUrl: URL;
+		try {
+			parsedBaseUrl = new URL(baseURL);
+		} catch {
+			throw new ValidationError('baseUrl must be an absolute HTTP(S) URL');
+		}
+		if (!['https:', 'http:'].includes(parsedBaseUrl.protocol)) {
+			throw new ValidationError('baseUrl must use HTTPS');
+		}
+		if (parsedBaseUrl.protocol !== 'https:' && !options.allowInsecureHttp) {
+			throw new ValidationError(
+				'baseUrl must use HTTPS; set allowInsecureHttp only for isolated local development',
+			);
+		}
+		if (parsedBaseUrl.username || parsedBaseUrl.password) {
+			throw new ValidationError('baseUrl must not contain embedded credentials');
+		}
+		if (parsedBaseUrl.search || parsedBaseUrl.hash) {
+			throw new ValidationError('baseUrl must not contain a query string or fragment');
+		}
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',
@@ -101,6 +126,7 @@ export class AssinafyClient {
 			baseURL,
 			timeout: options.timeout ?? 30_000,
 			headers,
+			maxRedirects: 0,
 		});
 
 		this.documents = new DocumentResource(this.axiosInstance, this.defaultAccountId, this.logger);
@@ -116,6 +142,7 @@ export class AssinafyClient {
 		this.tags = new TagResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.auth = new AuthenticationResource(this.axiosInstance, undefined, this.logger);
 		this.fields = new FieldsResource(this.axiosInstance, this.defaultAccountId, this.logger);
+		this.users = new UsersResource(this.axiosInstance, undefined, this.logger);
 		this.signerDocuments = new SignerDocumentsResource(
 			this.axiosInstance,
 			this.defaultAccountId,
@@ -130,7 +157,7 @@ export class AssinafyClient {
 		accountId: string,
 		options: Omit<AssinafyClientOptions, 'apiKey' | 'accountId'> = {},
 	): AssinafyClient {
-		return new AssinafyClient({ apiKey, accountId, ...options });
+		return new AssinafyClient({ ...options, apiKey, accountId });
 	}
 
 	/** Build a client from a plain object (supports snake_case and camelCase keys). */
@@ -148,6 +175,7 @@ export class AssinafyClient {
 		if (webhookSecret !== undefined) opts.webhookSecret = webhookSecret;
 		if (config.timeout !== undefined) opts.timeout = config.timeout;
 		if (config.logger !== undefined) opts.logger = config.logger;
+		opts.allowInsecureHttp = config.allow_insecure_http ?? config.allowInsecureHttp ?? false;
 		opts.allowUnauthenticated =
 			config.allow_unauthenticated ?? config.allowUnauthenticated ?? false;
 		return new AssinafyClient(opts);
@@ -170,6 +198,17 @@ export class AssinafyClient {
 		if (!options.signers || options.signers.length === 0) {
 			throw new ValidationError('At least one signer is required');
 		}
+		if (options.expiresAt !== undefined) requireIso8601(options.expiresAt, 'expiresAt');
+		const preparedSigners = options.signers.map((signer) => {
+			const payload: ICreateSignerPayload = { full_name: signer.name };
+			if (signer.email !== undefined) payload.email = signer.email;
+			const phone = signer.whatsapp_phone_number ?? signer.phone;
+			if (phone !== undefined) payload.whatsapp_phone_number = phone;
+			if (signer.cpf !== undefined) payload.cpf = signer.cpf;
+			if (signer.metadata !== undefined) payload.metadata = signer.metadata;
+			validateCreateSignerPayload(payload);
+			return { signer, payload, phone };
+		});
 
 		this.logger.info('Starting upload + signature workflow', {
 			signerCount: options.signers.length,
@@ -186,28 +225,23 @@ export class AssinafyClient {
 		}
 
 		const signerIds: string[] = [];
-		for (const signer of options.signers) {
-			const payload: ICreateSignerPayload = { full_name: signer.name };
-			if (signer.email !== undefined) {
-				payload.email = signer.email;
-			}
-			const phone = signer.whatsapp_phone_number ?? signer.phone;
-			if (phone !== undefined) {
-				payload.whatsapp_phone_number = phone;
-			}
-			if (signer.cpf !== undefined) {
-				payload.cpf = signer.cpf;
-			}
-			if (signer.metadata !== undefined) {
-				payload.metadata = signer.metadata;
-			}
+		const assignmentSigners: SignerReference[] = [];
+		for (const { signer, payload, phone } of preparedSigners) {
 			const created = await this.signers.create(payload, options.accountId);
 			signerIds.push(created.id);
+			const useWhatsapp = phone !== undefined && signer.email === undefined;
+			assignmentSigners.push({
+				id: created.id,
+				verification_method: signer.verification_method ?? (useWhatsapp ? 'Whatsapp' : undefined),
+				notification_methods:
+					signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
+				step: signer.step,
+			});
 		}
 
 		const assignmentPayload: ICreateAssignmentPayload = {
 			method: 'virtual',
-			signers: signerIds,
+			signers: assignmentSigners,
 		};
 		if (options.message !== undefined) assignmentPayload.message = options.message;
 		if (options.expiresAt !== undefined) assignmentPayload.expires_at = options.expiresAt;

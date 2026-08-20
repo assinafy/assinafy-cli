@@ -68,9 +68,15 @@ describe('WebhookVerifier envelope parsing', () => {
 		expect(v.getEventData(null)).toEqual({});
 	});
 
-	it('extracts the real per-event data from a live-shaped webhook dispatch envelope', () => {
-		// Matches a real delivered webhook body (sandbox-verified): the useful
-		// data lives under `payload`, while `object` is just a resource marker.
+	it('skips primitive and array event-data candidates', () => {
+		expect(v.getEventData({ payload: 'invalid', data: { a: 1 } } as never)).toEqual({ a: 1 });
+		expect(v.getEventData({ payload: [], data: null, object: { b: 2 } } as never)).toEqual({
+			b: 2,
+		});
+		expect(v.getEventData({ payload: 'invalid', data: [], object: null } as never)).toEqual({});
+	});
+
+	it('extracts per-event data from a representative webhook dispatch envelope', () => {
 		const envelope = {
 			id: 15715,
 			event: 'signature_requested',
@@ -78,8 +84,8 @@ describe('WebhookVerifier envelope parsing', () => {
 			origin: null,
 			message: null,
 			payload: {
-				signer_email: 'bill@febacapital.com',
-				signer_full_name: 'Audit Bill A2',
+				signer_email: 'signer@example.com',
+				signer_full_name: 'Example Signer',
 				notification_method: 'email',
 				signer_whatsapp_phone_number: null,
 			},
@@ -89,8 +95,8 @@ describe('WebhookVerifier envelope parsing', () => {
 		};
 		expect(v.getEventType(envelope as never)).toBe('signature_requested');
 		expect(v.getEventData(envelope as never)).toEqual({
-			signer_email: 'bill@febacapital.com',
-			signer_full_name: 'Audit Bill A2',
+			signer_email: 'signer@example.com',
+			signer_full_name: 'Example Signer',
 			notification_method: 'email',
 			signer_whatsapp_phone_number: null,
 		});
