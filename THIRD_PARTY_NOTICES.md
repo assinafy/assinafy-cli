@@ -62,7 +62,7 @@ Source: git+https://github.com/commander-js/extra-typings.git
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## @types/node 22.20.1
+## @types/node 26.2.0
 
 License: MIT
 
@@ -943,7 +943,7 @@ Source: https://github.com/terkelg/sisteransi
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## undici-types 6.21.0
+## undici-types 8.3.0
 
 License: MIT
 
