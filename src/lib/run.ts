@@ -47,11 +47,14 @@ async function withResolvedConfig(
 	command: CommandLike,
 	handler: (config: ResolvedConfig) => Promise<void>,
 ): Promise<void> {
-	const config = resolveConfig(getGlobals(command));
+	let outputConfig = { json: false, quiet: false };
 	try {
+		const globals = getGlobals(command);
+		outputConfig = { json: Boolean(globals.json), quiet: Boolean(globals.quiet) };
+		const config = resolveConfig(globals);
 		await handler(config);
 	} catch (err) {
-		printError(err, config);
+		printError(err, outputConfig);
 	}
 }
 
@@ -76,13 +79,16 @@ export function runWithOptionalClient(
 	);
 }
 
-/** Run a command that specifically requires a user JWT bearer token. */
-export function runWithTokenClient(
+/** Run a public command without forwarding any configured credentials. */
+export function runWithPublicClient(
 	command: CommandLike,
 	handler: (ctx: ClientContext) => Promise<void>,
 ): Promise<void> {
 	return withResolvedConfig(command, (config) =>
-		handler({ client: createClient(config, { preferToken: true }), config }),
+		handler({
+			client: createClient(config, { allowUnauthenticated: true, omitCredentials: true }),
+			config,
+		}),
 	);
 }
 

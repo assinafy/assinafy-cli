@@ -15,14 +15,14 @@ Commands:
                                   token (no existing credentials required)
   social-login [options]          Exchange a provider token for an Assinafy JWT
                                   (no existing credentials required)
+  link-social-login [options]     Link a Google identity to the authenticated
+                                  user
   change-password [options]       Change the authenticated user's password
-                                  (requires --token or ASSINAFY_TOKEN)
   request-password-reset <email>  Email a password-reset link to the user (no
                                   existing credentials required)
   reset-password [options]        Complete a password reset with the emailed
                                   token (no existing credentials required)
   api-keys                        Manage the current user personal API key
-                                  (requires --token or ASSINAFY_TOKEN)
   help [command]                  display help for command
 ```
 
@@ -38,7 +38,7 @@ Arguments:
   email                  Account email
 
 Options:
-  --password <password>  Password (prompted if omitted)
+  --password <password>  Password (prompted if omitted) (env: ASSINAFY_PASSWORD)
   -h, --help             display help for command
 ```
 
@@ -51,8 +51,20 @@ Exchange a provider token for an Assinafy JWT (no existing credentials required)
 
 Options:
   --provider <provider>     OAuth provider (e.g. google)
-  --provider-token <token>  Provider token
+  --provider-token <token>  Provider token (env: ASSINAFY_PROVIDER_TOKEN)
   --accept-terms            Accept the platform terms
+  -h, --help                display help for command
+```
+
+### `assinafy auth link-social-login`
+
+```text
+Usage: assinafy auth link-social-login [options]
+
+Link a Google identity to the authenticated user
+
+Options:
+  --provider-token <token>  Google identity token (env: ASSINAFY_PROVIDER_TOKEN)
   -h, --help                display help for command
 ```
 
@@ -61,12 +73,14 @@ Options:
 ```text
 Usage: assinafy auth change-password [options]
 
-Change the authenticated user's password (requires --token or ASSINAFY_TOKEN)
+Change the authenticated user's password
 
 Options:
   --email <email>            Account email
-  --password <password>      Current password (prompted if omitted)
-  --new-password <password>  New password (prompted if omitted)
+  --password <password>      Current password (prompted if omitted) (env:
+                             ASSINAFY_PASSWORD)
+  --new-password <password>  New password (prompted if omitted) (env:
+                             ASSINAFY_NEW_PASSWORD)
   -h, --help                 display help for command
 ```
 
@@ -94,8 +108,10 @@ required)
 
 Options:
   --email <email>            Account email
-  --token <token>            Reset token from the email
-  --new-password <password>  New password (prompted if omitted)
+  --reset-token <token>      Reset token from the email (env:
+                             ASSINAFY_RESET_TOKEN)
+  --new-password <password>  New password (prompted if omitted) (env:
+                             ASSINAFY_NEW_PASSWORD)
   -h, --help                 display help for command
 ```
 
@@ -104,7 +120,7 @@ Options:
 ```text
 Usage: assinafy auth api-keys [options] [command]
 
-Manage the current user personal API key (requires --token or ASSINAFY_TOKEN)
+Manage the current user personal API key
 
 Options:
   -h, --help           display help for command
@@ -124,7 +140,8 @@ Usage: assinafy auth api-keys create [options]
 Generate (and rotate) the current user API key
 
 Options:
-  --password <password>  Account password (prompted if omitted)
+  --password <password>  Account password (prompted if omitted) (env:
+                         ASSINAFY_PASSWORD)
   -h, --help             display help for command
 ```
 
@@ -150,4 +167,3 @@ Options:
   -y, --yes   Skip the confirmation prompt
   -h, --help  display help for command
 ```
-

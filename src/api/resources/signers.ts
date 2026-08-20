@@ -1,43 +1,51 @@
-import { ApiError, ValidationError } from '../errors';
+import { ApiError, ValidationError } from '../errors.js';
 import type {
 	ICreateSignerPayload,
 	ICreateSignerResponse,
-	IListParams,
+	IEmptyResult,
 	ISigner,
+	ISignerListParams,
 	ISignerListResponse,
 	IUpdateSignerPayload,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import { cleanParams, requireSort } from '../utils.js';
+import { BaseResource } from './base.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Validate the locally knowable fields before creating a signer. */
+export function validateCreateSignerPayload(payload: ICreateSignerPayload): void {
+	if (!payload.full_name?.trim()) throw new ValidationError('Signer full name is required');
+	if (payload.email) assertEmail(payload.email);
+}
+
+function assertEmail(email: string): void {
+	if (!email || !EMAIL_RE.test(email)) {
+		throw new ValidationError('Invalid email address', { email });
+	}
+}
 
 export class SignerResource extends BaseResource {
 	/**
 	 * Create a signer in the workspace.
 	 *
-	 * `email` is optional — the API also accepts whatsapp-only signers — but at
-	 * least one of `email` / `whatsapp_phone_number` (or the `phone` alias) is
-	 * required. When an `email` is supplied the call is idempotent by email:
-	 * an existing signer with that address is reused instead of duplicated.
+	 * Only `full_name` is required. When an `email` is supplied the call is
+	 * idempotent by email: an existing signer with that address is reused instead
+	 * of duplicated.
 	 */
 	async create(payload: ICreateSignerPayload, accountId?: string): Promise<ICreateSignerResponse> {
 		const id = this.accountId(accountId);
-		const phone = payload.whatsapp_phone_number ?? payload.phone;
-		if (!payload.email && !phone) {
-			throw new ValidationError('A signer requires at least an email or a whatsapp_phone_number');
-		}
-		if (payload.email) this.assertEmail(payload.email);
+		validateCreateSignerPayload(payload);
 
 		if (payload.email) {
 			const existing = await this.findByEmail(payload.email, id);
 			if (existing) {
-				this.logger.info('Using existing signer', { email: payload.email });
+				this.logger.info('Using existing signer', { signerId: existing.id });
 				return existing;
 			}
 		}
 
-		this.logger.info('Creating signer', { email: payload.email });
+		this.logger.info('Creating signer', { hasEmail: Boolean(payload.email) });
 		try {
 			return await this.call('Failed to create signer', () =>
 				this.http.post(`/accounts/${id}/signers`, normaliseSignerPayload(payload)),
@@ -47,7 +55,7 @@ export class SignerResource extends BaseResource {
 				const duplicate = await this.findByEmail(payload.email, id);
 				if (duplicate) {
 					this.logger.info('Signer already exists, using existing signer', {
-						email: payload.email,
+						signerId: duplicate.id,
 					});
 					return duplicate;
 				}
@@ -65,11 +73,14 @@ export class SignerResource extends BaseResource {
 		);
 	}
 
-	/** List signers for the workspace (supports `page`, `per_page`, `search`, `sort`). */
-	async list(params: IListParams = {}, accountId?: string): Promise<ISignerListResponse> {
+	/** List signers (`sort` accepts the live-verified `full_name` / `-full_name`). */
+	async list(params: ISignerListParams = {}, accountId?: string): Promise<ISignerListResponse> {
 		const id = this.accountId(accountId);
+		requireSort(params.sort, ['full_name', '-full_name']);
 		return this.callList<ISigner>('Failed to list signers', () =>
-			this.http.get(`/accounts/${id}/signers`, { params: cleanParams(params) }),
+			this.http.get(`/accounts/${id}/signers`, {
+				params: cleanParams(params as unknown as Record<string, unknown>),
+			}),
 		);
 	}
 
@@ -82,22 +93,22 @@ export class SignerResource extends BaseResource {
 		const id = this.accountId(accountId);
 		const sid = this.requireId(signerId, 'Signer ID');
 		return this.call('Failed to update signer', () =>
-			this.http.put(`/accounts/${id}/signers/${sid}`, normaliseSignerPayload(payload)),
+			this.http.put(`/accounts/${id}/signers/${sid}`, normaliseSignerPayload(payload, true)),
 		);
 	}
 
 	/** Delete a signer. */
-	async delete(signerId: string, accountId?: string): Promise<void> {
+	async delete(signerId: string, accountId?: string): Promise<IEmptyResult> {
 		const id = this.accountId(accountId);
 		const sid = this.requireId(signerId, 'Signer ID');
-		return this.callVoid('Failed to delete signer', () =>
+		return this.call('Failed to delete signer', () =>
 			this.http.delete(`/accounts/${id}/signers/${sid}`),
 		);
 	}
 
 	/** Find a signer by email via the API's `search` parameter. Returns `null` if none match. */
 	async findByEmail(email: string, accountId?: string): Promise<ISigner | null> {
-		this.assertEmail(email);
+		assertEmail(email);
 		try {
 			const { data } = await this.list({ search: email, per_page: 100 }, accountId);
 			const lower = email.toLowerCase();
@@ -109,16 +120,11 @@ export class SignerResource extends BaseResource {
 			throw err;
 		}
 	}
-
-	private assertEmail(email: string): void {
-		if (!email || !EMAIL_RE.test(email)) {
-			throw new ValidationError('Invalid email address', { email });
-		}
-	}
 }
 
 function normaliseSignerPayload(
 	payload: ICreateSignerPayload | IUpdateSignerPayload,
+	useGovernmentId = false,
 ): Record<string, unknown> {
 	const normalised: Record<string, unknown> = {
 		full_name: payload.full_name,
@@ -126,11 +132,13 @@ function normaliseSignerPayload(
 		whatsapp_phone_number: payload.whatsapp_phone_number ?? payload.phone,
 	};
 
-	if (payload.cpf) {
+	const governmentId =
+		'government_id' in payload ? (payload.government_id ?? payload.cpf) : payload.cpf;
+	if (governmentId) {
 		// Strip formatting; only forward a CPF when digits actually remain so a
 		// value like "---" doesn't get sent as an empty string.
-		const digits = payload.cpf.replace(/\D/g, '');
-		if (digits) normalised.cpf = digits;
+		const digits = governmentId.replace(/\D/g, '');
+		if (digits) normalised[useGovernmentId ? 'government_id' : 'cpf'] = digits;
 	}
 
 	if ('metadata' in payload && payload.metadata !== undefined) {

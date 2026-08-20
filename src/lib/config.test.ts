@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -71,6 +71,20 @@ describe('config file round-trip', () => {
 		writeConfigFile({ profiles: { default: {} } });
 		writeFileSync(configPath(), 'not json');
 		expect(readConfigFile()).toEqual({});
+	});
+
+	it('rejects an array at the config root', () => {
+		writeConfigFile({});
+		writeFileSync(configPath(), '[]');
+		expect(readConfigFile()).toEqual({});
+	});
+
+	it('refuses to mutate through a malformed existing config', () => {
+		writeConfigFile({});
+		writeFileSync(configPath(), 'recoverable malformed contents');
+
+		expect(() => readConfigFile({ strict: true })).toThrow(/refusing to overwrite/i);
+		expect(readFileSync(configPath(), 'utf8')).toBe('recoverable malformed contents');
 	});
 });
 

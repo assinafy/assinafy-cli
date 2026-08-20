@@ -95,4 +95,3 @@ Print the config file path
 Options:
   -h, --help  display help for command
 ```
-

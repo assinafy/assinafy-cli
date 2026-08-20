@@ -1,5 +1,8 @@
+import { promises as fs } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { AxiosInstance } from 'axios';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, ValidationError } from '../errors';
 import { AssignmentResource, buildAssignmentPayload } from './assignments';
 import { AuthenticationResource } from './authentication';
@@ -9,6 +12,7 @@ import { SignerDocumentsResource } from './signer-documents';
 import { SignerResource } from './signers';
 import { TagResource } from './tags';
 import { TemplateResource } from './templates';
+import { UsersResource } from './users';
 import { WebhookResource } from './webhooks';
 import { WorkspaceResource } from './workspaces';
 
@@ -23,6 +27,10 @@ function ok(data: unknown, headers: Record<string, string> = {}) {
 	return { status: 200, data: { status: 200, data }, headers };
 }
 
+function statusOk() {
+	return { status: 200, data: { status: 200, message: '' }, headers: {} };
+}
+
 function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 	return {
 		get: async (url: string, config?: CapturedCall['config']) => {
@@ -31,10 +39,15 @@ function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 		},
 		post: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
 			calls.push({ method: 'POST', url, body, config });
+			if (url === '/verify' || url === '/signature' || url === '/auth/link-social-login') {
+				return statusOk();
+			}
+			if (/\/accounts\/[^/]+\/logo$/.test(url)) return statusOk();
 			return ok({ id: 'created' });
 		},
 		put: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
 			calls.push({ method: 'PUT', url, body, config });
+			if (url === '/signers/accept-terms') return statusOk();
 			return ok({ id: 'updated' });
 		},
 		patch: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
@@ -43,10 +56,27 @@ function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 		},
 		delete: async (url: string, config?: CapturedCall['config']) => {
 			calls.push({ method: 'DELETE', url, config });
-			return { status: 200, data: { status: 200, data: [] } };
+			if (/\/accounts\/[^/]+\/logo$/.test(url)) return statusOk();
+			const data = /\/documents\/[^/]+\/tags\//.test(url)
+				? { detached: true }
+				: /\/tags\/[^/]+$/.test(url)
+					? { deleted: true }
+					: [];
+			return ok(data);
 		},
 	} as unknown as AxiosInstance;
 }
+
+describe('documented delete responses', () => {
+	it('returns the unwrapped empty data array instead of discarding it', async () => {
+		const http = mockHttp();
+		await expect(new DocumentResource(http).delete('doc')).resolves.toEqual([]);
+		await expect(new FieldsResource(http, 'acc').delete('field')).resolves.toEqual([]);
+		await expect(new SignerResource(http, 'acc').delete('signer')).resolves.toEqual([]);
+		await expect(new WorkspaceResource(http).delete('acc')).resolves.toEqual([]);
+		await expect(new AuthenticationResource(http).deleteApiKey()).resolves.toEqual([]);
+	});
+});
 
 describe('buildAssignmentPayload', () => {
 	it('normalises all supported signer reference shapes', () => {
@@ -87,10 +117,74 @@ describe('buildAssignmentPayload', () => {
 	it('rejects empty or invalid signer references', () => {
 		expect(() => buildAssignmentPayload({ signers: [] })).toThrow(ValidationError);
 		expect(() => buildAssignmentPayload({ signers: [{} as never] })).toThrow(ValidationError);
+		expect(() => buildAssignmentPayload({ signers: ['a'], signer_ids: ['b'] })).toThrow(
+			'Provide only one',
+		);
 	});
 });
 
 describe('DocumentResource', () => {
+	it('rejects oversized file paths before reading them into memory', async () => {
+		const directory = await fs.mkdtemp(path.join(tmpdir(), 'assinafy-upload-test-'));
+		const filePath = path.join(directory, 'oversized.pdf');
+		await fs.writeFile(filePath, '%PDF-1.7');
+		await fs.truncate(filePath, 25 * 1024 * 1024 + 1);
+		const readFile = vi.spyOn(fs, 'readFile');
+		try {
+			await expect(new DocumentResource(mockHttp()).upload({ filePath })).rejects.toThrow(
+				'File size exceeds',
+			);
+			expect(readFile).not.toHaveBeenCalled();
+		} finally {
+			readFile.mockRestore();
+			await fs.rm(directory, { recursive: true, force: true });
+		}
+	});
+
+	it('supports both the published and live-compatible public token payloads', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls));
+		await docs.sendToken('doc1', { email: 'signer@example.com' });
+		await docs.sendToken('doc1', '+5548999990000', 'whatsapp');
+		expect(calls).toMatchObject([
+			{
+				method: 'PUT',
+				url: '/public/documents/doc1/send-token',
+				body: { email: 'signer@example.com' },
+			},
+			{
+				method: 'PUT',
+				url: '/public/documents/doc1/send-token',
+				body: { recipient: '+5548999990000', channel: 'whatsapp' },
+			},
+		]);
+	});
+
+	it('preserves the published status-only send-token response', async () => {
+		const http = {
+			...mockHttp(),
+			put: async () => ({ status: 200, data: { status: 200, message: '' } }),
+		} as unknown as AxiosInstance;
+		const docs = new DocumentResource(http);
+		await expect(docs.sendToken('doc1', { email: 'signer@example.com' })).resolves.toEqual({
+			status: 200,
+			message: '',
+		});
+	});
+
+	it('keeps the document display name separate from the source PDF file name', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls), 'acc');
+		await docs.upload(
+			{ buffer: Buffer.from('%PDF-1.7'), fileName: 'contract.pdf' },
+			{ name: 'Contract' },
+		);
+
+		const form = calls[0]?.body as FormData;
+		expect(form.get('name')).toBe('Contract');
+		expect((form.get('file') as Blob & { name: string }).name).toBe('contract.pdf');
+	});
+
 	it('lists documents with documented query keys', async () => {
 		const calls: CapturedCall[] = [];
 		const docs = new DocumentResource(mockHttp(calls), 'acc');
@@ -109,7 +203,7 @@ describe('DocumentResource', () => {
 		const docs = new DocumentResource(mockHttp(calls), 'acc');
 		await docs.replaceTags('doc1', []);
 		await docs.addTags('doc1', ['Legal']);
-		await docs.detachTag('doc1', 'tag1');
+		expect(await docs.detachTag('doc1', 'tag1')).toEqual({ detached: true });
 		expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([
 			['PUT', '/accounts/acc/documents/doc1/tags', { tags: [] }],
 			['POST', '/accounts/acc/documents/doc1/tags', { tags: ['Legal'] }],
@@ -121,6 +215,7 @@ describe('DocumentResource', () => {
 		const docs = new DocumentResource(mockHttp(), 'acc');
 		await expect(docs.addTags('doc1', [])).rejects.toThrow(ValidationError);
 		await expect(docs.download('')).rejects.toThrow(ValidationError);
+		await expect(docs.download('doc1', '../original' as never)).rejects.toThrow(ValidationError);
 	});
 
 	it('fails loud on an unrecognised list response shape instead of returning an empty list', async () => {
@@ -180,6 +275,57 @@ describe('DocumentResource', () => {
 			docs.waitUntilReady('doc1', { maxWaitMs: 40, pollIntervalMs: 10 }),
 		).rejects.toThrow(/Timeout/);
 	});
+
+	it('caps polling sleep at the deadline and validates timing options', async () => {
+		vi.useFakeTimers();
+		try {
+			const http = {
+				...mockHttp(),
+				get: async () => ok({ status: 'processing' }),
+			} as unknown as AxiosInstance;
+			const docs = new DocumentResource(http, 'acc');
+			const pending = docs.waitUntilReady('doc1', {
+				maxWaitMs: 100,
+				pollIntervalMs: 60_000,
+			});
+			const timedOut = expect(pending).rejects.toThrow(/Timeout/);
+			await vi.advanceTimersByTimeAsync(100);
+			await timedOut;
+			await expect(docs.waitUntilReady('doc1', { maxWaitMs: 0 })).rejects.toThrow(ValidationError);
+			await expect(docs.waitUntilReady('doc1', { pollIntervalMs: Number.NaN })).rejects.toThrow(
+				ValidationError,
+			);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('caps each status request at the remaining wait deadline', async () => {
+		vi.useFakeTimers();
+		try {
+			const timeouts: number[] = [];
+			const http = {
+				...mockHttp(),
+				get: async (_url: string, config?: { timeout?: number }) => {
+					const timeout = config?.timeout ?? 30_000;
+					timeouts.push(timeout);
+					await new Promise((_, reject) =>
+						setTimeout(() => reject({ isAxiosError: true, message: 'timeout' }), timeout),
+					);
+				},
+			} as unknown as AxiosInstance;
+			const pending = new DocumentResource(http, 'acc').waitUntilReady('doc1', {
+				maxWaitMs: 100,
+				pollIntervalMs: 1_000,
+			});
+			const timedOut = expect(pending).rejects.toThrow(/Timeout/);
+			await vi.advanceTimersByTimeAsync(100);
+			await timedOut;
+			expect(timeouts).toEqual([100]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
 describe('SignerResource', () => {
@@ -192,10 +338,19 @@ describe('SignerResource', () => {
 	});
 
 	it('validates signer creation inputs', async () => {
-		await expect(signers.create({ full_name: 'No Contact' })).rejects.toThrow(ValidationError);
 		await expect(signers.create({ full_name: 'Bad Email', email: 'not-email' })).rejects.toThrow(
 			ValidationError,
 		);
+	});
+
+	it('creates the documented full-name-only signer', async () => {
+		await signers.create({ full_name: 'No Contact' });
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/accounts/acc/signers',
+			body: { full_name: 'No Contact' },
+		});
 	});
 
 	it('creates WhatsApp-only signers without an email lookup', async () => {
@@ -218,8 +373,25 @@ describe('SignerResource', () => {
 		expect(calls.at(-1)?.body).not.toHaveProperty('cpf');
 	});
 
+	it('normalises the legacy CPF update alias to the official government_id key', async () => {
+		await signers.update('signer1', { cpf: '390.533.447-05' });
+		expect(calls.at(-1)).toMatchObject({
+			method: 'PUT',
+			url: '/accounts/acc/signers/signer1',
+			body: { government_id: '39053344705' },
+		});
+		expect(calls.at(-1)?.body).not.toHaveProperty('cpf');
+	});
+
 	it('is idempotent by email: reuses an existing signer without a second POST', async () => {
 		const captured: CapturedCall[] = [];
+		const logged: unknown[] = [];
+		const logger = {
+			debug: () => undefined,
+			info: (_message: string, context?: Record<string, unknown>) => logged.push(context),
+			warn: () => undefined,
+			error: () => undefined,
+		};
 		const http = {
 			...mockHttp(captured),
 			get: async (url: string, config?: CapturedCall['config']) => {
@@ -227,10 +399,12 @@ describe('SignerResource', () => {
 				return ok([{ id: 'existing', full_name: 'Ana', email: 'ana@example.com' }]);
 			},
 		} as unknown as AxiosInstance;
-		const resource = new SignerResource(http, 'acc');
+		const resource = new SignerResource(http, 'acc', logger);
 		const created = await resource.create({ full_name: 'Ana', email: 'ana@example.com' });
 		expect(created.id).toBe('existing');
 		expect(captured.some((c) => c.method === 'POST')).toBe(false);
+		expect(JSON.stringify(logged)).not.toContain('ana@example.com');
+		expect(logged).toContainEqual({ signerId: 'existing' });
 	});
 });
 
@@ -241,7 +415,7 @@ describe('TagResource', () => {
 		await tags.list({ search: 'contract' });
 		await tags.create({ name: 'Contracts', color: 'ff8800' });
 		await tags.update('tag1', { color: null });
-		await tags.delete('tag1', { force: true });
+		expect(await tags.delete('tag1', { force: true })).toEqual({ deleted: true });
 		expect(calls).toMatchObject([
 			{ method: 'GET', url: '/accounts/acc/tags', config: { params: { search: 'contract' } } },
 			{ method: 'POST', url: '/accounts/acc/tags', body: { name: 'Contracts', color: 'ff8800' } },
@@ -267,7 +441,10 @@ describe('FieldsResource', () => {
 			method: 'POST',
 			url: '/accounts/acc/fields/field1/validate',
 			body: { value: '400.676.228-36' },
-			config: { params: { 'signer-access-code': 'code-1' } },
+			config: {
+				params: { 'signer-access-code': 'code-1' },
+				headers: { Authorization: undefined, 'X-Api-Key': undefined },
+			},
 		});
 	});
 
@@ -320,6 +497,11 @@ describe('TemplateResource', () => {
 			{ method: 'GET', url: '/accounts/acc/templates/template1' },
 		]);
 	});
+
+	it('rejects sort values the live endpoint ignores', async () => {
+		const templates = new TemplateResource(mockHttp(), 'acc');
+		await expect(templates.list({ sort: 'created_at' as never })).rejects.toThrow(ValidationError);
+	});
 });
 
 describe('WebhookResource', () => {
@@ -360,27 +542,110 @@ describe('WebhookResource', () => {
 
 	it('respects an explicit empty events array instead of substituting the defaults', async () => {
 		const calls: CapturedCall[] = [];
-		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		const logged: unknown[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc', {
+			debug: () => undefined,
+			info: (_message, context) => logged.push(context),
+			warn: () => undefined,
+			error: () => undefined,
+		});
 		await webhooks.register({
-			url: 'https://example.com/hook',
+			url: 'https://user:secret@example.com/hook?token=callback-secret',
 			email: 'ops@example.com',
 			events: [],
 		});
 		expect(calls[0]?.body).toMatchObject({ events: [] });
+		expect(JSON.stringify(logged)).not.toContain('callback-secret');
+		expect(JSON.stringify(logged)).not.toContain('https://');
+		expect(logged).toContainEqual({ eventCount: 0 });
 	});
 
 	it('requires dispatch IDs for retries', async () => {
 		const webhooks = new WebhookResource(mockHttp(), 'acc');
 		await expect(webhooks.retryDispatch('')).rejects.toThrow(ValidationError);
 	});
+
+	it('rejects ignored dispatch search and unsupported sort values', async () => {
+		const webhooks = new WebhookResource(mockHttp(), 'acc');
+		await expect(webhooks.listDispatches({ search: 'ignored' } as never)).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(webhooks.listDispatches({ sort: 'event' as never })).rejects.toThrow(
+			ValidationError,
+		);
+	});
 });
 
 describe('SignerDocumentsResource', () => {
+	it('preflights signer artifact downloads through a protected identity route', async () => {
+		const calls: CapturedCall[] = [];
+		const bytes = new Uint8Array([1, 2, 3]);
+		const http = {
+			...mockHttp(),
+			get: async (url: string, config?: CapturedCall['config']) => {
+				calls.push({ method: 'GET', url, config });
+				if (url === '/signers/self') {
+					return ok({ id: 'signer1' });
+				}
+				return { status: 200, data: bytes.buffer, headers: {} };
+			},
+		} as unknown as AxiosInstance;
+		const signerDocs = new SignerDocumentsResource(http);
+		await expect(signerDocs.download('signer1', 'doc1', 'original', 'code-1')).resolves.toEqual(
+			Buffer.from(bytes),
+		);
+		expect(calls).toMatchObject([
+			{
+				method: 'GET',
+				url: '/signers/self',
+				config: { params: { 'signer-access-code': 'code-1' } },
+			},
+			{
+				method: 'GET',
+				url: '/signers/signer1/documents/doc1/download/original',
+				config: {
+					responseType: 'arraybuffer',
+					params: { 'signer-access-code': 'code-1' },
+				},
+			},
+		]);
+	});
+
+	it('rejects a signer artifact download when the access code belongs to another signer', async () => {
+		const http = {
+			...mockHttp(),
+			get: async () => ok({ id: 'other-signer' }),
+		} as unknown as AxiosInstance;
+		await expect(
+			new SignerDocumentsResource(http).download('signer1', 'doc1', 'original', 'code-1'),
+		).rejects.toThrow(/does not match/);
+	});
+
+	it('rejects signer artifact and image path traversal before requesting it', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await expect(
+			signerDocs.download('signer1', 'doc1', '../original' as never, 'code-1'),
+		).rejects.toThrow(ValidationError);
+		await expect(signerDocs.downloadSignature('code-1', '../signature' as never)).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(
+			signerDocs.uploadSignature('code-1', Buffer.from('png'), {
+				imageType: '../signature' as never,
+			}),
+		).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(0);
+	});
+
 	it('passes signer-access-code for signer document list and signature upload', async () => {
 		const calls: CapturedCall[] = [];
 		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
 		await signerDocs.list('signer1', 'code-1', { search: 'contract' });
-		await signerDocs.uploadSignature('code-1', Buffer.from([1, 2, 3]));
+		await expect(signerDocs.uploadSignature('code-1', Buffer.from([1, 2, 3]))).resolves.toEqual({
+			status: 200,
+			message: '',
+		});
 		expect(calls).toMatchObject([
 			{
 				method: 'GET',
@@ -411,7 +676,7 @@ describe('SignerDocumentsResource', () => {
 	it('sends the access code as a query param for accept-terms (not the body)', async () => {
 		const calls: CapturedCall[] = [];
 		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
-		await signerDocs.acceptTerms('code-1');
+		await expect(signerDocs.acceptTerms('code-1')).resolves.toEqual({ status: 200, message: '' });
 		expect(calls[0]).toMatchObject({
 			method: 'PUT',
 			url: '/signers/accept-terms',
@@ -449,6 +714,20 @@ describe('SignerDocumentsResource', () => {
 			method: 'GET',
 			url: '/signers/signer1/documents/search',
 			config: { params: { 'signer-access-code': 'code-1', search: 'contract' } },
+		});
+	});
+
+	it('sends signer access code in the query when verifying an OTP', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await expect(
+			signerDocs.verifyEmail({ signerAccessCode: 'code-1', verificationCode: '123456' }),
+		).resolves.toEqual({ status: 200, message: '' });
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/verify',
+			body: { 'verification-code': '123456' },
+			config: { params: { 'signer-access-code': 'code-1' } },
 		});
 	});
 });
@@ -495,6 +774,39 @@ describe('AssignmentResource', () => {
 			url: '/assignments',
 			config: { params: { accountId: 'acc', 'per-page': 10 } },
 		});
+		await assignments.list({ accountId: 'untrusted' });
+		expect(calls[1]?.config?.params).toMatchObject({ accountId: 'acc' });
+	});
+
+	it('accepts only valid assignment expirations and preserves an explicit clear', async () => {
+		const calls: CapturedCall[] = [];
+		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
+		await assignments.resetExpiration('doc1', 'assignment1', null);
+		expect(calls[0]).toMatchObject({
+			method: 'PUT',
+			body: { expires_at: null },
+		});
+		await expect(assignments.resetExpiration('doc1', 'assignment1', 'tomorrow')).rejects.toThrow(
+			/ISO 8601/,
+		);
+		expect(() =>
+			buildAssignmentPayload({ signers: ['signer1'], expires_at: '2026-99-99T99:99:99Z' }),
+		).toThrow(/ISO 8601/);
+		expect(calls).toHaveLength(1);
+	});
+
+	it('rejects ignored assignment search, unsupported sort, and unsafe IDs', async () => {
+		const calls: CapturedCall[] = [];
+		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
+		await expect(assignments.list({ search: 'ignored' } as never)).rejects.toThrow(ValidationError);
+		await expect(assignments.list({ sort: 'name' as never })).rejects.toThrow(ValidationError);
+		await expect(
+			assignments.create('../accounts/victim', { signers: ['signer1'] }),
+		).rejects.toThrow(ValidationError);
+		await expect(new AssignmentResource(mockHttp(calls), '../victim').list()).rejects.toThrow(
+			ValidationError,
+		);
+		expect(calls).toHaveLength(0);
 	});
 
 	it('estimates cost for a collect assignment with no signers', async () => {
@@ -510,8 +822,84 @@ describe('AssignmentResource', () => {
 });
 
 describe('WorkspaceResource', () => {
+	it('covers theme, logo upload/delete, and daily statistics', async () => {
+		const calls: CapturedCall[] = [];
+		const workspaces = new WorkspaceResource(mockHttp(calls));
+		await workspaces.getTheme('acc');
+		await expect(
+			workspaces.uploadLogo('acc', Buffer.from([1, 2, 3]), {
+				fileName: 'brand.webp',
+				contentType: 'image/webp',
+			}),
+		).resolves.toEqual({ status: 200, message: '' });
+		await expect(workspaces.deleteLogo('acc')).resolves.toEqual({ status: 200, message: '' });
+		await workspaces.stats('acc', { granularity: 'daily', month: '2026-08' });
+
+		expect(calls[0]).toMatchObject({ method: 'GET', url: '/accounts/acc/theme' });
+		expect(calls[1]).toMatchObject({
+			method: 'POST',
+			url: '/accounts/acc/logo',
+			config: { headers: { 'Content-Type': 'multipart/form-data' } },
+		});
+		const logoForm = calls[1]?.body;
+		expect(logoForm).toBeInstanceOf(FormData);
+		const logo = (logoForm as FormData).get('file') as Blob & { name: string };
+		expect(logo.name).toBe('brand.webp');
+		expect(logo.type).toBe('image/webp');
+		expect(calls[2]).toMatchObject({ method: 'DELETE', url: '/accounts/acc/logo' });
+		expect(calls[3]).toMatchObject({
+			method: 'GET',
+			url: '/accounts/acc/stats',
+			config: { params: { granularity: 'daily', month: '2026-08' } },
+		});
+	});
+
+	it('downloads a logo as a Buffer', async () => {
+		const calls: CapturedCall[] = [];
+		const bytes = new Uint8Array([1, 2, 3]);
+		const http = {
+			...mockHttp(),
+			get: async (url: string, config?: CapturedCall['config']) => {
+				calls.push({ method: 'GET', url, config });
+				return { status: 200, data: bytes.buffer, headers: {} };
+			},
+		} as unknown as AxiosInstance;
+		const workspaces = new WorkspaceResource(http);
+		await expect(workspaces.downloadLogo('acc')).resolves.toEqual(Buffer.from(bytes));
+		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/accounts/acc/logo',
+			config: { responseType: 'arraybuffer' },
+		});
+	});
+
+	it('preserves the nullable logo returned by an unbranded workspace theme', async () => {
+		const theme = {
+			account_name: 'Workspace',
+			primary_color: '2072b9',
+			secondary_color: 'ffffff',
+			logo: null,
+		};
+		const http = { ...mockHttp(), get: async () => ok(theme) } as unknown as AxiosInstance;
+		await expect(new WorkspaceResource(http).getTheme('acc')).resolves.toEqual(theme);
+	});
+
+	it('validates logo data and daily statistics month', async () => {
+		const workspaces = new WorkspaceResource(mockHttp());
+		await expect(workspaces.uploadLogo('acc', Buffer.alloc(0))).rejects.toThrow(ValidationError);
+		await expect(workspaces.stats('acc', { granularity: 'daily' })).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(
+			workspaces.stats('acc', { granularity: 'daily', month: '2026-13' }),
+		).rejects.toThrow(ValidationError);
+	});
+
 	it('validates workspace IDs for get/update/delete', async () => {
 		const workspaces = new WorkspaceResource(mockHttp());
+		await expect(
+			workspaces.create({ name: 'Workspace', notification_sender_type: 'Invalid' as 'User' }),
+		).rejects.toThrow(ValidationError);
 		await expect(workspaces.get('')).rejects.toThrow(ValidationError);
 		await expect(workspaces.update('', { name: 'Updated' })).rejects.toThrow(ValidationError);
 		await expect(workspaces.delete('')).rejects.toThrow(ValidationError);
@@ -524,6 +912,22 @@ describe('WorkspaceResource', () => {
 });
 
 describe('AuthenticationResource', () => {
+	it('links a Google identity to the authenticated user', async () => {
+		const calls: CapturedCall[] = [];
+		const auth = new AuthenticationResource(mockHttp(calls));
+		await expect(
+			auth.linkSocialLogin({ provider: 'google', token: 'provider-token' }),
+		).resolves.toEqual({ status: 200, message: '' });
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/auth/link-social-login',
+			body: { provider: 'google', token: 'provider-token' },
+		});
+		await expect(
+			auth.linkSocialLogin({ provider: 'github' as 'google', token: 'provider-token' }),
+		).rejects.toThrow(ValidationError);
+	});
+
 	it('returns the masked API key when one exists', async () => {
 		const http = {
 			...mockHttp(),
@@ -542,5 +946,47 @@ describe('AuthenticationResource', () => {
 		} as unknown as AxiosInstance;
 		const auth = new AuthenticationResource(http);
 		await expect(auth.getApiKey()).resolves.toBeNull();
+	});
+});
+
+describe('UsersResource', () => {
+	it('covers self, stats, and notification-preference endpoints', async () => {
+		const calls: CapturedCall[] = [];
+		const users = new UsersResource(mockHttp(calls));
+		await users.self();
+		await users.stats({ granularity: 'monthly' });
+		await users.getNotificationPreferences();
+		await users.updateNotificationPreferences({ DocumentCompleted: false });
+
+		expect(calls).toMatchObject([
+			{ method: 'GET', url: '/users/self' },
+			{ method: 'GET', url: '/users/self/stats', config: { params: { granularity: 'monthly' } } },
+			{ method: 'GET', url: '/users/self/notification-preferences' },
+			{
+				method: 'PUT',
+				url: '/users/self/notification-preferences',
+				body: { DocumentCompleted: false },
+			},
+		]);
+	});
+
+	it('preserves the sandbox login-style self response', async () => {
+		const liveShape = {
+			user: { id: 'user1', name: 'Ana', email: 'ana@example.com' },
+			accounts: [],
+		};
+		const http = { ...mockHttp(), get: async () => ok(liveShape) } as unknown as AxiosInstance;
+		await expect(new UsersResource(http).self()).resolves.toEqual(liveShape);
+	});
+
+	it('rejects empty, unknown, and non-boolean notification preference updates', async () => {
+		const users = new UsersResource(mockHttp());
+		await expect(users.updateNotificationPreferences({})).rejects.toThrow(ValidationError);
+		await expect(users.updateNotificationPreferences({ Unknown: true } as never)).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(
+			users.updateNotificationPreferences({ DocumentCompleted: 'yes' } as never),
+		).rejects.toThrow(ValidationError);
 	});
 });

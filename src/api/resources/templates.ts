@@ -1,18 +1,21 @@
 import type {
-	IListParams,
 	ITemplateDetailsResponse,
 	ITemplateListItem,
+	ITemplateListParams,
 	ITemplateListResponse,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import { cleanParams, requireSort } from '../utils.js';
+import { BaseResource } from './base.js';
 
 export class TemplateResource extends BaseResource {
 	/** List templates for the workspace. */
-	async list(params: IListParams = {}, accountId?: string): Promise<ITemplateListResponse> {
+	async list(params: ITemplateListParams = {}, accountId?: string): Promise<ITemplateListResponse> {
 		const id = this.accountId(accountId);
+		requireSort(params.sort, ['name', '-name']);
 		return this.callList<ITemplateListItem>('Failed to list templates', () =>
-			this.http.get(`/accounts/${id}/templates`, { params: cleanParams(params) }),
+			this.http.get(`/accounts/${id}/templates`, {
+				params: cleanParams(params as unknown as Record<string, unknown>),
+			}),
 		);
 	}
 

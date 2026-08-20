@@ -1,6 +1,14 @@
-import { ValidationError } from '../errors';
-import type { IApiKeyResponse, ILoginResponse, IMaskedApiKeyResponse } from '../types';
-import { BaseResource } from './base';
+import { ValidationError } from '../errors.js';
+import type {
+	IApiKeyResponse,
+	IEmptyResult,
+	ILoginResponse,
+	IMaskedApiKeyResponse,
+	IStatusResponse,
+	SocialLoginProvider,
+} from '../types.js';
+import { publicRequestConfig } from '../utils.js';
+import { BaseResource } from './base.js';
 
 /**
  * Authentication endpoints (login, social login, password management) and
@@ -15,7 +23,9 @@ export class AuthenticationResource extends BaseResource {
 	async login(email: string, password: string): Promise<ILoginResponse> {
 		if (!email) throw new ValidationError('email is required');
 		if (!password) throw new ValidationError('password is required');
-		return this.call('Login failed', () => this.http.post('/login', { email, password }));
+		return this.call('Login failed', () =>
+			this.http.post('/login', { email, password }, publicRequestConfig()),
+		);
 	}
 
 	/** `POST /authentication/social-login` — exchange a provider token for an Assinafy JWT. */
@@ -24,10 +34,22 @@ export class AuthenticationResource extends BaseResource {
 		token: string;
 		has_accepted_terms: boolean;
 	}): Promise<ILoginResponse> {
-		if (!payload.provider) throw new ValidationError('provider is required');
+		if (payload.provider !== 'google') throw new ValidationError('provider must be google');
 		if (!payload.token) throw new ValidationError('token is required');
 		return this.call('Social login failed', () =>
-			this.http.post('/authentication/social-login', payload),
+			this.http.post('/authentication/social-login', payload, publicRequestConfig()),
+		);
+	}
+
+	/** `POST /auth/link-social-login` — link a Google identity to the current user. */
+	async linkSocialLogin(payload: {
+		provider: SocialLoginProvider;
+		token: string;
+	}): Promise<IStatusResponse> {
+		if (payload.provider !== 'google') throw new ValidationError('provider must be google');
+		if (!payload.token) throw new ValidationError('token is required');
+		return this.call('Failed to link social login', () =>
+			this.http.post('/auth/link-social-login', payload),
 		);
 	}
 
@@ -53,8 +75,8 @@ export class AuthenticationResource extends BaseResource {
 	}
 
 	/** `DELETE /users/api-keys` — revoke the current API key. */
-	async deleteApiKey(): Promise<void> {
-		return this.callVoid('Failed to delete API key', () => this.http.delete('/users/api-keys'));
+	async deleteApiKey(): Promise<IEmptyResult> {
+		return this.call('Failed to delete API key', () => this.http.delete('/users/api-keys'));
 	}
 
 	/** `PUT /authentication/change-password` — change the authenticated user's password. */
@@ -75,7 +97,7 @@ export class AuthenticationResource extends BaseResource {
 	async requestPasswordReset(email: string): Promise<{ email: string }> {
 		if (!email) throw new ValidationError('email is required');
 		return this.call('Failed to request password reset', () =>
-			this.http.put('/authentication/request-password-reset', { email }),
+			this.http.put('/authentication/request-password-reset', { email }, publicRequestConfig()),
 		);
 	}
 
@@ -88,7 +110,7 @@ export class AuthenticationResource extends BaseResource {
 		if (!payload.email) throw new ValidationError('email is required');
 		if (!payload.new_password) throw new ValidationError('new_password is required');
 		return this.call('Failed to reset password', () =>
-			this.http.put('/authentication/reset-password', payload),
+			this.http.put('/authentication/reset-password', payload, publicRequestConfig()),
 		);
 	}
 }

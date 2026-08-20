@@ -1,4 +1,6 @@
+import { stripVTControlCharacters } from 'node:util';
 import pc from 'picocolors';
+import { sanitizeTerminalText } from './terminal';
 
 export interface Column<T> {
 	header: string;
@@ -12,7 +14,7 @@ export function renderTable<T>(rows: T[], columns: Column<T>[]): string {
 		return pc.dim('(no results)');
 	}
 
-	const headers = columns.map((c) => c.header);
+	const headers = columns.map((c) => sanitizeTerminalText(c.header));
 	const body = rows.map((row) => columns.map((c) => formatCell(c.value(row))));
 
 	const widths = headers.map((header, i) => {
@@ -41,9 +43,10 @@ export function renderKeyValue(obj: Record<string, unknown>, order?: string[]): 
 	if (present.length === 0) {
 		return pc.dim('(empty)');
 	}
-	const labelWidth = Math.max(...present.map((k) => k.length));
+	const labels = new Map(present.map((key) => [key, sanitizeTerminalText(key)]));
+	const labelWidth = Math.max(...present.map((key) => labels.get(key)?.length ?? 0));
 	return present
-		.map((k) => `${pc.dim(`${k}:`.padEnd(labelWidth + 1))} ${formatCell(obj[k])}`)
+		.map((k) => `${pc.dim(`${labels.get(k)}:`.padEnd(labelWidth + 1))} ${formatCell(obj[k])}`)
 		.join('\n');
 }
 
@@ -53,12 +56,11 @@ function formatCell(value: unknown): string {
 	if (Array.isArray(value)) {
 		return value.length === 0 ? pc.dim('—') : value.map((v) => formatCell(v)).join(', ');
 	}
-	if (typeof value === 'object') return JSON.stringify(value);
-	return String(value);
+	if (typeof value === 'object') return sanitizeTerminalText(JSON.stringify(value));
+	return sanitizeTerminalText(value);
 }
 
 /** Visible width ignoring ANSI escape sequences picocolors may have inserted. */
 function displayWidth(text: string): number {
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping ANSI codes
-	return text.replace(/\[[0-9;]*m/g, '').length;
+	return stripVTControlCharacters(text).length;
 }

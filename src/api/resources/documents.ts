@@ -1,18 +1,21 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { ApiError, ValidationError } from '../errors';
+import { ApiError, ValidationError } from '../errors.js';
 import type {
 	DocumentArtifactName,
 	DocumentStatus,
 	ICreateDocumentFromTemplateOptions,
+	IDetachTagResponse,
 	IDocumentActivity,
 	IDocumentDetailsResponse,
 	IDocumentListItem,
 	IDocumentListParams,
 	IDocumentListResponse,
+	IDocumentSearchParams,
 	IDocumentStatusInfo,
 	IDocumentUploadResponse,
 	IDocumentVerifyResponse,
+	IEmptyResult,
 	IEstimateCostResponse,
 	IPublicDocumentInfo,
 	ISendTokenResponse,
@@ -21,9 +24,15 @@ import type {
 	ITemplateCostSigner,
 	ITemplateSigner,
 	SendTokenChannel,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import {
+	cleanParams,
+	publicRequestConfig,
+	requireDocumentArtifactName,
+	requireIso8601,
+	requireSort,
+} from '../utils.js';
+import { BaseResource } from './base.js';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
@@ -46,6 +55,8 @@ export type DocumentUploadSource =
 	| { buffer: Buffer; fileName: string };
 
 export interface IDocumentUploadOptions {
+	/** Document display name. Defaults to the source PDF file name. */
+	name?: string;
 	/** Optional metadata sent alongside the file (JSON-encoded). */
 	metadata?: Record<string, unknown>;
 	/** Override the default account ID configured on the client. */
@@ -70,7 +81,7 @@ export class DocumentResource extends BaseResource {
 		validateUpload(buffer, fileName);
 
 		const accountId = this.accountId(options.accountId);
-		const form = buildUploadForm(buffer, fileName, options.metadata);
+		const form = buildUploadForm(buffer, fileName, options.name ?? fileName, options.metadata);
 
 		this.logger.info('Uploading document', { fileName, size: buffer.byteLength });
 
@@ -95,8 +106,11 @@ export class DocumentResource extends BaseResource {
 	 */
 	async list(params: IDocumentListParams = {}, accountId?: string): Promise<IDocumentListResponse> {
 		const id = this.accountId(accountId);
+		requireSort(params.sort, ['name', '-name', 'updated_at', '-updated_at']);
 		return this.callList<IDocumentListItem>('Failed to list documents', () =>
-			this.http.get(`/accounts/${id}/documents`, { params: cleanParams(params) }),
+			this.http.get(`/accounts/${id}/documents`, {
+				params: cleanParams(params as unknown as Record<string, unknown>),
+			}),
 		);
 	}
 
@@ -109,19 +123,22 @@ export class DocumentResource extends BaseResource {
 	 * (live-verified against the sandbox).
 	 */
 	async search(
-		params: IDocumentListParams = {},
+		params: IDocumentSearchParams = {},
 		accountId?: string,
 	): Promise<IDocumentListResponse> {
 		const id = this.accountId(accountId);
+		requireSort(params.sort, ['name', '-name', 'updated_at', '-updated_at']);
 		return this.callList<IDocumentListItem>('Failed to search documents', () =>
-			this.http.get(`/accounts/${id}/documents/search`, { params: cleanParams(params) }),
+			this.http.get(`/accounts/${id}/documents/search`, {
+				params: cleanParams(params as unknown as Record<string, unknown>),
+			}),
 		);
 	}
 
 	/** Get document details. */
 	async details(documentId: string): Promise<IDocumentDetailsResponse> {
 		const id = this.requireId(documentId, 'Document ID');
-		return this.call('Failed to fetch document details', () => this.http.get(`/documents/${id}`));
+		return this.fetchDetails(id);
 	}
 
 	/**
@@ -151,6 +168,12 @@ export class DocumentResource extends BaseResource {
 		const id = this.requireId(documentId, 'Document ID');
 		const maxWaitMs = options.maxWaitMs ?? 30_000;
 		const pollIntervalMs = options.pollIntervalMs ?? 2_000;
+		if (!Number.isFinite(maxWaitMs) || maxWaitMs <= 0) {
+			throw new ValidationError('maxWaitMs must be a positive finite number');
+		}
+		if (!Number.isFinite(pollIntervalMs) || pollIntervalMs <= 0) {
+			throw new ValidationError('pollIntervalMs must be a positive finite number');
+		}
 		const start = Date.now();
 		let attempts = 0;
 
@@ -159,7 +182,8 @@ export class DocumentResource extends BaseResource {
 		while (Date.now() - start < maxWaitMs) {
 			attempts++;
 			try {
-				const details = await this.details(id);
+				const requestTimeoutMs = Math.max(1, maxWaitMs - (Date.now() - start));
+				const details = await this.fetchDetails(id, requestTimeoutMs);
 				const status = details.status ?? 'unknown';
 				this.logger.debug('Document status check', { attempts, status });
 
@@ -182,7 +206,9 @@ export class DocumentResource extends BaseResource {
 					error: err instanceof Error ? err.message : String(err),
 				});
 			}
-			await sleep(pollIntervalMs);
+			const remainingMs = maxWaitMs - (Date.now() - start);
+			if (remainingMs <= 0) break;
+			await sleep(Math.min(pollIntervalMs, remainingMs));
 		}
 
 		throw new ValidationError('Timeout waiting for document to be ready', {
@@ -191,14 +217,21 @@ export class DocumentResource extends BaseResource {
 		});
 	}
 
+	private fetchDetails(documentId: string, timeout?: number): Promise<IDocumentDetailsResponse> {
+		return this.call('Failed to fetch document details', () =>
+			this.http.get(`/documents/${documentId}`, timeout === undefined ? undefined : { timeout }),
+		);
+	}
+
 	/** Download a document artifact. Defaults to the certificated (signed) PDF. */
 	async download(
 		documentId: string,
 		artifactName: DocumentArtifactName = 'certificated',
 	): Promise<Buffer> {
 		const id = this.requireId(documentId, 'Document ID');
+		const artifact = requireDocumentArtifactName(artifactName);
 		return this.callBinary('Failed to download document', () =>
-			this.http.get<ArrayBuffer>(`/documents/${id}/download/${artifactName}`, {
+			this.http.get<ArrayBuffer>(`/documents/${id}/download/${artifact}`, {
 				responseType: 'arraybuffer',
 			}),
 		);
@@ -234,9 +267,9 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/** Delete a document. */
-	async delete(documentId: string): Promise<void> {
+	async delete(documentId: string): Promise<IEmptyResult> {
 		const id = this.requireId(documentId, 'Document ID');
-		return this.callVoid('Failed to delete document', () => this.http.delete(`/documents/${id}`));
+		return this.call('Failed to delete document', () => this.http.delete(`/documents/${id}`));
 	}
 
 	/** List the tags attached to a document. */
@@ -274,11 +307,15 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/** Detach a single tag from a document (the tag itself is not deleted). */
-	async detachTag(documentId: string, tagId: string, accountId?: string): Promise<void> {
+	async detachTag(
+		documentId: string,
+		tagId: string,
+		accountId?: string,
+	): Promise<IDetachTagResponse> {
 		const accId = this.accountId(accountId);
 		const docId = this.requireId(documentId, 'Document ID');
 		const tid = this.requireId(tagId, 'Tag ID');
-		return this.callVoid('Failed to detach document tag', () =>
+		return this.call('Failed to detach document tag', () =>
 			this.http.delete(`/accounts/${accId}/documents/${docId}/tags/${tid}`),
 		);
 	}
@@ -301,7 +338,8 @@ export class DocumentResource extends BaseResource {
 	): Promise<IDocumentDetailsResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
-		const body: Record<string, unknown> = { signers, ...options };
+		if (options.expires_at !== undefined) requireIso8601(options.expires_at, 'expires_at');
+		const body: Record<string, unknown> = { ...options, signers };
 		this.logger.info('Creating document from template', { templateId: tmplId, accountId: accId });
 		return this.call('Failed to create document from template', () =>
 			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents`, body),
@@ -327,7 +365,9 @@ export class DocumentResource extends BaseResource {
 	 */
 	async verify(hash: string): Promise<IDocumentVerifyResponse> {
 		const h = this.requireId(hash, 'Signature hash');
-		return this.call('Failed to verify document', () => this.http.get(`/documents/${h}/verify`));
+		return this.call('Failed to verify document', () =>
+			this.http.get(`/documents/${h}/verify`, publicRequestConfig()),
+		);
 	}
 
 	/**
@@ -348,23 +388,38 @@ export class DocumentResource extends BaseResource {
 	async getPublic(documentId: string): Promise<IPublicDocumentInfo> {
 		const id = this.requireId(documentId, 'Document ID');
 		return this.call('Failed to fetch public document info', () =>
-			this.http.get(`/public/documents/${id}`),
+			this.http.get(`/public/documents/${id}`, publicRequestConfig()),
 		);
 	}
 
 	/**
 	 * `PUT /public/documents/{document_id}/send-token` — send the 6-digit
-	 * verification token to the signer's email / WhatsApp.
+	 * verification token to the signer's email / WhatsApp. Pass `{ email }` for
+	 * the published OpenAPI body or a string plus channel for the live legacy body.
 	 */
 	async sendToken(
 		documentId: string,
-		recipient: string,
+		recipient: string | { email: string },
 		channel: SendTokenChannel = 'email',
 	): Promise<ISendTokenResponse> {
 		const id = this.requireId(documentId, 'Document ID');
+		if (typeof recipient === 'object') {
+			if (!recipient?.email) throw new ValidationError('email is required');
+			return this.call('Failed to send signing token', () =>
+				this.http.put(
+					`/public/documents/${id}/send-token`,
+					{ email: recipient.email },
+					publicRequestConfig(),
+				),
+			);
+		}
 		if (!recipient) throw new ValidationError('recipient is required');
 		return this.call('Failed to send signing token', () =>
-			this.http.put(`/public/documents/${id}/send-token`, { recipient, channel }),
+			this.http.put(
+				`/public/documents/${id}/send-token`,
+				{ recipient, channel },
+				publicRequestConfig(),
+			),
 		);
 	}
 
@@ -403,6 +458,13 @@ async function loadSource(
 	if (!source.filePath) {
 		throw new ValidationError('filePath is required');
 	}
+	const { size } = await fs.stat(source.filePath);
+	if (size > MAX_UPLOAD_BYTES) {
+		throw new ValidationError('File size exceeds maximum allowed (25MB)', {
+			fileSize: size,
+			maxSize: MAX_UPLOAD_BYTES,
+		});
+	}
 	const buffer = await fs.readFile(source.filePath);
 	return { buffer, fileName: source.fileName ?? path.basename(source.filePath) };
 }
@@ -425,13 +487,14 @@ function validateUpload(buffer: Buffer, fileName: string): void {
 function buildUploadForm(
 	buffer: Buffer,
 	fileName: string,
+	name: string,
 	metadata: Record<string, unknown> | undefined,
 ): FormData {
 	const form = new FormData();
 	// Blob copy-free view over the Buffer's underlying ArrayBuffer slice.
 	const view = new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength);
 	form.append('file', new Blob([view], { type: 'application/pdf' }), fileName);
-	form.append('name', fileName);
+	form.append('name', name);
 	if (metadata) {
 		form.append('metadata', JSON.stringify(metadata));
 	}

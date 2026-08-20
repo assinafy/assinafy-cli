@@ -1,0 +1,718 @@
+{
+  "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
+  "hash": "44da834c27173a3739d491fdacbb48decf9a170bd776a1c4edb4d0d4b108c22f",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}",
+      "tag": "Accounts",
+      "summary": "Get account",
+      "operationId": "3afeb0e00a024f92298a557cf8475184",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}",
+      "tag": "Accounts",
+      "summary": "Update account",
+      "operationId": "65686705e7f9e91c3351341bbf7a1817",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}",
+      "tag": "Accounts",
+      "summary": "Delete account",
+      "operationId": "1aa001f00400a7df2f7f5ddefc3f3321",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/theme",
+      "tag": "Accounts",
+      "summary": "Get account theme",
+      "operationId": "e769023db72349e5b478396ae92d12b2",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/logo",
+      "tag": "Accounts",
+      "summary": "Download account logo",
+      "operationId": "216f1847ee6dbaa3fced4140fd2c2008",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/logo",
+      "tag": "Accounts",
+      "summary": "Upload account logo",
+      "operationId": "fbbd6967f8f20103e417fc1b0e4b7921",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/logo",
+      "tag": "Accounts",
+      "summary": "Delete account logo",
+      "operationId": "0c8bf70659a47f7fb54e96de93697593",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts",
+      "tag": "Accounts",
+      "summary": "List my accounts",
+      "operationId": "b66118db27c244ca018dd6cf1a9c7a8b",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts",
+      "tag": "Accounts",
+      "summary": "Create account",
+      "operationId": "9b06ac45b842750e3be5df47e491531b",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/activities",
+      "tag": "Documents",
+      "summary": "List document activities",
+      "operationId": "737e469a367b00f097c6c4cf068d3b76",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assignments",
+      "tag": "Assignments",
+      "summary": "List assignments",
+      "operationId": "7138143459c5b2994b2f405b841cc513",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments",
+      "tag": "Assignments",
+      "summary": "Create assignment (request signatures)",
+      "operationId": "d1293d781c9d94ec8b8c43d540c99ef4",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments/estimate-cost",
+      "tag": "Assignments",
+      "summary": "Estimate assignment cost",
+      "operationId": "f3910833e526a79d16f6437ad6a8d215",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/resend",
+      "tag": "Assignments",
+      "summary": "Resend signature request",
+      "operationId": "f556159302bf30ddf22c59690a99b227",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/estimate-resend-cost",
+      "tag": "Assignments",
+      "summary": "Estimate resend cost",
+      "operationId": "34f9815c713f40910f5f66077b92462b",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/reset-expiration",
+      "tag": "Assignments",
+      "summary": "Reset assignment expiration",
+      "operationId": "50427eb689bff8f44a0c7301da693297",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/login",
+      "tag": "Authentication",
+      "summary": "Login",
+      "operationId": "e150d420935cd7d6b2e3349a97389388",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/authentication/request-password-reset",
+      "tag": "Authentication",
+      "summary": "Request password reset",
+      "operationId": "0a598df068cda77f8ad7539ef1c1b656",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/authentication/reset-password",
+      "tag": "Authentication",
+      "summary": "Reset password",
+      "operationId": "143dfddb05b05834f9cdbd82a0b890ac",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/authentication/change-password",
+      "tag": "Authentication",
+      "summary": "Change password",
+      "operationId": "aae47ded024b93634bebe51d72629c5a",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/documents",
+      "tag": "Documents",
+      "summary": "List documents",
+      "operationId": "b2b7143f00e6b1226be16e3fef8e0e50",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/documents",
+      "tag": "Documents",
+      "summary": "Upload and create document",
+      "operationId": "bcff2fa45a9fdeccf18fba36cbe98bb5",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/documents/search",
+      "tag": "Documents",
+      "summary": "Search documents (lightweight)",
+      "operationId": "4b403d1ab84648172bb8959332e6fa3c",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/statuses",
+      "tag": "Documents",
+      "summary": "List document statuses",
+      "operationId": "c21c2883aca1e1b6d1bcaea01fc63315",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}",
+      "tag": "Documents",
+      "summary": "Get document",
+      "operationId": "77e7c83fbc27058449bb8efe80e03645",
+      "hasRequestBody": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/documents/{documentId}",
+      "tag": "Documents",
+      "summary": "Delete document",
+      "operationId": "c15973e0c193ff1867dca0bee0ebb770",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/documents/{documentId}",
+      "tag": "Documents",
+      "summary": "Rename document",
+      "operationId": "1f3b35e2a94faced365948d245ee214b",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/download/{artifactName}",
+      "tag": "Documents",
+      "summary": "Download document artifact",
+      "operationId": "644d485cbdc3eba51692bbc291bb8d0b",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentSignatureHash}/verify",
+      "tag": "Documents",
+      "summary": "Verify a signed document",
+      "operationId": "1785911435e8ea338aed4c7ecf0b008c",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/tags",
+      "tag": "Documents",
+      "summary": "List document tags",
+      "operationId": "3a32f018aa387045cb59753a8b4435d6",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/tags",
+      "tag": "Documents",
+      "summary": "Replace document tags",
+      "operationId": "541e5ec2062181b0ae1c36062124d706",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/tags",
+      "tag": "Documents",
+      "summary": "Attach document tags",
+      "operationId": "26a1426d6ee3088235638248be8ffa2f",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/tags/{tagId}",
+      "tag": "Documents",
+      "summary": "Detach document tag",
+      "operationId": "8011e62c2c57c68797e3da40b27e9cc6",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/fields",
+      "tag": "Fields",
+      "summary": "List fields",
+      "operationId": "fd984179bd5458646412b752c5510248",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/fields",
+      "tag": "Fields",
+      "summary": "Create field",
+      "operationId": "73c2101959ae1a1fd07882ab7d869721",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/fields/{fieldId}",
+      "tag": "Fields",
+      "summary": "Get field",
+      "operationId": "8c103388d30ec655cb1a6acb2412fe91",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/fields/{fieldId}",
+      "tag": "Fields",
+      "summary": "Update field",
+      "operationId": "815e25604c39fceca60c2fb160bac50b",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/fields/{fieldId}",
+      "tag": "Fields",
+      "summary": "Delete field",
+      "operationId": "429ef4a2c141164d4f64019cf7940e31",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/fields/{fieldId}/validate",
+      "tag": "Fields",
+      "summary": "Validate field value",
+      "operationId": "5b256c974f65070abdbc89f9a35406d1",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/fields/validate-multiple",
+      "tag": "Fields",
+      "summary": "Validate multiple field values",
+      "operationId": "94ff510ce5cb7321bfdb7e1de3bfd92a",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/field-types",
+      "tag": "Fields",
+      "summary": "List field types",
+      "operationId": "f6ac99a60d22a08e8f58568c50d904d8",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/self/notification-preferences",
+      "tag": "Users",
+      "summary": "Get my notification preferences",
+      "operationId": "d51841b1f067607aec5746058815cd28",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/users/self/notification-preferences",
+      "tag": "Users",
+      "summary": "Update my notification preferences",
+      "operationId": "12356f56a66792b8a3e54010a1d4639f",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/thumbnail",
+      "tag": "Documents",
+      "summary": "Download document thumbnail",
+      "operationId": "cc6d4e29fdf261fb425f96b5e90f13b4",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/pages/{pageId}/download",
+      "tag": "Documents",
+      "summary": "Download document page",
+      "operationId": "c6de258c3244806094f8776c83ae3fce",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/documents/{documentId}",
+      "tag": "Signing",
+      "summary": "View public document",
+      "operationId": "cc576aa4d2121c709ea230b684b9188a",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/public/documents/{documentId}/send-token",
+      "tag": "Signing",
+      "summary": "Send access token for public document",
+      "operationId": "cfb52ef413176c9307a588f0fdf8237c",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/signers",
+      "tag": "Signers",
+      "summary": "List signers",
+      "operationId": "80ef05854b7106b70f9f5bf6095f2225",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/signers",
+      "tag": "Signers",
+      "summary": "Create signer",
+      "operationId": "9b3709e1ace146e1615e4d29ce845d67",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/signers/{signerId}",
+      "tag": "Signers",
+      "summary": "Get signer",
+      "operationId": "cfea1006df2f682a6e9c1ec8563d5d37",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/signers/{signerId}",
+      "tag": "Signers",
+      "summary": "Update signer",
+      "operationId": "8b29918a9706391427301103b2a7551e",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/signers/{signerId}",
+      "tag": "Signers",
+      "summary": "Delete signer",
+      "operationId": "bbe6808f264165e6752b911a5bce9c3e",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/self",
+      "tag": "Signing",
+      "summary": "Get current signer",
+      "operationId": "5091a0e760e9aeebc055388491ef4884",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/{signerId}/document",
+      "tag": "Signing",
+      "summary": "Get signer's document",
+      "operationId": "2061fb2dafd120f4fe26208638af1d07",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sign",
+      "tag": "Signing",
+      "summary": "View document to sign",
+      "operationId": "ccc4f307d924837da054992e1dc35069",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}",
+      "tag": "Signing",
+      "summary": "Sign assignment items",
+      "operationId": "68e20e0f63321f1ca7b18d31afb632f0",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/reject",
+      "tag": "Signing",
+      "summary": "Reject (decline) assignment",
+      "operationId": "30b04123c68e8f7ce31e08e21d2489f3",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/signers/documents/sign-multiple",
+      "tag": "Signing",
+      "summary": "Sign multiple documents",
+      "operationId": "0405395468bdf19f3385f46548182885",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/signers/documents/decline-multiple",
+      "tag": "Signing",
+      "summary": "Decline multiple documents",
+      "operationId": "35711fa6018e40819b79ca578df5e148",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/verify",
+      "tag": "Signing",
+      "summary": "Verify signer code (OTP)",
+      "operationId": "4075f595e51f8fb69ca65ec60f4ea328",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/documents/{documentId}/signers/confirm-data",
+      "tag": "Signing",
+      "summary": "Confirm signer data",
+      "operationId": "a2da02f024062898b460e339fa49aa7c",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/signers/accept-terms",
+      "tag": "Signing",
+      "summary": "Accept terms (signer)",
+      "operationId": "0b0f84720ca17aa42ee8686c6755af8d",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/signature",
+      "tag": "Signing",
+      "summary": "Upload signature image",
+      "operationId": "ccaf35a93d501e9b80ddbd4629b7006c",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signature/{signatureType}",
+      "tag": "Signing",
+      "summary": "Download signature image",
+      "operationId": "6073568a771b4b2ebb0ed2bcd5661443",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/{signerId}/documents",
+      "tag": "Signing",
+      "summary": "List signer's documents",
+      "operationId": "f98023cdbaac0f59f9be073cb0f3f873",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/{signerId}/documents/search",
+      "tag": "Signing",
+      "summary": "Search signer's documents",
+      "operationId": "f249c5e917662472dbb1c8bcfff1fa8f",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/{signerId}/documents/{documentId}/download/{artifactName}",
+      "tag": "Signing",
+      "summary": "Download signer's document artifact",
+      "operationId": "e5b804eb68ec9ff78f77fb79e1e756f3",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/authentication/social-login",
+      "tag": "Authentication",
+      "summary": "Social login",
+      "operationId": "63a7589594fbd879ed3c6ff94e730d70",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/link-social-login",
+      "tag": "Authentication",
+      "summary": "Link social login",
+      "operationId": "5bbe27d54e92cff16e0792930a74403d",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/stats",
+      "tag": "Accounts",
+      "summary": "Account document KPIs",
+      "operationId": "bd3114013a0533517d85f6e2fcbb1fe8",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/self/stats",
+      "tag": "Users",
+      "summary": "My cross-account document KPIs",
+      "operationId": "3244687bf958f0d655d5ea992b592c1c",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/tags",
+      "tag": "Tags",
+      "summary": "List tags",
+      "operationId": "fbc69bb6a998ae85014ff7838b61d795",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/tags",
+      "tag": "Tags",
+      "summary": "Create tag",
+      "operationId": "cad8c1f3ef2e9658a45e7acbbf3d1f2f",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/tags/{tagId}",
+      "tag": "Tags",
+      "summary": "Update tag",
+      "operationId": "678d6e02e486fa502171c9b2779ff50f",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/tags/{tagId}",
+      "tag": "Tags",
+      "summary": "Delete tag",
+      "operationId": "12cf354dabea81eb5f5ef55d9530ed93",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/templates",
+      "tag": "Templates",
+      "summary": "List templates",
+      "operationId": "2047ea16e15daf13b32fb3dbe7d16962",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/templates/{templateId}/documents",
+      "tag": "Documents",
+      "summary": "Create document from template",
+      "operationId": "3033df68c84a12871530151fb6459ce0",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/templates/{templateId}/documents/estimate-cost",
+      "tag": "Documents",
+      "summary": "Estimate document-from-template cost",
+      "operationId": "b92d0dffdb91c9f7f476f033339ccc31",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/self",
+      "tag": "Users",
+      "summary": "Get the authenticated user",
+      "operationId": "072ee2a4df4601447e3e35ab26f528fa",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/api-keys",
+      "tag": "Authentication",
+      "summary": "Get API key",
+      "operationId": "cd9aacf93332736955494b6d76520244",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users/api-keys",
+      "tag": "Authentication",
+      "summary": "Create API key",
+      "operationId": "693178f8c4dffa8ee8b2db24eef8b9d5",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/api-keys",
+      "tag": "Authentication",
+      "summary": "Delete API key",
+      "operationId": "12fa71cc0dbac4b53a00629fa206d577",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/webhooks/subscriptions",
+      "tag": "Webhooks",
+      "summary": "Get webhook subscription",
+      "operationId": "81205c8f43a00de885e2a7a10baaa799",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/webhooks/subscriptions",
+      "tag": "Webhooks",
+      "summary": "Update webhook subscription",
+      "operationId": "fc079cca354608b0297d562bc1484a68",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/webhooks/inactivate",
+      "tag": "Webhooks",
+      "summary": "Inactivate webhook subscription",
+      "operationId": "9722ccd8cf4087eda5704683314bc048",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/event-types",
+      "tag": "Webhooks",
+      "summary": "List webhook event types",
+      "operationId": "edb3edf6034dc41853a5bac6d217cd00",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/webhooks",
+      "tag": "Webhooks",
+      "summary": "List webhook deliveries",
+      "operationId": "adde7634a149a81406fac17636a96c99",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/webhooks/{historyId}/retry",
+      "tag": "Webhooks",
+      "summary": "Retry webhook delivery",
+      "operationId": "70960dceda68fdccf3c821c362638e87",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications",
+      "tag": "Assignments",
+      "summary": "List WhatsApp notifications",
+      "operationId": "e7a9cf679bb6b562b2d46c3df1adb457",
+      "hasRequestBody": false
+    }
+  ]
+}

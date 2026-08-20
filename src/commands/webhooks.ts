@@ -3,8 +3,8 @@ import type { IWebhookDispatchListParams } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { parseInteger, splitList } from '../lib/json';
-import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { addSortableListOptions } from '../lib/options';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
@@ -80,13 +80,14 @@ const eventTypesCommand = new Command('event-types')
 		});
 	});
 
-const dispatchesCommand = addListOptions(
+const dispatchesCommand = addSortableListOptions(
 	new Command('dispatches')
 		.description('List webhook delivery history')
 		.option('--event <event>', 'Filter by event name')
 		.option('--delivered <bool>', 'Filter by delivery status (true/false)')
 		.option('--from <unix>', 'Start of time range (unix seconds)')
 		.option('--to <unix>', 'End of time range (unix seconds)'),
+	'Sort by created_at (prefix with - for descending)',
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
@@ -106,7 +107,7 @@ const dispatchesCommand = addListOptions(
 		const result = await withSpinner('Fetching dispatches', config, () =>
 			client.webhooks.listDispatches(params, accountId),
 		);
-		printData(result.data, config, (rows) => {
+		printPaginatedData(result, config, (rows) => {
 			const table = renderTable(rows, [
 				{ header: 'ID', value: (r) => r.id },
 				{ header: 'EVENT', value: (r) => r.event },

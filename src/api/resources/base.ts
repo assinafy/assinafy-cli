@@ -1,7 +1,7 @@
 import type { AxiosInstance, AxiosResponse, AxiosResponseHeaders } from 'axios';
-import { ApiError, ValidationError } from '../errors';
-import type { Logger, PaginatedResult, PaginationMeta } from '../types';
-import { createNoopLogger, handleAssinafyResponse, toSdkError } from '../utils';
+import { ApiError, ValidationError } from '../errors.js';
+import type { Logger, PaginatedResult, PaginationMeta } from '../types.js';
+import { createNoopLogger, handleAssinafyResponse, toSdkError } from '../utils.js';
 
 /**
  * Shared plumbing for every Assinafy resource:
@@ -13,7 +13,7 @@ import { createNoopLogger, handleAssinafyResponse, toSdkError } from '../utils';
  *  - parses `X-Pagination-*` headers into a typed meta object
  *
  * Resources should never `try/catch` or touch the envelope directly — they call
- * one of `call` / `callVoid` / `callBinary` / `callList` instead.
+ * one of `call` / `callBinary` / `callList` instead.
  */
 export abstract class BaseResource {
 	constructor(
@@ -30,7 +30,7 @@ export abstract class BaseResource {
 				'Account ID is required. Provide it as a parameter or set a default in the client.',
 			);
 		}
-		return id;
+		return safeIdentifier(id, 'Account ID');
 	}
 
 	/** Guard required path arguments (documentId, signerId, …). */
@@ -38,7 +38,7 @@ export abstract class BaseResource {
 		if (!value) {
 			throw new ValidationError(`${name} is required`);
 		}
-		return value;
+		return safeIdentifier(value, name) as T;
 	}
 
 	/** Execute an HTTP call and return the unwrapped envelope body. */
@@ -58,18 +58,6 @@ export abstract class BaseResource {
 		} catch (err) {
 			if (err instanceof ApiError && err.statusCode === 404) return null;
 			throw err;
-		}
-	}
-
-	/** Execute an HTTP call that returns no body (DELETE / 204). */
-	protected async callVoid(label: string, request: RequestFn): Promise<void> {
-		try {
-			const response = await request();
-			if (response.status < 200 || response.status >= 300) {
-				throw new ValidationError(`${label}: HTTP ${response.status}`);
-			}
-		} catch (err) {
-			throw toSdkError(err, label);
 		}
 	}
 
@@ -109,6 +97,13 @@ export abstract class BaseResource {
 			throw toSdkError(err, label);
 		}
 	}
+}
+
+function safeIdentifier(value: string, name: string): string {
+	if (value === '.' || value === '..' || /[\s/?#\\%]/.test(value)) {
+		throw new ValidationError(`${name} contains invalid URL characters`);
+	}
+	return value;
 }
 
 type RequestFn = () => Promise<AxiosResponse>;

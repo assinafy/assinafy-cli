@@ -1,5 +1,5 @@
 import { Command } from '@commander-js/extra-typings';
-import { printData } from '../lib/output';
+import { printPaginatedData } from '../lib/output';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderTable } from '../lib/table';
@@ -11,7 +11,7 @@ export const whoamiCommand = new Command('whoami')
 			const result = await withSpinner('Checking credentials', config, () =>
 				client.workspaces.list(),
 			);
-			printData(result.data, config, (rows) =>
+			printPaginatedData(result, config, (rows) =>
 				renderTable(rows, [
 					{ header: 'ACCOUNT ID', value: (r) => r.id },
 					{ header: 'NAME', value: (r) => r.name },

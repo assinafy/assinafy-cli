@@ -29,11 +29,10 @@ Usage: assinafy assignments list [options]
 List assignments across the account
 
 Options:
-  --page <n>        Page number to fetch
-  --per-page <n>    Items per page
-  --search <query>  Filter results by a search query
-  --sort <field>    Sort by field (prefix with - for descending)
-  -h, --help        display help for command
+  --page <n>      Page number to fetch
+  --per-page <n>  Items per page
+  --sort <field>  Sort by created_at (prefix with - for descending)
+  -h, --help      display help for command
 ```
 
 ### `assinafy assignments create`
@@ -143,4 +142,3 @@ Arguments:
 Options:
   -h, --help    display help for command
 ```
-

@@ -1,22 +1,36 @@
 {
 	"name": "@assinafy/cli",
-	"version": "1.2.0",
+	"version": "2.0.0",
 	"description": "The official command-line interface for the Assinafy digital-signature API",
 	"license": "MIT",
 	"type": "module",
 	"engines": {
-		"node": ">=22"
+		"node": ">=22.12.0"
 	},
 	"bin": {
 		"assinafy": "./dist/cli.cjs"
 	},
+	"exports": {
+		"./api": {
+			"types": "./dist/types/api/index.d.ts",
+			"import": "./dist/api.js",
+			"require": "./dist/api.cjs"
+		},
+		"./package.json": "./package.json"
+	},
 	"files": [
 		"dist/cli.cjs",
+		"dist/api.js",
+		"dist/api.js.map",
+		"dist/api.cjs",
+		"dist/api.cjs.map",
+		"dist/types/",
 		"docs/",
 		"install.sh",
 		"install.ps1",
 		"README.md",
-		"LICENSE"
+		"LICENSE",
+		"THIRD_PARTY_NOTICES.md"
 	],
 	"keywords": [
 		"assinafy",
@@ -40,31 +54,38 @@
 	"scripts": {
 		"dev": "tsx src/cli.ts",
 		"dev:watch": "tsx --watch src/cli.ts",
-		"build": "tsup",
+		"build": "tsup && tsup --config tsup.api.config.ts && tsc -p tsconfig.build.json",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "vitest run",
+		"test:sandbox": "npm run build && node scripts/sandbox-smoke.mjs",
 		"test:watch": "vitest",
 		"docs": "npm run build && node scripts/gen-docs.mjs",
+		"docs:api": "node scripts/gen-api-reference.mjs",
+		"verify:api-docs": "node scripts/verify-api-docs.mjs",
+		"notices": "node scripts/gen-third-party-notices.mjs",
 		"verify:bundle": "node scripts/verify-bundle.mjs",
-		"pack:release": "npm run build && node scripts/package-release.mjs",
-		"prepack": "npm run build && npm run verify:bundle",
+		"pack:release": "npm run notices && npm run build && node scripts/package-release.mjs",
+		"prepack": "npm run notices && npm run build && npm run verify:bundle && npm run verify:api-docs",
 		"prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build && npm run verify:bundle"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.5.1",
-		"@commander-js/extra-typings": "^15.0.0",
-		"axios": "^1.7.9",
-		"commander": "^15.0.0",
-		"picocolors": "^1.1.1"
+		"@types/node": "^22.9.4",
+		"axios": "^1.7.9"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.16",
-		"@types/node": "^22.9.4",
+		"@biomejs/biome": "^2.5.9",
+		"@clack/prompts": "^1.7.0",
+		"@commander-js/extra-typings": "^15.0.0",
+		"commander": "^15.0.0",
+		"picocolors": "^1.1.1",
 		"tsup": "^8.3.5",
-		"tsx": "^4.19.2",
-		"typescript": "^6.0.3",
-		"vitest": "^4.1.8"
+		"tsx": "^4.23.12",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.11"
+	},
+	"overrides": {
+		"esbuild": "^0.28.2"
 	}
 }

@@ -1,36 +1,42 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { parseJsonArray, splitList } from '../lib/json';
-import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { addSortableListOptions } from '../lib/options';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, paginationFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
 
 /** Resolve the `signers` array from either --signers JSON or --signer-ids CSV. */
-function resolveSigners(signersJson?: string, signerIdsCsv?: string): SignerReference[] {
+export function resolveSigners(
+	signersJson?: string,
+	signerIdsCsv?: string,
+	required = true,
+): SignerReference[] {
 	if (signersJson) {
 		return parseJsonArray(signersJson, '--signers') as SignerReference[];
 	}
 	const ids = splitList(signerIdsCsv);
 	if (!ids || ids.length === 0) {
+		if (!required) return [];
 		throw new CliError('Provide signers with --signer-ids <id1,id2> or --signers <json>.');
 	}
 	return ids;
 }
 
-const listCommand = addListOptions(
+const listCommand = addSortableListOptions(
 	new Command('list').description('List assignments across the account'),
+	'Sort by created_at (prefix with - for descending)',
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
 		const result = await withSpinner('Fetching assignments', config, () =>
 			client.assignments.list(listParams(opts), accountId),
 		);
-		printData(result.data, config, (rows) => {
+		printPaginatedData(result, config, (rows) => {
 			const table = renderTable(rows, [
 				{ header: 'ID', value: (r) => r.id },
 				{ header: 'METHOD', value: (r) => r.method },
@@ -47,8 +53,13 @@ const listCommand = addListOptions(
 const createCommand = new Command('create')
 	.description('Create a signing assignment for a document')
 	.argument('<documentId>', 'Document ID')
-	.option('--signer-ids <csv>', 'Comma-separated signer IDs')
-	.option('--signers <json>', 'JSON array of signer refs (with verification_method, step, …)')
+	.addOption(new Option('--signer-ids <csv>', 'Comma-separated signer IDs').conflicts('signers'))
+	.addOption(
+		new Option(
+			'--signers <json>',
+			'JSON array of signer refs (with verification_method, step, …)',
+		).conflicts('signerIds'),
+	)
 	.option('--method <method>', 'virtual or collect', 'virtual')
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
@@ -88,8 +99,8 @@ const createCommand = new Command('create')
 const estimateCostCommand = new Command('estimate-cost')
 	.description('Estimate the credit cost of an assignment')
 	.argument('<documentId>', 'Document ID')
-	.option('--signer-ids <csv>', 'Comma-separated signer IDs')
-	.option('--signers <json>', 'JSON array of signer refs')
+	.addOption(new Option('--signer-ids <csv>', 'Comma-separated signer IDs').conflicts('signers'))
+	.addOption(new Option('--signers <json>', 'JSON array of signer refs').conflicts('signerIds'))
 	.option('--method <method>', 'virtual or collect', 'virtual')
 	.option(
 		'--entries <json>',
@@ -97,9 +108,10 @@ const estimateCostCommand = new Command('estimate-cost')
 	)
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
+			const method = opts.method as ICreateAssignmentPayload['method'];
 			const payload: ICreateAssignmentPayload = {
-				method: opts.method as ICreateAssignmentPayload['method'],
-				signers: resolveSigners(opts.signers, opts.signerIds),
+				method,
+				signers: resolveSigners(opts.signers, opts.signerIds, method !== 'collect'),
 			};
 			if (opts.entries) {
 				payload.entries = parseJsonArray(opts.entries, '--entries') as ICollectAssignmentEntry[];
@@ -115,8 +127,8 @@ const resetExpirationCommand = new Command('reset-expiration')
 	.description('Update or clear an assignment expiration date')
 	.argument('<documentId>', 'Document ID')
 	.argument('<assignmentId>', 'Assignment ID')
-	.option('--expires-at <iso8601>', 'New expiration timestamp')
-	.option('--clear', 'Remove the expiration entirely')
+	.addOption(new Option('--expires-at <iso8601>', 'New expiration timestamp').conflicts('clear'))
+	.addOption(new Option('--clear', 'Remove the expiration entirely').conflicts('expiresAt'))
 	.action(async (documentId, assignmentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			if (!opts.clear && !opts.expiresAt) {

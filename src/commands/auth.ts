@@ -1,18 +1,24 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import { printData, printSuccess } from '../lib/output';
 import { confirmDestructive, promptSecret } from '../lib/prompts';
-import { runWithOptionalClient, runWithTokenClient } from '../lib/run';
+import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue } from '../lib/table';
+
+export function resetPasswordPayload(email: string, resetToken: string, newPassword: string) {
+	return { email, token: resetToken, new_password: newPassword };
+}
 
 const loginCommand = new Command('login')
 	.description(
 		'Exchange email + password for a JWT access token (no existing credentials required)',
 	)
 	.argument('<email>', 'Account email')
-	.option('--password <password>', 'Password (prompted if omitted)')
+	.addOption(
+		new Option('--password <password>', 'Password (prompted if omitted)').env('ASSINAFY_PASSWORD'),
+	)
 	.action(async (email, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const password = opts.password ?? (await promptSecret('Password'));
 			const result = await withSpinner('Logging in', config, () =>
 				client.auth.login(email, password),
@@ -31,10 +37,14 @@ const loginCommand = new Command('login')
 const socialLoginCommand = new Command('social-login')
 	.description('Exchange a provider token for an Assinafy JWT (no existing credentials required)')
 	.requiredOption('--provider <provider>', 'OAuth provider (e.g. google)')
-	.requiredOption('--provider-token <token>', 'Provider token')
+	.addOption(
+		new Option('--provider-token <token>', 'Provider token')
+			.env('ASSINAFY_PROVIDER_TOKEN')
+			.makeOptionMandatory(),
+	)
 	.option('--accept-terms', 'Accept the platform terms')
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Logging in', config, () =>
 				client.auth.socialLogin({
 					provider: opts.provider,
@@ -49,12 +59,20 @@ const socialLoginCommand = new Command('social-login')
 	});
 
 const changePasswordCommand = new Command('change-password')
-	.description("Change the authenticated user's password (requires --token or ASSINAFY_TOKEN)")
+	.description("Change the authenticated user's password")
 	.requiredOption('--email <email>', 'Account email')
-	.option('--password <password>', 'Current password (prompted if omitted)')
-	.option('--new-password <password>', 'New password (prompted if omitted)')
+	.addOption(
+		new Option('--password <password>', 'Current password (prompted if omitted)').env(
+			'ASSINAFY_PASSWORD',
+		),
+	)
+	.addOption(
+		new Option('--new-password <password>', 'New password (prompted if omitted)').env(
+			'ASSINAFY_NEW_PASSWORD',
+		),
+	)
 	.action(async (opts, command) => {
-		await runWithTokenClient(command, async ({ client, config }) => {
+		await runWithClient(command, async ({ client, config }) => {
 			const password = opts.password ?? (await promptSecret('Current password'));
 			const newPassword = opts.newPassword ?? (await promptSecret('New password'));
 			const result = await withSpinner('Changing password', config, () =>
@@ -65,11 +83,28 @@ const changePasswordCommand = new Command('change-password')
 		});
 	});
 
+const linkSocialLoginCommand = new Command('link-social-login')
+	.description('Link a Google identity to the authenticated user')
+	.addOption(
+		new Option('--provider-token <token>', 'Google identity token')
+			.env('ASSINAFY_PROVIDER_TOKEN')
+			.makeOptionMandatory(),
+	)
+	.action(async (opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			await withSpinner('Linking Google identity', config, () =>
+				client.auth.linkSocialLogin({ provider: 'google', token: opts.providerToken }),
+			);
+			printSuccess('Google identity linked', config);
+			printData({ linked: true, provider: 'google' }, config);
+		});
+	});
+
 const requestResetCommand = new Command('request-password-reset')
 	.description('Email a password-reset link to the user (no existing credentials required)')
 	.argument('<email>', 'Account email')
 	.action(async (email, _opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Requesting reset', config, () =>
 				client.auth.requestPasswordReset(email),
 			);
@@ -83,17 +118,21 @@ const resetPasswordCommand = new Command('reset-password')
 		'Complete a password reset with the emailed token (no existing credentials required)',
 	)
 	.requiredOption('--email <email>', 'Account email')
-	.option('--token <token>', 'Reset token from the email')
-	.option('--new-password <password>', 'New password (prompted if omitted)')
+	.addOption(
+		new Option('--reset-token <token>', 'Reset token from the email')
+			.env('ASSINAFY_RESET_TOKEN')
+			.makeOptionMandatory(),
+	)
+	.addOption(
+		new Option('--new-password <password>', 'New password (prompted if omitted)').env(
+			'ASSINAFY_NEW_PASSWORD',
+		),
+	)
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const newPassword = opts.newPassword ?? (await promptSecret('New password'));
 			const result = await withSpinner('Resetting password', config, () =>
-				client.auth.resetPassword({
-					email: opts.email,
-					token: opts.token,
-					new_password: newPassword,
-				}),
+				client.auth.resetPassword(resetPasswordPayload(opts.email, opts.resetToken, newPassword)),
 			);
 			printSuccess('Password reset', config);
 			printData(result, config);
@@ -102,9 +141,13 @@ const resetPasswordCommand = new Command('reset-password')
 
 const apiKeyCreateCommand = new Command('create')
 	.description('Generate (and rotate) the current user API key')
-	.option('--password <password>', 'Account password (prompted if omitted)')
+	.addOption(
+		new Option('--password <password>', 'Account password (prompted if omitted)').env(
+			'ASSINAFY_PASSWORD',
+		),
+	)
 	.action(async (opts, command) => {
-		await runWithTokenClient(command, async ({ client, config }) => {
+		await runWithClient(command, async ({ client, config }) => {
 			const password = opts.password ?? (await promptSecret('Password'));
 			const result = await withSpinner('Creating API key', config, () =>
 				client.auth.createApiKey(password),
@@ -117,7 +160,7 @@ const apiKeyCreateCommand = new Command('create')
 const apiKeyGetCommand = new Command('get')
 	.description('Show the masked current API key')
 	.action(async (_opts, command) => {
-		await runWithTokenClient(command, async ({ client, config }) => {
+		await runWithClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Fetching API key', config, () => client.auth.getApiKey());
 			if (!result) {
 				printData({ api_key: null }, config, () => 'No API key has been generated yet.');
@@ -132,7 +175,7 @@ const apiKeyDeleteCommand = new Command('delete')
 	.description('Revoke the current API key')
 	.option('-y, --yes', 'Skip the confirmation prompt')
 	.action(async (opts, command) => {
-		await runWithTokenClient(command, async ({ client, config }) => {
+		await runWithClient(command, async ({ client, config }) => {
 			if (!(await confirmDestructive('Revoke the current API key?', Boolean(opts.yes)))) return;
 			await withSpinner('Revoking API key', config, () => client.auth.deleteApiKey());
 			printSuccess('API key revoked', config);
@@ -141,7 +184,7 @@ const apiKeyDeleteCommand = new Command('delete')
 	});
 
 const apiKeysCommand = new Command('api-keys')
-	.description('Manage the current user personal API key (requires --token or ASSINAFY_TOKEN)')
+	.description('Manage the current user personal API key')
 	.addCommand(apiKeyCreateCommand)
 	.addCommand(apiKeyGetCommand)
 	.addCommand(apiKeyDeleteCommand);
@@ -150,6 +193,7 @@ export const authCommand = new Command('auth')
 	.description('Authentication, password management, and personal API keys')
 	.addCommand(loginCommand)
 	.addCommand(socialLoginCommand)
+	.addCommand(linkSocialLoginCommand)
 	.addCommand(changePasswordCommand)
 	.addCommand(requestResetCommand)
 	.addCommand(resetPasswordCommand)

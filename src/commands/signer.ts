@@ -1,20 +1,27 @@
-import { Command } from '@commander-js/extra-typings';
-import type { DocumentArtifactName, ISignFieldEntry } from '../api';
+import { Command, Option } from '@commander-js/extra-typings';
+import type { ISignFieldEntry } from '../api';
+import { requireDocumentArtifactName, requireSignerImageType } from '../api/utils';
 import { defaultArtifactFilename, readBinary, writeBinary } from '../lib/files';
 import { parseJsonArray, splitList } from '../lib/json';
 import { addListOptions } from '../lib/options';
-import { printData, printSuccess } from '../lib/output';
+import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams } from '../lib/pagination';
-import { runWithOptionalClient } from '../lib/run';
+import { runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
+import { sanitizeTerminalText } from '../lib/terminal';
+
+const accessCodeOption = () =>
+	new Option('--access-code <code>', 'Signer access code')
+		.env('ASSINAFY_SIGNER_ACCESS_CODE')
+		.makeOptionMandatory();
 
 const documentCommand = new Command('document')
 	.description("Fetch the signer's current document")
 	.argument('<signerId>', 'Signer ID')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.action(async (signerId, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const doc = await withSpinner('Fetching document', config, () =>
 				client.signerDocuments.getCurrent(signerId, opts.accessCode),
 			);
@@ -26,13 +33,13 @@ const documentsCommand = addListOptions(
 	new Command('documents')
 		.description("List the signer's documents")
 		.argument('<signerId>', 'Signer ID')
-		.requiredOption('--access-code <code>', 'Signer access code'),
+		.addOption(accessCodeOption()),
 ).action(async (signerId, opts, command) => {
-	await runWithOptionalClient(command, async ({ client, config }) => {
+	await runWithPublicClient(command, async ({ client, config }) => {
 		const result = await withSpinner('Fetching documents', config, () =>
 			client.signerDocuments.list(signerId, opts.accessCode, listParams(opts)),
 		);
-		printData(result.data, config, (rows) =>
+		printPaginatedData(result, config, (rows) =>
 			renderTable(rows, [
 				{ header: 'ID', value: (r) => r.id },
 				{ header: 'NAME', value: (r) => r.name },
@@ -42,34 +49,57 @@ const documentsCommand = addListOptions(
 	});
 });
 
+const searchCommand = new Command('search')
+	.description("Search the signer's documents")
+	.argument('<signerId>', 'Signer ID')
+	.argument('<query>', 'Search text')
+	.addOption(accessCodeOption())
+	.action(async (signerId, query, opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Searching documents', config, () =>
+				client.signerDocuments.search(signerId, query, opts.accessCode),
+			);
+			printPaginatedData(result, config, (rows) =>
+				renderTable(rows, [
+					{ header: 'ID', value: (r) => r.id },
+					{ header: 'NAME', value: (r) => r.name },
+					{ header: 'STATUS', value: (r) => r.status },
+				]),
+			);
+		});
+	});
+
 const downloadCommand = new Command('download')
 	.description('Download a signer document artifact')
 	.argument('<signerId>', 'Signer ID')
 	.argument('<documentId>', 'Document ID')
-	.argument('<artifact>', 'original | certificated | certificate-page | bundle')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.argument('<artifact>', 'original | certificated | certificate-page | pades | bundle')
+	.addOption(accessCodeOption())
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (signerId, documentId, artifact, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const artifactName = requireDocumentArtifactName(artifact);
 			const buffer = await withSpinner('Downloading', config, () =>
-				client.signerDocuments.download(
-					signerId,
-					documentId,
-					artifact as DocumentArtifactName,
-					opts.accessCode,
-				),
+				client.signerDocuments.download(signerId, documentId, artifactName, opts.accessCode),
 			);
-			const out = writeBinary(opts.output ?? defaultArtifactFilename(documentId, artifact), buffer);
+			const out = writeBinary(
+				opts.output ?? defaultArtifactFilename(documentId, artifactName),
+				buffer,
+				{ force: opts.force },
+			);
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 
 const selfCommand = new Command('self')
 	.description("Fetch the signer's own profile")
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const profile = await withSpinner('Fetching profile', config, () =>
 				client.signerDocuments.self(opts.accessCode),
 			);
@@ -79,9 +109,9 @@ const selfCommand = new Command('self')
 
 const acceptTermsCommand = new Command('accept-terms')
 	.description('Accept the platform terms as the signer')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Accepting terms', config, () =>
 				client.signerDocuments.acceptTerms(opts.accessCode),
 			);
@@ -92,10 +122,14 @@ const acceptTermsCommand = new Command('accept-terms')
 
 const verifyEmailCommand = new Command('verify-email')
 	.description('Verify the email OTP for a signer')
-	.requiredOption('--access-code <code>', 'Signer access code')
-	.requiredOption('--code <otp>', 'Verification code')
+	.addOption(accessCodeOption())
+	.addOption(
+		new Option('--code <otp>', 'Verification code')
+			.env('ASSINAFY_VERIFICATION_CODE')
+			.makeOptionMandatory(),
+	)
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Verifying', config, () =>
 				client.signerDocuments.verifyEmail({
 					signerAccessCode: opts.accessCode,
@@ -110,14 +144,14 @@ const verifyEmailCommand = new Command('verify-email')
 const confirmDataCommand = new Command('confirm-data')
 	.description("Confirm a signer's contact data")
 	.argument('<documentId>', 'Document ID')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.option('--full-name <name>', 'Full name to confirm')
 	.option('--email <email>', 'Email to confirm')
 	.option('--phone <number>', 'WhatsApp phone number to confirm')
 	.option('--government-id <id>', 'Government ID (e.g. CPF) to confirm')
 	.option('--accept-terms', 'Also accept the platform terms')
 	.action(async (documentId, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const payload: {
 				full_name?: string;
 				email?: string;
@@ -140,17 +174,19 @@ const confirmDataCommand = new Command('confirm-data')
 
 const uploadSignatureCommand = new Command('upload-signature')
 	.description("Upload the signer's signature or initial image")
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.requiredOption('--file <path>', 'Path to the signature image (PNG)')
 	.option('--type <type>', 'signature or initial', 'signature')
 	.option('--content-type <mime>', 'Image MIME type', 'image/png')
 	.option('--reuse', "Mark the signer's signature as reusable in future processes")
+	.option('--no-reuse', "Disable reuse of the signer's signature in future processes")
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const image = readBinary(opts.file);
+			const imageType = requireSignerImageType(opts.type);
 			const result = await withSpinner('Uploading signature', config, () =>
 				client.signerDocuments.uploadSignature(opts.accessCode, image, {
-					imageType: opts.type as 'signature' | 'initial',
+					imageType,
 					contentType: opts.contentType,
 					reuse: opts.reuse,
 				}),
@@ -162,29 +198,32 @@ const uploadSignatureCommand = new Command('upload-signature')
 
 const downloadSignatureCommand = new Command('download-signature')
 	.description("Download the signer's signature or initial image")
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.option('--type <type>', 'signature or initial', 'signature')
 	.option('-o, --output <path>', 'Output file path')
+	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const imageType = requireSignerImageType(opts.type);
 			const buffer = await withSpinner('Downloading signature', config, () =>
-				client.signerDocuments.downloadSignature(
-					opts.accessCode,
-					opts.type as 'signature' | 'initial',
-				),
+				client.signerDocuments.downloadSignature(opts.accessCode, imageType),
 			);
-			const out = writeBinary(opts.output ?? `signer-${opts.type}.png`, buffer);
+			const out = writeBinary(opts.output ?? `signer-${imageType}.png`, buffer, {
+				force: opts.force,
+			});
 			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) => d.path);
+			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
+				sanitizeTerminalText(d.path),
+			);
 		});
 	});
 
 const assignmentCommand = new Command('assignment')
 	.description('Fetch the assignment as the signer sees it')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.option('--accept-terms', 'Pass has_accepted_terms=true')
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Fetching assignment', config, () =>
 				client.signerDocuments.getAssignment(opts.accessCode, opts.acceptTerms ? true : undefined),
 			);
@@ -196,10 +235,10 @@ const signCommand = new Command('sign')
 	.description('Sign a document as the signer')
 	.argument('<documentId>', 'Document ID')
 	.argument('<assignmentId>', 'Assignment ID')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.requiredOption('--entries <json>', 'JSON array of { itemId, fieldId, pageId, value } entries')
 	.action(async (documentId, assignmentId, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const entries = parseJsonArray(opts.entries, '--entries') as ISignFieldEntry[];
 			const result = await withSpinner('Signing document', config, () =>
 				client.signerDocuments.sign(documentId, assignmentId, opts.accessCode, entries),
@@ -213,10 +252,10 @@ const declineCommand = new Command('decline')
 	.description('Decline an assignment as the signer')
 	.argument('<documentId>', 'Document ID')
 	.argument('<assignmentId>', 'Assignment ID')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.requiredOption('--reason <reason>', 'Reason for declining')
 	.action(async (documentId, assignmentId, opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Declining', config, () =>
 				client.signerDocuments.decline(documentId, assignmentId, opts.accessCode, opts.reason),
 			);
@@ -227,10 +266,10 @@ const declineCommand = new Command('decline')
 
 const signMultipleCommand = new Command('sign-multiple')
 	.description('Sign multiple documents at once')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.requiredOption('--document-ids <csv>', 'Comma-separated document IDs')
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const ids = splitList(opts.documentIds) ?? [];
 			const result = await withSpinner('Signing documents', config, () =>
 				client.signerDocuments.signMultiple(ids, opts.accessCode),
@@ -242,11 +281,11 @@ const signMultipleCommand = new Command('sign-multiple')
 
 const declineMultipleCommand = new Command('decline-multiple')
 	.description('Decline multiple documents at once')
-	.requiredOption('--access-code <code>', 'Signer access code')
+	.addOption(accessCodeOption())
 	.requiredOption('--document-ids <csv>', 'Comma-separated document IDs')
 	.requiredOption('--reason <reason>', 'Reason for declining')
 	.action(async (opts, command) => {
-		await runWithOptionalClient(command, async ({ client, config }) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
 			const ids = splitList(opts.documentIds) ?? [];
 			const result = await withSpinner('Declining documents', config, () =>
 				client.signerDocuments.declineMultiple(ids, opts.reason, opts.accessCode),
@@ -260,6 +299,7 @@ export const signerCommand = new Command('signer')
 	.description('Signer-side flows authenticated by a signer access code')
 	.addCommand(documentCommand)
 	.addCommand(documentsCommand)
+	.addCommand(searchCommand)
 	.addCommand(downloadCommand)
 	.addCommand(selfCommand)
 	.addCommand(acceptTermsCommand)

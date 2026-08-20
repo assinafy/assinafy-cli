@@ -1,14 +1,21 @@
-import { ValidationError } from '../errors';
+import { ValidationError } from '../errors.js';
 import type {
 	DocumentArtifactName,
 	IDocumentDetailsResponse,
 	IDocumentListItem,
 	IDocumentListResponse,
-	IListParams,
+	ISigner,
+	ISignerDocumentListParams,
+	ISignerSelf,
 	ISignFieldEntry,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+	IStatusResponse,
+} from '../types.js';
+import {
+	requireDocumentArtifactName,
+	requireSignerImageType,
+	signerAccessConfig,
+} from '../utils.js';
+import { BaseResource } from './base.js';
 
 /**
  * Signer-side endpoints. Every call here is authenticated by `signer-access-code`
@@ -21,9 +28,7 @@ export class SignerDocumentsResource extends BaseResource {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to fetch current signer document', () =>
-			this.http.get(`/signers/${sid}/document`, {
-				params: { 'signer-access-code': code },
-			}),
+			this.http.get(`/signers/${sid}/document`, signerAccessConfig(code)),
 		);
 	}
 
@@ -31,14 +36,15 @@ export class SignerDocumentsResource extends BaseResource {
 	async list(
 		signerId: string,
 		signerAccessCode: string,
-		params: IListParams = {},
+		params: ISignerDocumentListParams = {},
 	): Promise<IDocumentListResponse> {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.callList<IDocumentListItem>('Failed to list signer documents', () =>
-			this.http.get(`/signers/${sid}/documents`, {
-				params: { 'signer-access-code': code, ...cleanParams(params) },
-			}),
+			this.http.get(
+				`/signers/${sid}/documents`,
+				signerAccessConfig(code, params as unknown as Record<string, unknown>),
+			),
 		);
 	}
 
@@ -51,9 +57,7 @@ export class SignerDocumentsResource extends BaseResource {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.callList<IDocumentListItem>('Failed to search signer documents', () =>
-			this.http.get(`/signers/${sid}/documents/search`, {
-				params: cleanParams({ 'signer-access-code': code, search }),
-			}),
+			this.http.get(`/signers/${sid}/documents/search`, signerAccessConfig(code, { search })),
 		);
 	}
 
@@ -66,17 +70,25 @@ export class SignerDocumentsResource extends BaseResource {
 	): Promise<Buffer> {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const did = this.requireId(documentId, 'Document ID');
+		const artifact = requireDocumentArtifactName(artifactName);
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		// Sandbox currently serves this download even for an invalid access code.
+		// Gate it through the protected profile route so SDK callers never rely on
+		// that upstream authorization defect.
+		const signer = await this.self(code);
+		if (signer.id !== sid) {
+			throw new ValidationError('Signer access code does not match the signer ID');
+		}
 		return this.callBinary('Failed to download signer document', () =>
-			this.http.get<ArrayBuffer>(`/signers/${sid}/documents/${did}/download/${artifactName}`, {
+			this.http.get<ArrayBuffer>(`/signers/${sid}/documents/${did}/download/${artifact}`, {
+				...signerAccessConfig(code),
 				responseType: 'arraybuffer',
-				params: { 'signer-access-code': code },
 			}),
 		);
 	}
 
 	/** `PUT /signers/documents/sign-multiple?signer-access-code=…` */
-	async signMultiple(documentIds: string[], signerAccessCode: string): Promise<unknown> {
+	async signMultiple(documentIds: string[], signerAccessCode: string): Promise<unknown[]> {
 		if (!Array.isArray(documentIds) || documentIds.length === 0) {
 			throw new ValidationError('documentIds must be a non-empty array');
 		}
@@ -85,7 +97,7 @@ export class SignerDocumentsResource extends BaseResource {
 			this.http.put(
 				'/signers/documents/sign-multiple',
 				{ document_ids: documentIds },
-				{ params: { 'signer-access-code': code } },
+				signerAccessConfig(code),
 			),
 		);
 	}
@@ -95,7 +107,7 @@ export class SignerDocumentsResource extends BaseResource {
 		documentIds: string[],
 		declineReason: string,
 		signerAccessCode: string,
-	): Promise<unknown> {
+	): Promise<unknown[]> {
 		if (!Array.isArray(documentIds) || documentIds.length === 0) {
 			throw new ValidationError('documentIds must be a non-empty array');
 		}
@@ -105,16 +117,16 @@ export class SignerDocumentsResource extends BaseResource {
 			this.http.put(
 				'/signers/documents/decline-multiple',
 				{ document_ids: documentIds, decline_reason: declineReason },
-				{ params: { 'signer-access-code': code } },
+				signerAccessConfig(code),
 			),
 		);
 	}
 
 	/** `GET /signers/self?signer-access-code=…` — fetch the signer's own profile. */
-	async self(signerAccessCode: string): Promise<unknown> {
+	async self(signerAccessCode: string): Promise<ISignerSelf> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to fetch signer profile', () =>
-			this.http.get('/signers/self', { params: { 'signer-access-code': code } }),
+			this.http.get('/signers/self', signerAccessConfig(code)),
 		);
 	}
 
@@ -126,12 +138,10 @@ export class SignerDocumentsResource extends BaseResource {
 	 * every other signer-side endpoint (the spec under-documents this one, but
 	 * the query-param convention is uniform across the Signing API).
 	 */
-	async acceptTerms(signerAccessCode: string): Promise<unknown> {
+	async acceptTerms(signerAccessCode: string): Promise<IStatusResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to accept terms', () =>
-			this.http.put('/signers/accept-terms', undefined, {
-				params: { 'signer-access-code': code },
-			}),
+			this.http.put('/signers/accept-terms', undefined, signerAccessConfig(code)),
 		);
 	}
 
@@ -139,14 +149,11 @@ export class SignerDocumentsResource extends BaseResource {
 	async verifyEmail(payload: {
 		signerAccessCode: string;
 		verificationCode: string;
-	}): Promise<unknown> {
+	}): Promise<IStatusResponse> {
 		const code = this.requireId(payload.signerAccessCode, 'signer-access-code');
 		const otp = this.requireId(payload.verificationCode, 'verification-code');
 		return this.call('Failed to verify signer email', () =>
-			this.http.post('/verify', {
-				'signer-access-code': code,
-				'verification-code': otp,
-			}),
+			this.http.post('/verify', { 'verification-code': otp }, signerAccessConfig(code)),
 		);
 	}
 
@@ -167,7 +174,7 @@ export class SignerDocumentsResource extends BaseResource {
 			whatsapp_phone_number?: string;
 			has_accepted_terms?: boolean;
 		},
-	): Promise<unknown> {
+	): Promise<ISigner> {
 		const did = this.requireId(documentId, 'Document ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		// Build the JSON body explicitly (only defined fields). Don't route it
@@ -178,9 +185,7 @@ export class SignerDocumentsResource extends BaseResource {
 			if (value !== undefined) body[key] = value;
 		}
 		return this.call('Failed to confirm signer data', () =>
-			this.http.put(`/documents/${did}/signers/confirm-data`, body, {
-				params: { 'signer-access-code': code },
-			}),
+			this.http.put(`/documents/${did}/signers/confirm-data`, body, signerAccessConfig(code)),
 		);
 	}
 
@@ -192,21 +197,26 @@ export class SignerDocumentsResource extends BaseResource {
 		signerAccessCode: string,
 		image: Buffer,
 		options: { imageType?: 'signature' | 'initial'; contentType?: string; reuse?: boolean } = {},
-	): Promise<unknown> {
+	): Promise<IStatusResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		const imageType = requireSignerImageType(options.imageType ?? 'signature');
 		if (!Buffer.isBuffer(image) || image.byteLength === 0) {
 			throw new ValidationError('image buffer is required');
 		}
 		return this.call('Failed to upload signer signature', () =>
-			this.http.post('/signature', image, {
-				params: cleanParams({
-					'signer-access-code': code,
-					type: options.imageType ?? 'signature',
-					// Documented query flag controlling the signer's is_signature_reusable state.
-					reuse: options.reuse,
-				}),
-				headers: { 'Content-Type': options.contentType ?? 'image/png' },
-			}),
+			this.http.post(
+				'/signature',
+				image,
+				signerAccessConfig(
+					code,
+					{
+						type: imageType,
+						// Documented query flag controlling the signer's is_signature_reusable state.
+						reuse: options.reuse,
+					},
+					{ 'Content-Type': options.contentType ?? 'image/png' },
+				),
+			),
 		);
 	}
 
@@ -216,24 +226,23 @@ export class SignerDocumentsResource extends BaseResource {
 		imageType: 'signature' | 'initial' = 'signature',
 	): Promise<Buffer> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		const type = requireSignerImageType(imageType);
 		return this.callBinary('Failed to download signer signature', () =>
-			this.http.get<ArrayBuffer>(`/signature/${imageType}`, {
+			this.http.get<ArrayBuffer>(`/signature/${type}`, {
+				...signerAccessConfig(code),
 				responseType: 'arraybuffer',
-				params: { 'signer-access-code': code },
 			}),
 		);
 	}
 
 	/** `GET /sign?signer-access-code=…` — fetch the assignment as the signer sees it. */
-	async getAssignment(signerAccessCode: string, hasAcceptedTerms?: boolean): Promise<unknown> {
+	async getAssignment(
+		signerAccessCode: string,
+		hasAcceptedTerms?: boolean,
+	): Promise<IDocumentDetailsResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to fetch signer assignment', () =>
-			this.http.get('/sign', {
-				params: cleanParams({
-					'signer-access-code': code,
-					has_accepted_terms: hasAcceptedTerms,
-				}),
-			}),
+			this.http.get('/sign', signerAccessConfig(code, { has_accepted_terms: hasAcceptedTerms })),
 		);
 	}
 
@@ -243,7 +252,7 @@ export class SignerDocumentsResource extends BaseResource {
 		assignmentId: string,
 		signerAccessCode: string,
 		entries: ISignFieldEntry[],
-	): Promise<unknown> {
+	): Promise<Record<string, unknown>> {
 		const did = this.requireId(documentId, 'Document ID');
 		const aid = this.requireId(assignmentId, 'Assignment ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
@@ -251,9 +260,7 @@ export class SignerDocumentsResource extends BaseResource {
 			throw new ValidationError('entries must be a non-empty array');
 		}
 		return this.call('Failed to sign document', () =>
-			this.http.post(`/documents/${did}/assignments/${aid}`, entries, {
-				params: { 'signer-access-code': code },
-			}),
+			this.http.post(`/documents/${did}/assignments/${aid}`, entries, signerAccessConfig(code)),
 		);
 	}
 
@@ -266,7 +273,7 @@ export class SignerDocumentsResource extends BaseResource {
 		assignmentId: string,
 		signerAccessCode: string,
 		declineReason: string,
-	): Promise<unknown> {
+	): Promise<unknown[]> {
 		const did = this.requireId(documentId, 'Document ID');
 		const aid = this.requireId(assignmentId, 'Assignment ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
@@ -275,7 +282,7 @@ export class SignerDocumentsResource extends BaseResource {
 			this.http.put(
 				`/documents/${did}/assignments/${aid}/reject`,
 				{ decline_reason: declineReason },
-				{ params: { 'signer-access-code': code } },
+				signerAccessConfig(code),
 			),
 		);
 	}

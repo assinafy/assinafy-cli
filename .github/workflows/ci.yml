@@ -20,25 +20,32 @@ defaults:
 
 jobs:
   test:
-    name: Node ${{ matrix.node-version }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        node-version:
-          - 22.x
-          - 24.x
-          - 26.x
+        include:
+          - os: ubuntu-latest
+            node-version: 22.12.0
+          - os: ubuntu-latest
+            node-version: 24.x
+          - os: ubuntu-latest
+            node-version: 26.x
+          - os: macos-latest
+            node-version: 24.x
+          - os: windows-latest
+            node-version: 24.x
 
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -62,22 +69,111 @@ jobs:
       - name: Verify bundle
         run: npm run verify:bundle
 
-      - name: Verify generated docs are up to date
+      - name: Verify generated files are up to date
         run: |
           node scripts/gen-docs.mjs
+          npm run notices
           git diff --exit-code -- docs/
+          git diff --exit-code -- THIRD_PARTY_NOTICES.md
+          test -z "$(git ls-files --others --exclude-standard docs/)"
 
       - name: Verify installer syntax
         run: |
           bash -n install.sh
-          pwsh -NoLogo -NoProfile -Command '$null = [scriptblock]::Create((Get-Content -Raw install.ps1))'
+          pwsh -NoLogo -NoProfile -Command '[scriptblock]::Create((Get-Content -Raw install.ps1)) | Out-Null'
+
+      - name: Verify installer PATH escaping
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          source ./install.sh
+          test_home="$(mktemp -d)"
+          trap 'rm -rf "$test_home"' EXIT
+          HOME="$test_home"
+          SHELL=/bin/bash
+          marker="$RUNNER_TEMP/assinafy-installer-injection"
+          ensure_path "/tmp/assinafy-\$(touch $marker)"
+          bash "$HOME/.bashrc"
+          test ! -e "$marker"
 
       - name: Package release assets
         run: npm run pack:release
 
+      - name: Validate release archive layouts
+        if: runner.os == 'Linux' && matrix.node-version == '24.x'
+        run: |
+          source ./install.sh
+          setup_colors
+          for archive in dist/release/assinafy-*.tar.gz; do
+            target="${archive##*/assinafy-}"
+            validate_archive "$archive" "${target%.tar.gz}"
+          done
+          invalid_dir="$(mktemp -d)"
+          trap 'rm -rf "$invalid_dir"' EXIT
+          touch "$invalid_dir/unexpected"
+          tar -czf "$invalid_dir/invalid.tar.gz" -C "$invalid_dir" unexpected
+          ! (validate_archive "$invalid_dir/invalid.tar.gz" linux-x64)
+
+      - name: Verify reproducible release archives
+        if: runner.os == 'Linux' && matrix.node-version == '24.x'
+        run: |
+          cp dist/release/SHA256SUMS "$RUNNER_TEMP/SHA256SUMS.first"
+          node scripts/package-release.mjs
+          cmp "$RUNNER_TEMP/SHA256SUMS.first" dist/release/SHA256SUMS
+
       - name: Verify release checksums
+        if: runner.os != 'Windows'
         run: shasum -a 256 -c SHA256SUMS
         working-directory: dist/release
+
+      - name: Smoke test POSIX release archive
+        if: runner.os != 'Windows'
+        run: |
+          target="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+          case "$target" in
+            darwin-x86_64) target="darwin-x64" ;;
+            darwin-arm64) target="darwin-arm64" ;;
+            linux-x86_64) target="linux-x64" ;;
+            linux-aarch64) target="linux-arm64" ;;
+            *) echo "Unsupported runner target: $target" >&2; exit 1 ;;
+          esac
+          smoke_dir="$(mktemp -d)"
+          trap 'rm -rf "$smoke_dir"' EXIT
+          tar -xzf "dist/release/assinafy-${target}.tar.gz" -C "$smoke_dir"
+          version="$("$smoke_dir/assinafy" --version)"
+          archive_version="$(tr -d '\r\n' < "$smoke_dir/VERSION")"
+          test "$version" = "@assinafy/cli v$archive_version"
+
+      - name: Verify release checksums on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-Content dist/release/SHA256SUMS | ForEach-Object {
+            $parts = $_.Trim() -split '\s+'
+            if ($parts.Count -ne 2) { throw "Invalid SHA256SUMS line: $_" }
+            $actual = (Get-FileHash "dist/release/$($parts[1])" -Algorithm SHA256).Hash
+            if ($actual -ne $parts[0]) { throw "Checksum mismatch for $($parts[1])" }
+          }
+
+      - name: Smoke test Windows release archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' }
+          . ./install.ps1
+          Test-ArchiveLayout "dist/release/assinafy-windows-$arch.tar.gz" "windows-$arch"
+          $smokeDir = Join-Path $env:RUNNER_TEMP "assinafy-smoke-$([guid]::NewGuid())"
+          New-Item -ItemType Directory -Path $smokeDir | Out-Null
+          try {
+            tar -xzf "dist/release/assinafy-windows-$arch.tar.gz" -C $smokeDir
+            $version = & (Join-Path $smokeDir 'assinafy.cmd') --version
+            $archiveVersion = (Get-Content (Join-Path $smokeDir 'VERSION') -Raw).Trim()
+            if ($LASTEXITCODE -ne 0 -or $version.Trim() -cne "@assinafy/cli v$archiveVersion") {
+              throw 'Packaged Windows CLI did not run'
+            }
+          } finally {
+            Remove-Item $smokeDir -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Verify package contents
         run: npm pack --dry-run

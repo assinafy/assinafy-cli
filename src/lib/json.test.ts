@@ -68,6 +68,11 @@ describe('parseInteger', () => {
 		expect(() => parseInteger('12abc', '--n')).toThrow(/must be an integer/);
 	});
 
+	it('rejects integers that cannot be represented safely', () => {
+		expect(() => parseInteger('9007199254740992', '--n')).toThrow(/safe integer/);
+		expect(() => parseInteger('-9007199254740992', '--n')).toThrow(/safe integer/);
+	});
+
 	it('enforces a minimum when provided', () => {
 		expect(() => parseInteger('0', '--page', { min: 1 })).toThrow(/1 or greater/);
 		expect(() => parseInteger('-1', '--page', { min: 1 })).toThrow(/1 or greater/);

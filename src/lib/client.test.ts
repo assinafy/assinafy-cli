@@ -34,17 +34,14 @@ describe('createClient', () => {
 		expect(client).toBeInstanceOf(AssinafyClient);
 	});
 
-	it('prefers a JWT token when requested', () => {
-		const client = createClient(cfg({ apiKey: 'k_abc', token: 'jwt_abc' }), {
-			preferToken: true,
+	it('omits configured credentials for explicitly public requests', () => {
+		const client = createClient(cfg({ apiKey: 'stale-key', token: 'stale-token' }), {
+			allowUnauthenticated: true,
+			omitCredentials: true,
 		});
 		const headers = client.getAxiosInstance().defaults.headers as Record<string, unknown>;
-		expect(headers.Authorization).toBe('Bearer jwt_abc');
+		expect(headers.Authorization).toBeUndefined();
 		expect(headers['X-Api-Key']).toBeUndefined();
-	});
-
-	it('requires a JWT token for token-only commands', () => {
-		expect(() => createClient(cfg({ apiKey: 'k_abc' }), { preferToken: true })).toThrow(CliError);
 	});
 });
 

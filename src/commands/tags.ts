@@ -1,4 +1,4 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { IUpdateTagPayload } from '../api';
 import { requireAccountId } from '../lib/client';
 import { printData, printSuccess } from '../lib/output';
@@ -46,8 +46,8 @@ const updateCommand = new Command('update')
 	.description('Update a tag name and/or color')
 	.argument('<id>', 'Tag ID')
 	.option('--name <name>', 'New name')
-	.option('--color <hex>', '6-char hex color')
-	.option('--clear-color', 'Clear the color')
+	.addOption(new Option('--color <hex>', '6-char hex color').conflicts('clearColor'))
+	.addOption(new Option('--clear-color', 'Clear the color').conflicts('color'))
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
@@ -73,11 +73,11 @@ const deleteCommand = new Command('delete')
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			if (!(await confirmDestructive(`Delete tag ${id}?`, Boolean(opts.yes)))) return;
-			await withSpinner('Deleting tag', config, () =>
+			const result = await withSpinner('Deleting tag', config, () =>
 				client.tags.delete(id, { force: opts.force, accountId }),
 			);
 			printSuccess(`Deleted tag ${id}`, config);
-			printData({ deleted: id }, config);
+			printData(result, config);
 		});
 	});
 

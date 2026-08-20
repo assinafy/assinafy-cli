@@ -1,7 +1,7 @@
-import { ValidationError } from '../errors';
-import type { ICreateTagPayload, ITag, IUpdateTagPayload } from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+import { ValidationError } from '../errors.js';
+import type { ICreateTagPayload, IDeleteTagResponse, ITag, IUpdateTagPayload } from '../types.js';
+import { cleanParams } from '../utils.js';
+import { BaseResource } from './base.js';
 
 /**
  * Workspace-scoped tags used to label documents and templates.
@@ -59,11 +59,11 @@ export class TagResource extends BaseResource {
 	async delete(
 		tagId: string,
 		options: { force?: boolean; accountId?: string } = {},
-	): Promise<void> {
+	): Promise<IDeleteTagResponse> {
 		const id = this.accountId(options.accountId);
 		const tid = this.requireId(tagId, 'Tag ID');
 		const params = options.force ? { force: 'true' } : undefined;
-		return this.callVoid('Failed to delete tag', () =>
+		return this.call('Failed to delete tag', () =>
 			this.http.delete(`/accounts/${id}/tags/${tid}`, { params }),
 		);
 	}

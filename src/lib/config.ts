@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
 	chmodSync,
 	existsSync,
@@ -11,6 +12,8 @@ import os from 'node:os';
 import path from 'node:path';
 import pc from 'picocolors';
 import { normalizeBaseUrl } from '../api';
+import { CliError } from './errors';
+import { sanitizeTerminalText } from './terminal';
 
 /**
  * The default production base URL. The sandbox lives at a different host
@@ -89,21 +92,28 @@ export function configPath(): string {
  * user with real stored credentials staring at a misleading "no credentials
  * found" error with no clue their config file, not their setup, is the problem.
  */
-export function readConfigFile(): ConfigFile {
+export function readConfigFile(options: { strict?: boolean } = {}): ConfigFile {
 	const file = configPath();
 	if (!existsSync(file)) {
 		return {};
 	}
 	try {
 		const parsed = JSON.parse(readFileSync(file, 'utf8')) as ConfigFile;
-		if (parsed && typeof parsed === 'object') return parsed;
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+		if (options.strict) {
+			throw new CliError(`Config file at ${file} is not a JSON object; refusing to overwrite it.`);
+		}
 		process.stderr.write(
-			`${pc.yellow('!')} Config file at ${file} is not a JSON object; ignoring it.\n`,
+			`${pc.yellow('!')} Config file at ${sanitizeTerminalText(file)} is not a JSON object; ignoring it.\n`,
 		);
 		return {};
-	} catch {
+	} catch (error) {
+		if (error instanceof CliError) throw error;
+		if (options.strict) {
+			throw new CliError(`Config file at ${file} is not valid JSON; refusing to overwrite it.`);
+		}
 		process.stderr.write(
-			`${pc.yellow('!')} Config file at ${file} is not valid JSON; ignoring it.\n`,
+			`${pc.yellow('!')} Config file at ${sanitizeTerminalText(file)} is not valid JSON; ignoring it.\n`,
 		);
 		return {};
 	}
@@ -124,9 +134,12 @@ export function writeConfigFile(config: ConfigFile): void {
 		mkdirSync(dir, { recursive: true, mode: 0o700 });
 	}
 	const file = configPath();
-	const tmp = `${file}.${process.pid}.tmp`;
-	writeFileSync(tmp, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+	const tmp = `${file}.${randomUUID()}.tmp`;
 	try {
+		writeFileSync(tmp, `${JSON.stringify(config, null, 2)}\n`, {
+			flag: 'wx',
+			mode: 0o600,
+		});
 		chmodSync(tmp, 0o600);
 		renameSync(tmp, file);
 	} catch (err) {

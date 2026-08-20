@@ -13,6 +13,7 @@ Options:
 Commands:
   document [options] <signerId>                          Fetch the signer's current document
   documents [options] <signerId>                         List the signer's documents
+  search [options] <signerId> <query>                    Search the signer's documents
   download [options] <signerId> <documentId> <artifact>  Download a signer document artifact
   self [options]                                         Fetch the signer's own profile
   accept-terms [options]                                 Accept the platform terms as the signer
@@ -39,7 +40,7 @@ Arguments:
   signerId              Signer ID
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
 
@@ -54,11 +55,27 @@ Arguments:
   signerId              Signer ID
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --page <n>            Page number to fetch
   --per-page <n>        Items per page
-  --search <query>      Filter results by a search query
-  --sort <field>        Sort by field (prefix with - for descending)
+  --search <query>      Filter by a search query
+  --sort <field>        Sort by field
+  -h, --help            display help for command
+```
+
+### `assinafy signer search`
+
+```text
+Usage: assinafy signer search [options] <signerId> <query>
+
+Search the signer's documents
+
+Arguments:
+  signerId              Signer ID
+  query                 Search text
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
 
@@ -72,11 +89,13 @@ Download a signer document artifact
 Arguments:
   signerId              Signer ID
   documentId            Document ID
-  artifact              original | certificated | certificate-page | bundle
+  artifact              original | certificated | certificate-page | pades |
+                        bundle
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
   -h, --help            display help for command
 ```
 
@@ -88,7 +107,7 @@ Usage: assinafy signer self [options]
 Fetch the signer's own profile
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
 
@@ -100,7 +119,7 @@ Usage: assinafy signer accept-terms [options]
 Accept the platform terms as the signer
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
 
@@ -112,8 +131,8 @@ Usage: assinafy signer verify-email [options]
 Verify the email OTP for a signer
 
 Options:
-  --access-code <code>  Signer access code
-  --code <otp>          Verification code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --code <otp>          Verification code (env: ASSINAFY_VERIFICATION_CODE)
   -h, --help            display help for command
 ```
 
@@ -128,7 +147,7 @@ Arguments:
   documentId            Document ID
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --full-name <name>    Full name to confirm
   --email <email>       Email to confirm
   --phone <number>      WhatsApp phone number to confirm
@@ -145,11 +164,13 @@ Usage: assinafy signer upload-signature [options]
 Upload the signer's signature or initial image
 
 Options:
-  --access-code <code>   Signer access code
+  --access-code <code>   Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --file <path>          Path to the signature image (PNG)
   --type <type>          signature or initial (default: "signature")
   --content-type <mime>  Image MIME type (default: "image/png")
   --reuse                Mark the signer's signature as reusable in future
+                         processes
+  --no-reuse             Disable reuse of the signer's signature in future
                          processes
   -h, --help             display help for command
 ```
@@ -162,9 +183,10 @@ Usage: assinafy signer download-signature [options]
 Download the signer's signature or initial image
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --type <type>         signature or initial (default: "signature")
   -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
   -h, --help            display help for command
 ```
 
@@ -176,7 +198,7 @@ Usage: assinafy signer assignment [options]
 Fetch the assignment as the signer sees it
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --accept-terms        Pass has_accepted_terms=true
   -h, --help            display help for command
 ```
@@ -193,7 +215,7 @@ Arguments:
   assignmentId          Assignment ID
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --entries <json>      JSON array of { itemId, fieldId, pageId, value } entries
   -h, --help            display help for command
 ```
@@ -210,7 +232,7 @@ Arguments:
   assignmentId          Assignment ID
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --reason <reason>     Reason for declining
   -h, --help            display help for command
 ```
@@ -223,7 +245,7 @@ Usage: assinafy signer sign-multiple [options]
 Sign multiple documents at once
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --document-ids <csv>  Comma-separated document IDs
   -h, --help            display help for command
 ```
@@ -236,9 +258,8 @@ Usage: assinafy signer decline-multiple [options]
 Decline multiple documents at once
 
 Options:
-  --access-code <code>  Signer access code
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --document-ids <csv>  Comma-separated document IDs
   --reason <reason>     Reason for declining
   -h, --help            display help for command
 ```
-

@@ -27,8 +27,8 @@ List templates in the workspace
 Options:
   --page <n>        Page number to fetch
   --per-page <n>    Items per page
-  --search <query>  Filter results by a search query
-  --sort <field>    Sort by field (prefix with - for descending)
+  --search <query>  Filter by a search query
+  --sort <field>    Sort by name (prefix with - for descending)
   -h, --help        display help for command
 ```
 
@@ -59,6 +59,6 @@ Arguments:
 
 Options:
   -o, --output <path>  Output file path
+  --force              Overwrite the output file if it already exists
   -h, --help           display help for command
 ```
-

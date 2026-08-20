@@ -115,6 +115,7 @@ Arguments:
 
 Options:
   --signer-access-code <code>  Signer access code (for signer-side validation)
+                               (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help                   display help for command
 ```
 
@@ -127,7 +128,8 @@ Validate multiple field values at once
 
 Options:
   --entries <json>             JSON array of { field_id, value } entries
-  --signer-access-code <code>  Signer access code
+  --signer-access-code <code>  Signer access code (env:
+                               ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help                   display help for command
 ```
 
@@ -141,4 +143,3 @@ List the platform's supported field types
 Options:
   -h, --help  display help for command
 ```
-

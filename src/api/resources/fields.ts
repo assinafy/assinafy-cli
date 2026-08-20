@@ -1,14 +1,15 @@
-import { ValidationError } from '../errors';
+import { ValidationError } from '../errors.js';
 import type {
 	ICreateFieldPayload,
+	IEmptyResult,
 	IFieldDefinition,
 	IFieldType,
 	IFieldValidateMultipleEntry,
 	IFieldValidationResult,
 	IUpdateFieldPayload,
-} from '../types';
-import { cleanParams } from '../utils';
-import { BaseResource } from './base';
+} from '../types.js';
+import { cleanParams, signerAccessConfig } from '../utils.js';
+import { BaseResource } from './base.js';
 
 /**
  * Custom field definitions used by `collect` assignments.
@@ -79,10 +80,10 @@ export class FieldsResource extends BaseResource {
 	}
 
 	/** Delete a field definition. Fails if the field has been used. */
-	async delete(fieldId: string, accountId?: string): Promise<void> {
+	async delete(fieldId: string, accountId?: string): Promise<IEmptyResult> {
 		const id = this.accountId(accountId);
 		const fid = this.requireId(fieldId, 'Field ID');
-		return this.callVoid('Failed to delete field definition', () =>
+		return this.call('Failed to delete field definition', () =>
 			this.http.delete(`/accounts/${id}/fields/${fid}`),
 		);
 	}
@@ -100,11 +101,12 @@ export class FieldsResource extends BaseResource {
 	): Promise<IFieldValidationResult> {
 		const id = this.accountId(options.accountId);
 		const fid = this.requireId(fieldId, 'Field ID');
-		const params = options.signerAccessCode
-			? { 'signer-access-code': options.signerAccessCode }
-			: undefined;
 		return this.call('Failed to validate field value', () =>
-			this.http.post(`/accounts/${id}/fields/${fid}/validate`, { value }, { params }),
+			this.http.post(
+				`/accounts/${id}/fields/${fid}/validate`,
+				{ value },
+				validationConfig(options.signerAccessCode),
+			),
 		);
 	}
 
@@ -117,11 +119,12 @@ export class FieldsResource extends BaseResource {
 			throw new ValidationError('entries must be a non-empty array');
 		}
 		const id = this.accountId(options.accountId);
-		const params = options.signerAccessCode
-			? { 'signer-access-code': options.signerAccessCode }
-			: undefined;
 		return this.call('Failed to validate field values', () =>
-			this.http.post(`/accounts/${id}/fields/validate-multiple`, entries, { params }),
+			this.http.post(
+				`/accounts/${id}/fields/validate-multiple`,
+				entries,
+				validationConfig(options.signerAccessCode),
+			),
 		);
 	}
 
@@ -129,4 +132,8 @@ export class FieldsResource extends BaseResource {
 	async listTypes(): Promise<IFieldType[]> {
 		return this.call('Failed to list field types', () => this.http.get('/field-types'));
 	}
+}
+
+function validationConfig(signerAccessCode?: string) {
+	return signerAccessCode ? signerAccessConfig(signerAccessCode) : undefined;
 }
