@@ -23,7 +23,11 @@ const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 const bundle = path.join(root, 'dist', 'cli.cjs');
 const releaseDir = path.join(root, 'dist', 'release');
 const archiveTime = new Date('2000-01-01T00:00:00Z');
-const tarVersion = execFileSync('tar', ['--version'], { encoding: 'utf8' });
+const tarBin =
+	process.platform === 'win32'
+		? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe')
+		: 'tar';
+const tarVersion = execFileSync(tarBin, ['--version'], { encoding: 'utf8' });
 
 const targets = [
 	{ name: 'darwin-arm64', type: 'posix' },
@@ -100,7 +104,7 @@ function archiveTarget(target) {
 
 	try {
 		execFileSync(
-			'tar',
+			tarBin,
 			[
 				'-czf',
 				archive,
