@@ -1,3 +1,4 @@
+import { stripVTControlCharacters } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CliError } from './errors';
 import { printData, printError, printPaginatedData, printSuccess } from './output';
@@ -105,8 +106,9 @@ describe('printSuccess', () => {
 				quiet: false,
 			}),
 		);
-		expect(out).toContain('done spooffdp.exex');
-		expect(out).not.toContain('\u001b');
+		expect(stripVTControlCharacters(out)).toContain('done spooffdp.exex');
+		expect(out).not.toContain('\u001b]52');
+		expect(out).not.toContain('\u0007');
 		expect(out).not.toContain('\u202e');
 	});
 
