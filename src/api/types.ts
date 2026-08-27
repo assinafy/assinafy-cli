@@ -62,7 +62,11 @@ export interface AssinafyClientOptions {
 	accountId?: string;
 	/** Override the API base URL. Defaults to https://api.assinafy.com.br/v1. */
 	baseUrl?: string;
-	/** Allow a plaintext HTTP base URL for isolated local development only. */
+	/**
+	 * Allow a plaintext `http://` base URL. Restricted to loopback hosts
+	 * (`localhost`, `127.0.0.0/8`, `[::1]`) so the API key can never leave the
+	 * machine in cleartext; any other host is rejected even with this enabled.
+	 */
 	allowInsecureHttp?: boolean;
 	/**
 	 * Experimental secret for {@link WebhookVerifier}. Assinafy does not publish

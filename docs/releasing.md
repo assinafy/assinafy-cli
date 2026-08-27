@@ -9,7 +9,8 @@ branches and `v*` tags to GitHub; GitHub Release objects are created by
 - Create a protected GitHub environment named `release` for the publish job.
 - Create a protected `sandbox` environment for `.github/workflows/sandbox.yml` and
   configure its four `ASSINAFY_SANDBOX_*` secrets described in `CONTRIBUTING.md`.
-  Do not require a reviewer if the scheduled weekly run must execute unattended.
+  Do not require a reviewer: the scheduled weekly run and the release live gate
+  both execute unattended, and the gate blocks every publish until it passes.
 - Configure npm trusted publishing for this GitHub repository, workflow
   `release.yml`, and environment `release`. No long-lived npm token is used.
 - Allow the repository `GITHUB_TOKEN` to write GitHub Releases and Packages.
@@ -31,6 +32,13 @@ branches and `v*` tags to GitHub; GitHub Release objects are created by
    annotated `vX.Y.Z` tag from GitLab.
 3. Confirm the GitHub workflow verifies that exact tag/commit, uploads its checked
    artifact, publishes both registries, and only then publishes the draft release.
+
+The `publish` job depends on a `live-gate` job that calls `sandbox.yml` against
+the tagged commit, so nothing reaches a registry until the build has exercised the
+real API and re-confirmed the published contract. The gate runs with
+`ASSINAFY_SANDBOX_REQUIRED=1`: missing sandbox secrets fail the release rather
+than silently skipping the check. A sandbox outage therefore blocks the release —
+re-dispatch the same tag once the sandbox recovers; the publish job is idempotent.
 
 Prerelease versions advance the `next` registry tag and are not marked as the
 latest GitHub release. Stable versions advance `latest`. The workflow compares

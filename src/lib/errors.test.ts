@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, ValidationError } from '../api';
+import { ApiError, PartialWorkflowError, ValidationError } from '../api';
 import { CliError, errorMessage, normalizeError } from './errors';
 
 describe('normalizeError', () => {
@@ -24,6 +24,20 @@ describe('normalizeError', () => {
 		const n = normalizeError(new ValidationError('invalid', { field: 'email' }));
 		expect(n.code).toBe('validation_error');
 		expect(n.details).toEqual({ field: 'email' });
+	});
+
+	it('keeps the underlying status and exposes the resources a partial workflow left behind', () => {
+		const n = normalizeError(
+			new PartialWorkflowError(
+				'Saldo insuficiente. (document doc1 and 2 signer(s) were already created)',
+				{ documentId: 'doc1', signerIds: ['sig1', 'sig2'] },
+				{ cause: new ApiError('Saldo insuficiente.', 402) },
+			),
+		);
+		expect(n.code).toBe('api_error');
+		expect(n.statusCode).toBe(402);
+		expect(n.details).toEqual({ documentId: 'doc1', signerIds: ['sig1', 'sig2'] });
+		expect(n.message).toContain('doc1');
 	});
 
 	it('handles plain Errors and non-errors', () => {

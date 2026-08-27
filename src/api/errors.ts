@@ -62,3 +62,45 @@ export class NetworkError extends AssinafyError {
 		this.name = 'NetworkError';
 	}
 }
+
+/**
+ * Thrown when a multi-step workflow helper fails *after* it has already created
+ * billable resources.
+ *
+ * Without this, a failure part-way through
+ * {@link AssinafyClient.uploadAndRequestSignatures} would leave an uploaded
+ * document and freshly created signers in the workspace with no handle for the
+ * caller to resume from or clean up. The original failure is preserved in
+ * {@link Error.cause}.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await client.uploadAndRequestSignatures({ source, signers });
+ * } catch (err) {
+ *   if (err instanceof PartialWorkflowError) {
+ *     if (err.documentId) await client.documents.delete(err.documentId);
+ *     for (const id of err.signerIds) await client.signers.delete(id);
+ *   }
+ *   throw err;
+ * }
+ * ```
+ */
+export class PartialWorkflowError extends AssinafyError {
+	/** The document that was uploaded before the failure, if any. */
+	public readonly documentId: string | undefined;
+	/** IDs of every signer created (or reused) before the failure. */
+	public readonly signerIds: string[];
+
+	constructor(
+		message: string,
+		created: { documentId?: string; signerIds?: string[] },
+		options?: { cause?: unknown },
+	) {
+		const signerIds = created.signerIds ?? [];
+		super(message, { documentId: created.documentId, signerIds }, options);
+		this.name = 'PartialWorkflowError';
+		this.documentId = created.documentId;
+		this.signerIds = signerIds;
+	}
+}

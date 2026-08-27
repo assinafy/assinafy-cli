@@ -1,6 +1,7 @@
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
 import { describe, expect, it, vi } from 'vitest';
 import { AssinafyClient } from './client';
+import { ApiError, PartialWorkflowError, ValidationError } from './errors';
 
 async function listen(server: Server): Promise<string> {
 	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -33,6 +34,27 @@ describe('AssinafyClient transport security', () => {
 		expect(
 			() => new AssinafyClient({ apiKey: 'test-key', baseUrl: 'https://example.test/v1#docs' }),
 		).toThrow(/query string or fragment/);
+	});
+
+	it.each(['http://localhost:3000', 'http://127.0.0.1:8080', 'http://127.10.0.5', 'http://[::1]'])(
+		'accepts the loopback development base URL %s',
+		(baseUrl) => {
+			expect(
+				new AssinafyClient({ apiKey: 'test-key', baseUrl, allowInsecureHttp: true }),
+			).toBeInstanceOf(AssinafyClient);
+		},
+	);
+
+	it.each([
+		'http://example.test',
+		'http://127.0.0.1.example.test',
+		'http://localhost.example.test',
+		'http://10.0.0.5',
+		'ftp://127.0.0.1',
+	])('refuses to send credentials in cleartext to non-loopback %s', (baseUrl) => {
+		expect(
+			() => new AssinafyClient({ apiKey: 'test-key', baseUrl, allowInsecureHttp: true }),
+		).toThrow(/loopback/);
 	});
 
 	it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
@@ -157,6 +179,57 @@ describe('AssinafyClient.uploadAndRequestSignatures', () => {
 				},
 			],
 		});
+	});
+
+	it('reports the created document and signers when the assignment fails', async () => {
+		const client = new AssinafyClient({ apiKey: 'test-key', accountId: 'acc' });
+		vi.spyOn(client.documents, 'upload').mockResolvedValue({ id: 'document1' } as never);
+		vi.spyOn(client.signers, 'create')
+			.mockResolvedValueOnce({ id: 'signer1' } as never)
+			.mockResolvedValueOnce({ id: 'signer2' } as never);
+		vi.spyOn(client.assignments, 'create').mockRejectedValue(
+			new ApiError('Saldo insuficiente.', 402),
+		);
+
+		const failure = await client
+			.uploadAndRequestSignatures({
+				source: { buffer: Buffer.from('%PDF-1.7'), fileName: 'contract.pdf' },
+				waitForReady: false,
+				signers: [
+					{ name: 'Ana Lima', email: 'ana@example.com' },
+					{ name: 'Bruno Souza', email: 'bruno@example.com' },
+				],
+			})
+			.catch((err: unknown) => err);
+
+		expect(failure).toBeInstanceOf(PartialWorkflowError);
+		const partial = failure as PartialWorkflowError;
+		expect(partial.documentId).toBe('document1');
+		expect(partial.signerIds).toEqual(['signer1', 'signer2']);
+		expect(partial.message).toContain('Saldo insuficiente.');
+		expect(partial.message).toContain('document1');
+		expect(partial.cause).toBeInstanceOf(ApiError);
+	});
+
+	it('reports the uploaded document when processing never becomes ready', async () => {
+		const client = new AssinafyClient({ apiKey: 'test-key', accountId: 'acc' });
+		vi.spyOn(client.documents, 'upload').mockResolvedValue({ id: 'document1' } as never);
+		vi.spyOn(client.documents, 'waitUntilReady').mockRejectedValue(
+			new ValidationError('Timeout waiting for document to be ready'),
+		);
+		const createSigner = vi.spyOn(client.signers, 'create');
+
+		const failure = await client
+			.uploadAndRequestSignatures({
+				source: { buffer: Buffer.from('%PDF-1.7'), fileName: 'contract.pdf' },
+				signers: [{ name: 'Ana Lima', email: 'ana@example.com' }],
+			})
+			.catch((err: unknown) => err);
+
+		expect(failure).toBeInstanceOf(PartialWorkflowError);
+		expect((failure as PartialWorkflowError).documentId).toBe('document1');
+		expect((failure as PartialWorkflowError).signerIds).toEqual([]);
+		expect(createSigner).not.toHaveBeenCalled();
 	});
 
 	it('uses WhatsApp assignment controls for a phone-only signer', async () => {

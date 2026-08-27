@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -71,7 +71,43 @@ if (/"(?:api_key|access_token)"\s*:\s*"(?!example_credential")/i.test(reference)
 	throw new Error('API reference contains a non-placeholder credential');
 }
 
-console.log(`Verified documentation for ${manifest.operations.length} API operations`);
+// The SDK must also *implement* every published operation, not merely document
+// it. Scanning the resource sources keeps that at 100% without a live call.
+const implemented = new Set();
+const resourceDir = path.join(root, 'src', 'api', 'resources');
+for (const file of readdirSync(resourceDir)) {
+	if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
+	const source = readFileSync(path.join(resourceDir, file), 'utf8');
+	for (const match of source.matchAll(
+		/this\.http\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*(?:`([^`]+)`|'([^']+)')/g,
+	)) {
+		implemented.add(normalizeRoute(match[1], match[2] ?? match[3]));
+	}
+}
+
+const unimplemented = manifest.operations.filter(
+	(operation) => !implemented.has(normalizeRoute(operation.method, operation.path)),
+);
+if (unimplemented.length > 0) {
+	throw new Error(
+		`SDK does not implement ${unimplemented.length} published operation(s): ${unimplemented
+			.map((operation) => `${operation.method} ${operation.path}`)
+			.join(', ')}`,
+	);
+}
+
+console.log(
+	`Verified documentation and SDK coverage for ${manifest.operations.length} API operations`,
+);
+
+/** Compare spec paths (`/v1/accounts/{account_id}`) with SDK template literals. */
+function normalizeRoute(method, route) {
+	return `${method.toUpperCase()} ${route
+		.replace(/\$\{[^}]*\}/g, '{}')
+		.replace(/\{[^}]*\}/g, '{}')
+		.replace(/^\/v1(?=\/|$)/, '')
+		.replace(/\/+$/, '')}`;
+}
 
 function verifyPlaceholderValues(value, key = '') {
 	if (Array.isArray(value)) {

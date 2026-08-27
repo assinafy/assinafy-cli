@@ -38,7 +38,7 @@ if (parsedBaseUrl.protocol !== 'https:' || parsedBaseUrl.hostname !== 'sandbox.a
 	process.exit(2);
 }
 
-const { ApiError, AssinafyClient } = await import('../dist/api.js');
+const { ApiError, AssinafyClient, PartialWorkflowError } = await import('../dist/api.js');
 const accountId = process.env.ASSINAFY_ACCOUNT_ID;
 const apiKey = process.env.ASSINAFY_API_KEY;
 const email = process.env.ASSINAFY_TEST_EMAIL;
@@ -73,11 +73,11 @@ async function run(operation, action, options = {}) {
 		const code = statusCode(error);
 		if (code !== undefined && expectedStatuses.includes(code)) {
 			add(operation, options.expectedStatus ?? 'EXPECTED_NEGATIVE', code, options.note);
-			return { ok: false, expected: true };
+			return { ok: false, expected: true, error };
 		}
 		add(operation, 'FAIL', code, code === undefined ? 'client or transport failure' : undefined);
 		unexpectedFailures++;
-		return { ok: false };
+		return { ok: false, error };
 	}
 }
 
@@ -690,27 +690,17 @@ try {
 		if (helper.ok) {
 			helperDocumentId = helper.value.document.id;
 			for (const id of helper.value.signer_ids) helperSignerIds.add(id);
-		} else {
-			const partialDocuments = await run('cleanup.discoverHelperDocuments', () =>
-				temporaryClient.documents.search({ search: helperName, per_page: 20 }),
+		} else if (helper.error instanceof PartialWorkflowError) {
+			// A partial failure names everything it created, so the shared cleanup
+			// below reclaims it without searching the workspace for orphans.
+			helperDocumentId = helper.error.documentId;
+			for (const id of helper.error.signerIds) helperSignerIds.add(id);
+			add(
+				'client.uploadAndRequestSignatures.partialRecovery',
+				'PASS',
+				undefined,
+				'the failure reported the document and signers it had already created',
 			);
-			if (partialDocuments.ok) {
-				for (const document of partialDocuments.value.data) {
-					await run('cleanup.partialHelperDocument', () =>
-						temporaryClient.documents.delete(document.id),
-					);
-				}
-			}
-			const partialSigner = await run('cleanup.discoverHelperSigner', () =>
-				temporaryClient.signers.findByEmail(alternateEmail),
-			);
-			if (
-				partialSigner.ok &&
-				partialSigner.value?.id &&
-				partialSigner.value.full_name === `SDK Helper Signer ${suffix}`
-			) {
-				helperSignerIds.add(partialSigner.value.id);
-			}
 		}
 
 		const dispatches = await run('webhooks.listDispatches.afterMutations', () =>

@@ -48,7 +48,7 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 | `token` | `string` | JWT fallback; sent as `Authorization: Bearer`. `apiKey` wins when both are set. |
 | `accountId` | `string` | Default for account-scoped methods; most methods also accept an override. |
 | `baseUrl` | `string` | HTTPS URL; defaults to `https://api.assinafy.com.br/v1`. Redirects are rejected. |
-| `allowInsecureHttp` | `boolean` | Explicit opt-in for isolated local development only. |
+| `allowInsecureHttp` | `boolean` | Opt-in for a plaintext `http://` base URL. Restricted to loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`); any other host is rejected even with this enabled, so the API key can never travel in cleartext. |
 | `timeout` | `number` | Request timeout in milliseconds; default `30_000`. |
 | `logger` | `Logger` | Optional `debug`/`info`/`warn`/`error` functions; otherwise no-op. |
 | `allowUnauthenticated` | `boolean` | Permit construction without `apiKey`/`token`; use only for public and signer-code flows. |
@@ -87,7 +87,24 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 }
 ```
 
-It resolves to `{ document: IDocumentUploadResponse; assignment: IAssignment; signer_ids: string[] }`. A phone-only signer defaults to WhatsApp verification and notification unless those controls are supplied explicitly. The workflow is not transactional: if a later step fails, previously created documents/signers remain available for caller-directed cleanup.
+It resolves to `{ document: IDocumentUploadResponse; assignment: IAssignment; signer_ids: string[] }`. A phone-only signer defaults to WhatsApp verification and notification unless those controls are supplied explicitly.
+
+The workflow is not transactional. Once the upload succeeds, any later failure rejects with a `PartialWorkflowError` naming everything that already exists, so cleanup or a resume never needs to search the workspace for orphans. Nothing is deleted automatically — the caller decides.
+
+```ts
+import { PartialWorkflowError } from '@assinafy/cli/api';
+
+try {
+  await client.uploadAndRequestSignatures({ source, signers });
+} catch (error) {
+  if (error instanceof PartialWorkflowError) {
+    console.error(error.message, error.cause); // original API/validation failure
+    if (error.documentId) await client.documents.delete(error.documentId);
+    for (const signerId of error.signerIds) await client.signers.delete(signerId);
+  }
+  throw error;
+}
+```
 
 ## Documents (`client.documents`)
 
@@ -371,10 +388,10 @@ Registration payload: `{ url: string; email: string; events?: string[]; is_activ
 
 - JSON responses with `data` are unwrapped from the API envelope; direct status bodies remain `IStatusResponse`. Paginated calls resolve to `{ data: T[]; meta?: { current_page?, last_page?, per_page?, total? } }`; metadata comes from `X-Pagination-*` headers.
 - Binary methods resolve to Node.js `Buffer`; the SDK is not a browser package. It never writes downloaded data to disk.
-- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode` and `responseData`. `NetworkError` covers timeout/DNS/transport failures. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
+- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode` and `responseData`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
 - `normalizeBaseUrl(url)` is exported and removes one trailing slash.
 
-Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause? }?)`, `ApiError.fromResponse(statusCode, responseData)`, `new ValidationError(message?, errors?)`, and `new NetworkError(message, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
+Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause? }?)`, `ApiError.fromResponse(statusCode, responseData)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
 
 ```ts
 try {

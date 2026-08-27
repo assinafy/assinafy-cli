@@ -8,3 +8,6 @@ coverage/
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# Claude Code local settings can hold credentials; never commit them.
+.claude/

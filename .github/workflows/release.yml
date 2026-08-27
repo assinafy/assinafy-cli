@@ -179,8 +179,18 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  publish:
+  # Hard gate: the tagged build has to pass against the live sandbox API before
+  # anything is published. Reuses the scheduled contract workflow so there is one
+  # definition of "works against the real API".
+  live-gate:
     needs: verify
+    uses: ./.github/workflows/sandbox.yml
+    with:
+      ref: ${{ needs.verify.outputs.release-tag }}
+    secrets: inherit
+
+  publish:
+    needs: [verify, live-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release

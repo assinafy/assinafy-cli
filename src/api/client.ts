@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import { ValidationError } from './errors.js';
+import { PartialWorkflowError, ValidationError } from './errors.js';
 import { AssignmentResource } from './resources/assignments.js';
 import { AuthenticationResource } from './resources/authentication.js';
 import { DocumentResource, type DocumentUploadSource } from './resources/documents.js';
@@ -45,6 +45,15 @@ export interface ClientConfigInput {
 }
 
 const DEFAULT_BASE_URL = 'https://api.assinafy.com.br/v1';
+
+/** Hosts that never leave the machine, so plaintext HTTP cannot expose a key. */
+function isLoopbackHost(hostname: string): boolean {
+	return (
+		hostname === 'localhost' ||
+		hostname === '[::1]' ||
+		/^127(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(hostname)
+	);
+}
 
 /**
  * Primary entry point for the Assinafy API.
@@ -103,13 +112,20 @@ export class AssinafyClient {
 		} catch {
 			throw new ValidationError('baseUrl must be an absolute HTTP(S) URL');
 		}
-		if (!['https:', 'http:'].includes(parsedBaseUrl.protocol)) {
-			throw new ValidationError('baseUrl must use HTTPS');
-		}
-		if (parsedBaseUrl.protocol !== 'https:' && !options.allowInsecureHttp) {
-			throw new ValidationError(
-				'baseUrl must use HTTPS; set allowInsecureHttp only for isolated local development',
-			);
+		if (parsedBaseUrl.protocol !== 'https:') {
+			if (parsedBaseUrl.protocol !== 'http:' || !options.allowInsecureHttp) {
+				throw new ValidationError(
+					'baseUrl must use HTTPS; set allowInsecureHttp only for a loopback development server',
+				);
+			}
+			// The escape hatch exists for a dev server on this machine. Allowing an
+			// arbitrary host would put the API key on the wire in cleartext, so the
+			// flag alone is not enough — the host has to be loopback.
+			if (!isLoopbackHost(parsedBaseUrl.hostname)) {
+				throw new ValidationError(
+					'allowInsecureHttp only permits a loopback baseUrl (localhost, 127.0.0.0/8, or ::1)',
+				);
+			}
 		}
 		if (parsedBaseUrl.username || parsedBaseUrl.password) {
 			throw new ValidationError('baseUrl must not contain embedded credentials');
@@ -190,6 +206,11 @@ export class AssinafyClient {
 	/**
 	 * High-level helper that uploads a PDF, ensures it's processed, creates any
 	 * missing signers, and kicks off a virtual signature assignment.
+	 *
+	 * Once the upload succeeds the workflow owns real workspace resources, so any
+	 * later failure is rethrown as a {@link PartialWorkflowError} carrying the
+	 * document and signer IDs that already exist. Catch it to resume or clean up;
+	 * nothing is deleted automatically.
 	 */
 	async uploadAndRequestSignatures(options: {
 		source: DocumentUploadSource;
@@ -226,39 +247,55 @@ export class AssinafyClient {
 
 		const document = await this.documents.upload(options.source, uploadOpts);
 
-		if (options.waitForReady !== false) {
-			await this.documents.waitUntilReady(document.id);
-		}
-
+		// Past this point every step can fail with a document (and possibly
+		// signers) already created. Track them so the failure can name them
+		// instead of leaving the caller to hunt for orphans by name.
 		const signerIds: string[] = [];
-		const assignmentSigners: SignerReference[] = [];
-		for (const { signer, payload, phone } of preparedSigners) {
-			const created = await this.signers.create(payload, options.accountId);
-			signerIds.push(created.id);
-			const useWhatsapp = phone !== undefined && signer.email === undefined;
-			assignmentSigners.push({
-				id: created.id,
-				verification_method: signer.verification_method ?? (useWhatsapp ? 'Whatsapp' : undefined),
-				notification_methods:
-					signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
-				step: signer.step,
+		try {
+			if (options.waitForReady !== false) {
+				await this.documents.waitUntilReady(document.id);
+			}
+
+			const assignmentSigners: SignerReference[] = [];
+			for (const { signer, payload, phone } of preparedSigners) {
+				const created = await this.signers.create(payload, options.accountId);
+				signerIds.push(created.id);
+				const useWhatsapp = phone !== undefined && signer.email === undefined;
+				assignmentSigners.push({
+					id: created.id,
+					verification_method: signer.verification_method ?? (useWhatsapp ? 'Whatsapp' : undefined),
+					notification_methods:
+						signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
+					step: signer.step,
+				});
+			}
+
+			const assignmentPayload: ICreateAssignmentPayload = {
+				method: 'virtual',
+				signers: assignmentSigners,
+			};
+			if (options.message !== undefined) assignmentPayload.message = options.message;
+			if (options.expiresAt !== undefined) assignmentPayload.expires_at = options.expiresAt;
+			if (options.copyReceivers !== undefined)
+				assignmentPayload.copy_receivers = options.copyReceivers;
+
+			const assignment = await this.assignments.create(document.id, assignmentPayload);
+
+			this.logger.info('Upload + signature workflow completed', { documentId: document.id });
+
+			return { document, assignment, signer_ids: signerIds };
+		} catch (err) {
+			this.logger.error('Upload + signature workflow failed after creating resources', {
+				documentId: document.id,
+				signerIds,
 			});
+			const reason = err instanceof Error ? err.message : String(err);
+			throw new PartialWorkflowError(
+				`${reason} (document ${document.id} and ${signerIds.length} signer(s) were already created)`,
+				{ documentId: document.id, signerIds },
+				{ cause: err },
+			);
 		}
-
-		const assignmentPayload: ICreateAssignmentPayload = {
-			method: 'virtual',
-			signers: assignmentSigners,
-		};
-		if (options.message !== undefined) assignmentPayload.message = options.message;
-		if (options.expiresAt !== undefined) assignmentPayload.expires_at = options.expiresAt;
-		if (options.copyReceivers !== undefined)
-			assignmentPayload.copy_receivers = options.copyReceivers;
-
-		const assignment = await this.assignments.create(document.id, assignmentPayload);
-
-		this.logger.info('Upload + signature workflow completed', { documentId: document.id });
-
-		return { document, assignment, signer_ids: signerIds };
 	}
 
 	/** Expose the underlying axios instance for advanced use cases (interceptors, custom endpoints). */

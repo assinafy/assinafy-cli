@@ -1,4 +1,10 @@
-import { ApiError, AssinafyError, NetworkError, ValidationError } from '../api';
+import {
+	ApiError,
+	AssinafyError,
+	NetworkError,
+	PartialWorkflowError,
+	ValidationError,
+} from '../api';
 
 /**
  * A user-facing CLI error. Thrown for problems we detect before (or instead of)
@@ -39,6 +45,18 @@ export function normalizeError(err: unknown): NormalizedError {
 			statusCode: err.statusCode,
 			details: err.responseData ?? undefined,
 		};
+	}
+	// Keep the underlying code/status so a half-finished workflow still reports
+	// *why* it failed; the created resource IDs ride along in `details`.
+	if (err instanceof PartialWorkflowError) {
+		const cause = normalizeError(err.cause);
+		const normalized: NormalizedError = {
+			message: err.message,
+			code: cause.code,
+			details: err.context,
+		};
+		if (cause.statusCode !== undefined) normalized.statusCode = cause.statusCode;
+		return normalized;
 	}
 	if (err instanceof ValidationError) {
 		return { message: err.message, code: 'validation_error', details: err.errors };

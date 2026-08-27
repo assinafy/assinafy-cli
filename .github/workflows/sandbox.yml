@@ -4,12 +4,21 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 6 * * 1'
+  # Called by release.yml so no version ships without passing against the live API.
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit-ish to verify; defaults to the triggering ref
+        required: false
+        type: string
 
 permissions:
   contents: read
 
+# Every run isolates its mutations in a disposable workspace, so a release gate
+# never has to queue behind (or be cancelled by) the weekly contract run.
 concurrency:
-  group: assinafy-sandbox-contract
+  group: assinafy-sandbox-contract-${{ inputs.ref || github.ref }}
   cancel-in-progress: false
 
 defaults:
@@ -26,6 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - name: Setup Node
