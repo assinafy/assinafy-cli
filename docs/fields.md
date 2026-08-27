@@ -34,7 +34,7 @@ Options:
   --name <name>    Field name
   --regex <regex>  Validation regex
   --required       Mark the field as required
-  --inactive       Create the field inactive
+  --inactive       Compatibility: create the field inactive
   -h, --help       display help for command
 ```
 
@@ -76,12 +76,12 @@ Arguments:
   id               Field ID
 
 Options:
-  --type <type>    Field type
+  --type <type>    Compatibility: change the field type
   --name <name>    Field name
   --regex <regex>  Validation regex
   --clear-regex    Remove the existing validation regex
-  --required       Mark as required
-  --optional       Mark as not required
+  --required       Compatibility: mark as required
+  --optional       Compatibility: mark as not required
   --active         Activate the field
   --inactive       Deactivate the field
   -h, --help       display help for command

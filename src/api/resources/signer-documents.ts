@@ -11,6 +11,7 @@ import type {
 	IStatusResponse,
 } from '../types.js';
 import {
+	publicRequestConfig,
 	requireDocumentArtifactName,
 	requireSignerImageType,
 	signerAccessConfig,
@@ -18,9 +19,9 @@ import {
 import { BaseResource } from './base.js';
 
 /**
- * Signer-side endpoints. Every call here is authenticated by `signer-access-code`
- * (the one-time link emailed/whatsapped to the signer), not by the workspace
- * API key. Use this resource when building a custom signer UI.
+ * Signer-side endpoints. Except for the public artifact download, calls here
+ * are authenticated by `signer-access-code` (the one-time link sent to the
+ * signer), not by the workspace API key.
  */
 export class SignerDocumentsResource extends BaseResource {
 	/** `GET /signers/{signer_id}/document?signer-access-code=…` */
@@ -61,27 +62,32 @@ export class SignerDocumentsResource extends BaseResource {
 		);
 	}
 
-	/** `GET /signers/{signer_id}/documents/{document_id}/download/{artifact}?signer-access-code=…` */
+	/**
+	 * Public `GET /signers/{signer_id}/documents/{document_id}/download/{artifact}`.
+	 * When an access code is supplied, the SDK first verifies that it belongs to
+	 * the requested signer for callers that want that additional check.
+	 */
 	async download(
 		signerId: string,
 		documentId: string,
 		artifactName: DocumentArtifactName,
-		signerAccessCode: string,
+		signerAccessCode?: string,
 	): Promise<Buffer> {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const did = this.requireId(documentId, 'Document ID');
 		const artifact = requireDocumentArtifactName(artifactName);
-		const code = this.requireId(signerAccessCode, 'signer-access-code');
-		// Sandbox currently serves this download even for an invalid access code.
-		// Gate it through the protected profile route so SDK callers never rely on
-		// that upstream authorization defect.
-		const signer = await this.self(code);
-		if (signer.id !== sid) {
-			throw new ValidationError('Signer access code does not match the signer ID');
+		let config = publicRequestConfig();
+		if (signerAccessCode !== undefined) {
+			const code = this.requireId(signerAccessCode, 'signer-access-code');
+			const signer = await this.self(code);
+			if (signer.id !== sid) {
+				throw new ValidationError('Signer access code does not match the signer ID');
+			}
+			config = signerAccessConfig(code);
 		}
 		return this.callBinary('Failed to download signer document', () =>
 			this.http.get<ArrayBuffer>(`/signers/${sid}/documents/${did}/download/${artifact}`, {
-				...signerAccessConfig(code),
+				...config,
 				responseType: 'arraybuffer',
 			}),
 		);

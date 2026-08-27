@@ -67,7 +67,7 @@ export interface ResolvedConfig {
 const DEFAULT_PROFILE = 'default';
 
 /** Absolute path to the config directory (honours `XDG_CONFIG_HOME` / `%APPDATA%`). */
-export function configDir(): string {
+function configDir(): string {
 	if (process.env.ASSINAFY_CONFIG_DIR) {
 		return process.env.ASSINAFY_CONFIG_DIR;
 	}

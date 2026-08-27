@@ -1,6 +1,12 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { ApiError, AssinafyError, NetworkError, ValidationError } from './errors.js';
-import type { DocumentArtifactName, IDocumentStatsParams, Logger } from './types.js';
+import type {
+	AssignmentNotificationMethod,
+	AssignmentVerificationMethod,
+	DocumentArtifactName,
+	IDocumentStatsParams,
+	Logger,
+} from './types.js';
 
 const DOCUMENT_ARTIFACT_NAMES: readonly DocumentArtifactName[] = [
 	'original',
@@ -9,6 +15,14 @@ const DOCUMENT_ARTIFACT_NAMES: readonly DocumentArtifactName[] = [
 	'pades',
 	'bundle',
 ];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VERIFICATION_METHODS: readonly AssignmentVerificationMethod[] = [
+	'Email',
+	'Whatsapp',
+	'DigitalCertificate',
+];
+const NOTIFICATION_METHODS: readonly AssignmentNotificationMethod[] = ['Email', 'Whatsapp'];
 
 /**
  * Unwrap the Assinafy API envelope `{ status, message, data }`.
@@ -131,6 +145,77 @@ export function requireIso8601(value: string, name = 'timestamp'): string {
 		throw new ValidationError(`${name} must be a valid ISO 8601 timestamp`);
 	}
 	return value;
+}
+
+/** Reject an invalid email before it reaches an API request body or query. */
+export function requireEmail(value: string | null | undefined): string {
+	if (!value || !EMAIL_RE.test(value)) {
+		throw new ValidationError('Invalid email address', { email: value });
+	}
+	return value;
+}
+
+/** Validate the shared verification, notification, and step fields on signer entries. */
+export function validateSignerOptions(input: {
+	verification_method?: unknown;
+	notification_methods?: unknown;
+	step?: unknown;
+}): void {
+	if (
+		input.verification_method !== undefined &&
+		!VERIFICATION_METHODS.includes(input.verification_method as AssignmentVerificationMethod)
+	) {
+		throw new ValidationError(
+			`verification_method must be one of: ${VERIFICATION_METHODS.join(', ')}`,
+		);
+	}
+	if (
+		input.notification_methods !== undefined &&
+		(!Array.isArray(input.notification_methods) ||
+			input.notification_methods.some(
+				(method) => !NOTIFICATION_METHODS.includes(method as AssignmentNotificationMethod),
+			))
+	) {
+		throw new ValidationError(
+			`notification_methods must contain only: ${NOTIFICATION_METHODS.join(', ')}`,
+		);
+	}
+	if (input.step !== undefined && !Number.isInteger(input.step)) {
+		throw new ValidationError('step must be an integer');
+	}
+}
+
+/** Validate the sequencing rules published for template-document signers. */
+export function validateSigningSteps(
+	signers: readonly { verification_method?: unknown; step?: unknown }[],
+): void {
+	const withSteps = signers.filter((signer) => signer.step !== undefined);
+	if (withSteps.length > 0) {
+		if (withSteps.length !== signers.length) {
+			throw new ValidationError('step must be supplied for every signer when used');
+		}
+		const steps = [...new Set(withSteps.map((signer) => signer.step as number))].sort(
+			(a, b) => a - b,
+		);
+		if (steps.some((step, index) => step !== index + 1)) {
+			throw new ValidationError('steps must form a contiguous sequence starting at 1');
+		}
+	}
+	validateDigitalCertificateSteps(signers);
+}
+
+/** Enforce the documented one-digital-certificate-signer-per-step constraint. */
+export function validateDigitalCertificateSteps(
+	signers: readonly { verification_method?: unknown; step?: unknown }[],
+): void {
+	for (const signer of signers) {
+		if (
+			signer.verification_method === 'DigitalCertificate' &&
+			signers.some((other) => other !== signer && (other.step ?? 1) === (signer.step ?? 1))
+		) {
+			throw new ValidationError('a DigitalCertificate signer must be alone in its signing step');
+		}
+	}
 }
 
 /** Validate and serialize the query shared by account/user statistics endpoints. */

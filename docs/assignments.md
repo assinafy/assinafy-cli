@@ -14,7 +14,7 @@ Commands:
   list [options]                                               List assignments across the account
   create [options] <documentId>                                Create a signing assignment for a document
   estimate-cost [options] <documentId>                         Estimate the credit cost of an assignment
-  reset-expiration [options] <documentId> <assignmentId>       Update or clear an assignment expiration date
+  reset-expiration [options] <documentId> <assignmentId>       Update an assignment expiration date
   resend <documentId> <assignmentId> <signerId>                Resend the signing notification to a signer
   estimate-resend-cost <documentId> <assignmentId> <signerId>  Estimate the cost of resending a signer notification
   whatsapp-notifications <documentId> <assignmentId>           List WhatsApp notifications sent for an assignment
@@ -84,7 +84,7 @@ Options:
 ```text
 Usage: assinafy assignments reset-expiration [options] <documentId> <assignmentId>
 
-Update or clear an assignment expiration date
+Update an assignment expiration date
 
 Arguments:
   documentId              Document ID
@@ -92,7 +92,7 @@ Arguments:
 
 Options:
   --expires-at <iso8601>  New expiration timestamp
-  --clear                 Remove the expiration entirely
+  --clear                 Remove the expiration when supported by the deployment
   -h, --help              display help for command
 ```
 

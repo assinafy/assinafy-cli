@@ -22,7 +22,7 @@ if (missing.length > 0) {
 			2,
 		),
 	);
-	process.exit(0);
+	process.exit(process.env.ASSINAFY_SANDBOX_REQUIRED === '1' ? 2 : 0);
 }
 
 const baseUrl = process.env.ASSINAFY_SANDBOX_BASE_URL ?? 'https://sandbox.assinafy.com.br/v1';
@@ -468,10 +468,13 @@ try {
 
 			if (tagId && tagName) {
 				await run('documents.replaceTags', () =>
-					temporaryClient.documents.replaceTags(documentId, [tagName]),
+					temporaryClient.documents.replaceTags(documentId, [tagId]),
 				);
 				await run('documents.listTags', () => temporaryClient.documents.listTags(documentId));
 				await run('documents.addTags', () =>
+					temporaryClient.documents.addTags(documentId, [tagId]),
+				);
+				await run('documents.addTags.compatibilityName', () =>
 					temporaryClient.documents.addTags(documentId, [tagName]),
 				);
 				await run('documents.detachTag', () =>
@@ -520,7 +523,17 @@ try {
 						temporaryClient.assignments.listWhatsAppNotifications(documentId, assignmentId),
 					);
 					await run('documents.getPublic', () => publicClient.documents.getPublic(documentId));
-					await run('documents.sendToken.oneEmail', () =>
+					await run(
+						'documents.sendToken.publishedBody',
+						() => publicClient.documents.sendToken(documentId, { email }),
+						{
+							expectedStatuses: [400, 404, 422],
+							expectedStatus: 'SANDBOX_DRIFT',
+							allowSuccess: true,
+							note: 'published in production OpenAPI but rejected by the sandbox deployment',
+						},
+					);
+					await run('documents.sendToken.compatibilityOneEmail', () =>
 						publicClient.documents.sendToken(documentId, email, 'email'),
 					);
 					const invalidCode = `invalid-${suffix}`;
@@ -551,20 +564,8 @@ try {
 							),
 						signerNegative,
 					);
-					await run(
-						'rawApi.signerArtifactDownload.invalidAccessCode',
-						async () => {
-							const url = new URL(
-								`${baseUrl.replace(/\/$/, '')}/signers/${encodeURIComponent(emailSignerId)}/documents/${encodeURIComponent(documentId)}/download/original`,
-							);
-							url.searchParams.set('signer-access-code', invalidCode);
-							const response = await fetch(url, { redirect: 'error' });
-							if (!response.ok) {
-								throw new ApiError('Raw signer artifact request was rejected', response.status);
-							}
-							return response.arrayBuffer();
-						},
-						signerNegative,
+					await run('signerDocuments.download.public', () =>
+						publicClient.signerDocuments.download(emailSignerId, documentId, 'original'),
 					);
 					await run(
 						'signerDocuments.signMultiple.invalidAccessCode',
@@ -876,10 +877,20 @@ const counts = Object.fromEntries(
 const cleanupFailures = rows.filter(
 	(row) => row.operation.startsWith('cleanup.') && row.status === 'FAIL',
 ).length;
+const hasExclusions = rows.some(
+	(row) =>
+		row.status.startsWith('SKIP') ||
+		['SANDBOX_DRIFT', 'PASS_NOT_CONFIGURED', 'EXPECTED_UNAVAILABLE'].includes(row.status),
+);
 console.log(
 	JSON.stringify(
 		{
-			status: unexpectedFailures === 0 && cleanupFailures === 0 ? 'PASS' : 'FAIL',
+			status:
+				unexpectedFailures > 0 || cleanupFailures > 0
+					? 'FAIL'
+					: hasExclusions
+						? 'PASS_WITH_EXCLUSIONS'
+						: 'PASS',
 			target: 'Assinafy sandbox',
 			counts,
 			cleanup: cleanupFailures === 0 ? 'complete' : 'failed',

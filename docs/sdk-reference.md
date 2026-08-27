@@ -132,9 +132,13 @@ interface IDocumentUploadOptions {
 }
 ```
 
-Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. Prefer the published `sendToken(documentId, { email })` form. The string overload sends the live-compatible legacy `{ recipient, channel }` body for email or WhatsApp integrations that still require it.
+Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. Prefer the published `sendToken(documentId, { email })` form. The current sandbox rejects that form with HTTP 400, so use the string overload there; it sends the live-compatible legacy `{ recipient, channel }` body for email or WhatsApp integrations that still require it.
+
+Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id, verification_method?, notification_methods?, step? }`; each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations.
 
 Document list params are `{ page?, per_page?, status?, method?, tags?, search?, sort? }`; search params omit `method`/`tags`. Supported sort values are `name`, `-name`, `updated_at`, and `-updated_at`.
+
+`replaceTags` and `addTags` take tag IDs, as required by the published request bodies. Values are still forwarded unchanged for compatibility with deployments that accept tag names; new integrations should use IDs from `client.tags.list()`.
 
 Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline tags, assignment/signing state, decline state, and creation/update timestamps. `IPublicDocumentInfo` models the complete published public-document payload while retaining the older optional `page_count` and `created_by` fields.
 
@@ -145,7 +149,7 @@ Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline ta
 | `list(params?, accountId?)` | [`GET /assignments?accountId=…`](./api-reference.md#list-assignments) | `PaginatedResult<IAssignment>` |
 | `create(documentId, payload)` | [`POST /documents/{documentId}/assignments`](./api-reference.md#create-assignment-request-signatures) | `IAssignment` |
 | `estimateCost(documentId, payload)` | [`POST /documents/{documentId}/assignments/estimate-cost`](./api-reference.md#estimate-assignment-cost) | `IEstimateCostResponse` |
-| `resetExpiration(documentId, assignmentId, expiresAt)` | [`PUT …/reset-expiration`](./api-reference.md#reset-assignment-expiration) | `IAssignment`; pass `null` to remove expiration |
+| `resetExpiration(documentId, assignmentId, expiresAt)` | [`PUT …/reset-expiration`](./api-reference.md#reset-assignment-expiration) | `IAssignment`; the published API accepts an ISO 8601 timestamp, and deployments that support clearing also accept `null` |
 | `resendNotification(documentId, assignmentId, signerId)` | [`PUT …/signers/{signerId}/resend`](./api-reference.md#resend-signature-request) | `IResendEmailResponse` |
 | `estimateResendCost(documentId, assignmentId, signerId)` | [`POST …/estimate-resend-cost`](./api-reference.md#estimate-resend-cost) | `IResendCostEstimate` |
 | `listWhatsAppNotifications(documentId, assignmentId)` | [`GET …/whatsapp-notifications`](./api-reference.md#list-whatsapp-notifications) | `IWhatsAppNotification[]` |
@@ -171,7 +175,7 @@ Assignment payload:
 }
 ```
 
-`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. `create` requires at least one signer; `estimateCost` permits zero signers for `collect`. Assignment list params are pagination plus the live-verified `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. The sandbox ignored an assignment `search` query, so the SDK does not expose it.
+`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. `create` requires at least one signer and enforces the documented one-digital-certificate-signer-per-step rule. The estimate schema has no `step`, so `estimateCost` does not apply that create-only rule and permits zero signers for `collect`. Assignment list params are pagination plus the live-verified `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. The sandbox ignored an assignment `search` query, so the SDK does not expose it.
 
 ## Signers (`client.signers`)
 
@@ -184,18 +188,18 @@ Assignment payload:
 | `delete(signerId, accountId?)` | [`DELETE /accounts/{accountId}/signers/{signerId}`](./api-reference.md#delete-signer) | `IEmptyResult` (`unknown[]`) |
 | `findByEmail(email, accountId?)` | SDK helper over `list({ search: email })` | `ISigner | null` |
 
-Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `phone` and update-time `cpf` are compatibility aliases. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. List params support published `search` and live-verified `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
+Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; new integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. List params support published `search` and live-verified `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the one-time `signer-access-code`, not the workspace API key.
+These methods use the one-time `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
 | `getCurrent(signerId, accessCode)` | [`GET /signers/{signerId}/document`](./api-reference.md#get-signers-document) | `IDocumentDetailsResponse` |
 | `list(signerId, accessCode, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
 | `search(signerId, search, accessCode)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
-| `download(signerId, documentId, artifact, accessCode)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-signers-document-artifact) | `Buffer` |
+| `download(signerId, documentId, artifact, accessCode?)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-signers-document-artifact) | `Buffer` |
 | `signMultiple(documentIds, accessCode)` | [`PUT /signers/documents/sign-multiple`](./api-reference.md#sign-multiple-documents) | `unknown[]` |
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |
 | `self(accessCode)` | [`GET /signers/self`](./api-reference.md#get-current-signer) | `ISignerSelf` |
@@ -210,7 +214,7 @@ These methods use the one-time `signer-access-code`, not the workspace API key.
 
 `confirmData` accepts `{ full_name?, email?, government_id?, whatsapp_phone_number?, has_accepted_terms? }`. `uploadSignature` accepts a non-empty image `Buffer` plus `{ imageType?: 'signature' | 'initial'; contentType?: string; reuse?: boolean }`. Each signing entry is `{ itemId, fieldId, pageId, value }`.
 
-`download` first verifies the access code through `/signers/self` and confirms that it belongs to the requested signer. This SDK-side check mitigates a sandbox defect where the raw artifact route returned a document for an invalid access code; the upstream route must still be fixed before it can be treated as a secure trust boundary.
+The artifact `download` route is public in the published API. If `accessCode` is supplied, the SDK first verifies it through `/signers/self` and confirms that it belongs to the requested signer before downloading.
 
 ## Workspaces (`client.workspaces`)
 
@@ -228,6 +232,29 @@ These methods use the one-time `signer-access-code`, not the workspace API key.
 | `delete(accountId, { force? }?)` | [`DELETE /accounts/{accountId}`](./api-reference.md#delete-account) | `IEmptyResult` (`unknown[]`) |
 
 Create/update payloads use `name` and `notification_sender_type?: 'User' | 'Account'`; legacy color fields remain accepted for compatibility. List/detail responses include `resource`, `id`, `name`, nullable colors, `notification_sender_type`, roles, delete permission, and `created_at`. `IAccountTheme` is `{ account_name; primary_color; secondary_color: string | null; logo: string | null }`. Logo options are `{ fileName?, contentType? }`. Statistics params are `{ granularity?: 'monthly' | 'daily'; month?: 'YYYY-MM' }`; `month` is required for daily data.
+
+Both account and user statistics resolve to the complete published row:
+
+```ts
+interface IDocumentStatsRow {
+  period: string; // YYYY-MM or YYYY-MM-DD
+  documents_uploaded: number;
+  documents_sent: number;
+  signature_requests: number;
+  signature_requests_notification_email: number;
+  signature_requests_notification_whatsapp: number;
+  signature_requests_notification_bypass: number;
+  signature_requests_verification_email: number;
+  signature_requests_verification_whatsapp: number;
+  signature_requests_verification_bypass: number;
+  signature_requests_verification_digital_certificate: number;
+  signature_requests_viewed: number;
+  signature_requests_completed: number;
+  documents_certified: number;
+}
+```
+
+Notification counters can overlap when a request uses multiple delivery channels. The four verification counters are mutually exclusive and add up to `signature_requests`.
 
 ## Users (`client.users`)
 
@@ -269,7 +296,7 @@ Login/social/reset bootstrap calls can use an unauthenticated client. The publis
 | `validateMultiple(entries, options?)` | [`POST …/fields/validate-multiple`](./api-reference.md#validate-multiple-field-values) | `IFieldValidationResult[]` |
 | `listTypes()` | [`GET /field-types`](./api-reference.md#list-field-types) | `IFieldType[]` |
 
-Create payload: `{ type: string; name: string; regex?; is_required?; is_active? }`. Update makes each field optional and allows `regex: null`. List params are `{ include_inactive?, include_standard? }`. Validation options are `{ signerAccessCode?, accountId? }`; multiple entries are `{ field_id, value }[]`. When a signer code is supplied, the SDK removes any configured owner API-key/bearer headers from that request.
+Published create payload: `{ type: string; name: string; regex?; is_required? }`. Published update payload: `{ name?; regex?: string | null; is_active? }`. The SDK retains create-time `is_active` and update-time `type`/`is_required` as compatibility extensions. List params are `{ include_inactive?, include_standard? }`. Validation options are `{ signerAccessCode?, accountId? }`; multiple entries are `{ field_id, value }[]`. When a signer code is supplied, the SDK removes any configured owner API-key/bearer headers from that request.
 
 ## Tags (`client.tags`)
 
@@ -288,9 +315,44 @@ Create payload: `{ type: string; name: string; regex?; is_required?; is_active? 
 | `get(templateId, accountId?)` | `GET /accounts/{accountId}/templates/{templateId}` | `ITemplateDetailsResponse` |
 | `downloadPage(templateId, pageId, accountId?)` | `GET /accounts/{accountId}/templates/{templateId}/pages/{pageId}/download` | JPEG `Buffer` |
 
-The last two compatibility routes are supported by the platform/official PHP SDK but are absent from the published OpenAPI document, so they have no generated payload section.
+The last two routes are retained for platform compatibility although they are not in the published OpenAPI. Neither sends a request body. `get` unwraps the normal Assinafy envelope and returns:
 
-Template list params support pagination, published `search`, and live-verified `sort?: 'name' | '-name'`; ignored sort fields are rejected locally. `ITemplatePage` contains document page dimensions/URL plus typed `ITemplateField[]` entries (`id`, `field_id`, `role_id`, `label`, `display_settings`, and timestamps). Template document creation accepts `editor_fields?: Array<{ field_id: string; value: unknown }>`.
+```ts
+interface ITemplateDetailsResponse {
+  resource?: string;
+  id: string;
+  name: string;
+  document_name?: string | null;
+  message?: string | null;
+  status: string;
+  account_id?: string;
+  pages?: Array<{
+    id: string;
+    number: number;
+    height: number;
+    width: number;
+    download_url: string;
+    fields: Array<{
+      id: string;
+      field_id: string;
+      role_id: string;
+      label: string;
+      display_settings: IDisplaySettings | unknown[] | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+  }>;
+  roles?: ITemplateRole[];
+  tags?: IInlineTag[];
+  default_document_tags?: IInlineTag[];
+  created_at: string;
+  updated_at?: string;
+}
+```
+
+`downloadPage` returns the raw JPEG response as a Node.js `Buffer`; it does not unwrap JSON.
+
+Template list params support pagination, published `search`, and live-verified `sort?: 'name' | '-name'`; ignored sort fields are rejected locally. `ITemplatePage` contains document page dimensions/URL plus typed `ITemplateField[]` entries (`id`, `field_id`, `role_id`, `label`, `display_settings`, and timestamps). Template document creation accepts `editor_fields?: Array<{ field_id: string; value: string }>`.
 
 ## Webhooks (`client.webhooks`)
 

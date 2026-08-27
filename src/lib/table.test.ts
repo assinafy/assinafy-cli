@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderKeyValue, renderTable } from './table';
+import { renderDocumentStats, renderKeyValue, renderTable } from './table';
 
 // Strip ANSI escape sequences so assertions match the visible text.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching the ESC in ANSI codes
@@ -57,6 +57,56 @@ describe('renderTable', () => {
 		expect(out).not.toContain('\u202e');
 		expect(out).not.toContain('\u2066');
 		expect(out.split('\n')).toHaveLength(2);
+	});
+});
+
+describe('renderDocumentStats', () => {
+	it('renders every current notification and verification counter', () => {
+		const out = plain(
+			renderDocumentStats([
+				{
+					period: '2026-08',
+					documents_uploaded: 1,
+					documents_sent: 2,
+					signature_requests: 3,
+					signature_requests_notification_email: 4,
+					signature_requests_notification_whatsapp: 5,
+					signature_requests_notification_bypass: 6,
+					signature_requests_verification_email: 7,
+					signature_requests_verification_whatsapp: 8,
+					signature_requests_verification_bypass: 9,
+					signature_requests_verification_digital_certificate: 10,
+					signature_requests_viewed: 11,
+					signature_requests_completed: 12,
+					documents_certified: 13,
+				},
+			]),
+		);
+
+		for (const heading of [
+			'NOTIFY EMAIL',
+			'NOTIFY WA',
+			'NOTIFY BYPASS',
+			'VERIFY EMAIL',
+			'VERIFY WA',
+			'VERIFY BYPASS',
+			'VERIFY CERT',
+			'VIEWED',
+		]) {
+			expect(out).toContain(heading);
+		}
+		expect(out.split('\n')[1]?.trim().split(/\s+/).slice(-10)).toEqual([
+			'4',
+			'5',
+			'6',
+			'7',
+			'8',
+			'9',
+			'10',
+			'11',
+			'12',
+			'13',
+		]);
 	});
 });
 

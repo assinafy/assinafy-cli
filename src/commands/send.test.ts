@@ -31,12 +31,12 @@ describe('parseSignerSpec', () => {
 
 describe('resolveSigners', () => {
 	it('parses --signers JSON when provided', () => {
-		const json = '[{"name":"X","email":"x@y.com"}]';
-		expect(resolveSigners([], json)).toEqual([{ name: 'X', email: 'x@y.com' }]);
+		const json = '[{"name":"X","email":"x@example.com"}]';
+		expect(resolveSigners([], json)).toEqual([{ name: 'X', email: 'x@example.com' }]);
 	});
 
 	it('maps --signer specs', () => {
-		expect(resolveSigners(['A <a@b.com>'])).toEqual([{ name: 'A', email: 'a@b.com' }]);
+		expect(resolveSigners(['A <a@example.com>'])).toEqual([{ name: 'A', email: 'a@example.com' }]);
 	});
 
 	it('throws when no signers are given', () => {
@@ -44,8 +44,8 @@ describe('resolveSigners', () => {
 	});
 
 	it('rejects ambiguous signer sources', () => {
-		expect(() => resolveSigners(['A <a@b.com>'], '[{"name":"B","email":"b@b.com"}]')).toThrow(
-			/not both/,
-		);
+		expect(() =>
+			resolveSigners(['A <a@example.com>'], '[{"name":"B","email":"b@example.com"}]'),
+		).toThrow(/not both/);
 	});
 });

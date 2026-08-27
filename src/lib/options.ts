@@ -5,7 +5,7 @@ import type { Command, OptionValues } from '@commander-js/extra-typings';
  *
  * Written as a generic passthrough so commander's option typing is preserved.
  */
-export function addPaginationOptions<
+function addPaginationOptions<
 	Args extends unknown[],
 	Opts extends OptionValues,
 	Globals extends OptionValues,
@@ -16,7 +16,7 @@ export function addPaginationOptions<
 }
 
 /** Attach pagination plus search. */
-export function addSearchListOptions<
+function addSearchListOptions<
 	Args extends unknown[],
 	Opts extends OptionValues,
 	Globals extends OptionValues,

@@ -1,14 +1,10 @@
 import { Command } from '@commander-js/extra-typings';
-import type {
-	IDocumentStatsParams,
-	IDocumentStatsRow,
-	IUpdateNotificationPreferencesPayload,
-} from '../api';
+import type { IDocumentStatsParams, IUpdateNotificationPreferencesPayload } from '../api';
 import { parseJsonObject } from '../lib/json';
 import { printData, printSuccess } from '../lib/output';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
-import { renderTable } from '../lib/table';
+import { renderDocumentStats, renderTable } from '../lib/table';
 
 const selfCommand = new Command('self')
 	.description("Show the authenticated user's profile and accounts")
@@ -32,7 +28,7 @@ const statsCommand = new Command('stats')
 			const rows = await withSpinner('Fetching user statistics', config, () =>
 				client.users.stats(params),
 			);
-			printData(rows, config, renderStats);
+			printData(rows, config, renderDocumentStats);
 		});
 	});
 
@@ -80,14 +76,3 @@ export const usersCommand = new Command('users')
 	.addCommand(selfCommand)
 	.addCommand(statsCommand)
 	.addCommand(preferencesCommand);
-
-function renderStats(rows: IDocumentStatsRow[]): string {
-	return renderTable(rows, [
-		{ header: 'PERIOD', value: (row) => row.period },
-		{ header: 'UPLOADED', value: (row) => row.documents_uploaded },
-		{ header: 'SENT', value: (row) => row.documents_sent },
-		{ header: 'REQUESTS', value: (row) => row.signature_requests },
-		{ header: 'COMPLETED', value: (row) => row.signature_requests_completed },
-		{ header: 'CERTIFIED', value: (row) => row.documents_certified },
-	]);
-}

@@ -5,7 +5,6 @@ import {
 	configPath,
 	type ProfileConfig,
 	readConfigFile,
-	resolveConfig,
 	writeConfigFile,
 } from '../../lib/config';
 import { CliError } from '../../lib/errors';
@@ -179,6 +178,3 @@ export const configCommand = new Command('config')
 	.addCommand(useCommand)
 	.addCommand(removeCommand)
 	.addCommand(pathCommand);
-
-// Re-exported so cli.ts can resolve config consistently when needed.
-export { resolveConfig };

@@ -29,8 +29,11 @@ import {
 	cleanParams,
 	publicRequestConfig,
 	requireDocumentArtifactName,
+	requireEmail,
 	requireIso8601,
 	requireSort,
+	validateSignerOptions,
+	validateSigningSteps,
 } from '../utils.js';
 import { BaseResource } from './base.js';
 
@@ -282,24 +285,24 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/**
-	 * Replace the document's tag set with `tags` (an array of tag names).
-	 * Unknown names are auto-created; an empty array detaches all tags.
+	 * Replace the document's tag set with tag IDs. An empty array detaches all tags.
+	 * Values are forwarded unchanged for compatibility with deployments that also accept names.
 	 */
 	async replaceTags(documentId: string, tags: string[], accountId?: string): Promise<ITag[]> {
 		const accId = this.accountId(accountId);
 		const docId = this.requireId(documentId, 'Document ID');
-		if (!Array.isArray(tags)) throw new ValidationError('tags must be an array of tag names');
+		if (!Array.isArray(tags)) throw new ValidationError('tags must be an array of tag IDs');
 		return this.call('Failed to replace document tags', () =>
 			this.http.put(`/accounts/${accId}/documents/${docId}/tags`, { tags }),
 		);
 	}
 
-	/** Attach additional tags (by name) without removing existing ones. Idempotent. */
+	/** Attach additional tag IDs without removing existing ones. */
 	async addTags(documentId: string, tags: string[], accountId?: string): Promise<ITag[]> {
 		const accId = this.accountId(accountId);
 		const docId = this.requireId(documentId, 'Document ID');
 		if (!Array.isArray(tags) || tags.length === 0) {
-			throw new ValidationError('tags must be a non-empty array of tag names');
+			throw new ValidationError('tags must be a non-empty array of tag IDs');
 		}
 		return this.call('Failed to add document tags', () =>
 			this.http.post(`/accounts/${accId}/documents/${docId}/tags`, { tags }),
@@ -338,7 +341,21 @@ export class DocumentResource extends BaseResource {
 	): Promise<IDocumentDetailsResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
+		validateTemplateSigners(signers, { requireId: true, singleNotification: true });
 		if (options.expires_at !== undefined) requireIso8601(options.expires_at, 'expires_at');
+		if (
+			options.editor_fields !== undefined &&
+			(!Array.isArray(options.editor_fields) ||
+				options.editor_fields.some((field) => !field?.field_id || typeof field.value !== 'string'))
+		) {
+			throw new ValidationError('editor_fields must contain field_id and value');
+		}
+		if (
+			options.tags !== undefined &&
+			(!Array.isArray(options.tags) || options.tags.some((tag) => typeof tag !== 'string' || !tag))
+		) {
+			throw new ValidationError('tags must contain non-empty tag names');
+		}
 		const body: Record<string, unknown> = { ...options, signers };
 		this.logger.info('Creating document from template', { templateId: tmplId, accountId: accId });
 		return this.call('Failed to create document from template', () =>
@@ -354,6 +371,7 @@ export class DocumentResource extends BaseResource {
 	): Promise<IEstimateCostResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
+		validateTemplateSigners(signers, { requireId: false, singleNotification: false });
 		return this.call('Failed to estimate cost from template', () =>
 			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents/estimate-cost`, { signers }),
 		);
@@ -404,7 +422,7 @@ export class DocumentResource extends BaseResource {
 	): Promise<ISendTokenResponse> {
 		const id = this.requireId(documentId, 'Document ID');
 		if (typeof recipient === 'object') {
-			if (!recipient?.email) throw new ValidationError('email is required');
+			requireEmail(recipient?.email);
 			return this.call('Failed to send signing token', () =>
 				this.http.put(
 					`/public/documents/${id}/send-token`,
@@ -414,6 +432,10 @@ export class DocumentResource extends BaseResource {
 			);
 		}
 		if (!recipient) throw new ValidationError('recipient is required');
+		if (channel !== 'email' && channel !== 'whatsapp') {
+			throw new ValidationError('channel must be email or whatsapp');
+		}
+		if (channel === 'email') requireEmail(recipient);
 		return this.call('Failed to send signing token', () =>
 			this.http.put(
 				`/public/documents/${id}/send-token`,
@@ -443,6 +465,48 @@ export class DocumentResource extends BaseResource {
 		const pending = Math.max(total - signed, 0);
 		const percentage = total > 0 ? Math.round((signed / total) * 10_000) / 100 : 0;
 		return { signed, total, pending, percentage };
+	}
+}
+
+function validateTemplateSigners(
+	signers: unknown,
+	options: { requireId: boolean; singleNotification: boolean },
+): void {
+	if (!Array.isArray(signers)) throw new ValidationError('signers must be an array');
+	for (const value of signers) {
+		if (!value || typeof value !== 'object') {
+			throw new ValidationError('each template signer must be an object');
+		}
+		const signer = value as {
+			role_id?: unknown;
+			id?: unknown;
+			verification_method?: unknown;
+			notification_methods?: unknown;
+			step?: unknown;
+		};
+		if (typeof signer.role_id !== 'string' || !signer.role_id) {
+			throw new ValidationError('each template signer requires role_id');
+		}
+		if (
+			(options.requireId || signer.id !== undefined) &&
+			(typeof signer.id !== 'string' || !signer.id)
+		) {
+			throw new ValidationError('each template signer requires a valid id');
+		}
+		validateSignerOptions(signer);
+		if (options.requireId && signer.step !== undefined && Number(signer.step) < 1) {
+			throw new ValidationError('template signer step must be a positive integer');
+		}
+		if (
+			options.singleNotification &&
+			Array.isArray(signer.notification_methods) &&
+			signer.notification_methods.length > 1
+		) {
+			throw new ValidationError('template signers accept at most one notification method');
+		}
+	}
+	if (options.requireId) {
+		validateSigningSteps(signers as Array<{ verification_method?: unknown; step?: unknown }>);
 	}
 }
 

@@ -7,6 +7,9 @@ branches and `v*` tags to GitHub; GitHub Release objects are created by
 ## One-time repository setup
 
 - Create a protected GitHub environment named `release` for the publish job.
+- Create a protected `sandbox` environment for `.github/workflows/sandbox.yml` and
+  configure its four `ASSINAFY_SANDBOX_*` secrets described in `CONTRIBUTING.md`.
+  Do not require a reviewer if the scheduled weekly run must execute unattended.
 - Configure npm trusted publishing for this GitHub repository, workflow
   `release.yml`, and environment `release`. No long-lived npm token is used.
 - Allow the repository `GITHUB_TOKEN` to write GitHub Releases and Packages.
@@ -20,8 +23,10 @@ branches and `v*` tags to GitHub; GitHub Release objects are created by
 
 ## Publish
 
-1. Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, and
-   `npm run pack:release` on the release commit.
+1. Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`,
+   `npm run docs:api`, `npm run verify:api-docs`, and `npm run pack:release` on
+   the release commit. Commit the generated API reference when the official
+   contract changes.
 2. Set `package.json` to the exact SemVer version and push the matching signed or
    annotated `vX.Y.Z` tag from GitLab.
 3. Confirm the GitHub workflow verifies that exact tag/commit, uploads its checked

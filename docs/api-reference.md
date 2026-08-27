@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.0.0
 - API document version: 1.0.0
 - Operations: 89
-- Contract SHA-256: `44da834c27173a3739d491fdacbb48decf9a170bd776a1c4edb4d0d4b108c22f`
+- Contract SHA-256: `47fe244e05d7acd9cef0561da4b8c042e1eb549b015f731233475093b5602087`
 
 ## Accounts
 
@@ -627,8 +627,13 @@ Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) re
             "documents_uploaded": 42,
             "documents_sent": 37,
             "signature_requests": 61,
-            "signature_requests_email": "user1@example.com",
-            "signature_requests_whatsapp": 18,
+            "signature_requests_notification_email": 55,
+            "signature_requests_notification_whatsapp": 18,
+            "signature_requests_notification_bypass": 3,
+            "signature_requests_verification_email": 48,
+            "signature_requests_verification_whatsapp": 6,
+            "signature_requests_verification_bypass": 3,
+            "signature_requests_verification_digital_certificate": 4,
             "signature_requests_viewed": 44,
             "signature_requests_completed": 52,
             "documents_certified": 30
@@ -780,7 +785,7 @@ List documents of the workspace.
             "assignment": {
                 "resource": "assignment",
                 "id": "example_id_6",
-                "sender_email": "user2@example.com",
+                "sender_email": "user1@example.com",
                 "method": "virtual",
                 "expires_at": null,
                 "message": "string",
@@ -806,7 +811,7 @@ List documents of the workspace.
                         "resource": "signer",
                         "id": "example_id_7",
                         "full_name": "Example User",
-                        "email": "user3@example.com",
+                        "email": "user2@example.com",
                         "whatsapp_phone_number": "+5500000000000",
                         "has_accepted_terms": false
                     }
@@ -934,7 +939,7 @@ Example:
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -960,7 +965,7 @@ Example:
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -1088,7 +1093,7 @@ Search documents of the workspace, returning a compact representation (no expand
             "assignment": {
                 "resource": "assignment",
                 "id": "example_id_6",
-                "sender_email": "user2@example.com",
+                "sender_email": "user1@example.com",
                 "method": "virtual",
                 "expires_at": null,
                 "message": "string",
@@ -1114,7 +1119,7 @@ Search documents of the workspace, returning a compact representation (no expand
                         "resource": "signer",
                         "id": "example_id_7",
                         "full_name": "Example User",
-                        "email": "user3@example.com",
+                        "email": "user2@example.com",
                         "whatsapp_phone_number": "+5500000000000",
                         "has_accepted_terms": false
                     }
@@ -1287,7 +1292,7 @@ Get a document by its ID. `decline_reason` is only present when the access token
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -1313,7 +1318,7 @@ Get a document by its ID. `decline_reason` is only present when the access token
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -1506,7 +1511,7 @@ Example:
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -1532,7 +1537,7 @@ Example:
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -2150,7 +2155,7 @@ Example:
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -2176,7 +2181,7 @@ Example:
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -2372,7 +2377,7 @@ List the assignments belonging to the authenticated user's current account.
         {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -2398,7 +2403,7 @@ List the assignments belonging to the authenticated user's current account.
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -2657,7 +2662,7 @@ Example — Create with input fields (method: collect):
     "data": {
         "resource": "assignment",
         "id": "example_id_21",
-        "sender_email": "user2@example.com",
+        "sender_email": "user1@example.com",
         "method": "virtual",
         "expires_at": "2021-09-30T21:00:00Z",
         "message": null,
@@ -2665,7 +2670,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_15",
                 "full_name": "Example User",
-                "email": "user4@example.com",
+                "email": "user3@example.com",
                 "verification_method": "Email",
                 "notification_methods": [
                     "Email"
@@ -2677,7 +2682,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_16",
                 "full_name": "Example User",
-                "email": "user5@example.com",
+                "email": "user4@example.com",
                 "verification_method": "Whatsapp",
                 "notification_methods": [
                     "Whatsapp"
@@ -2695,7 +2700,7 @@ Example — Create with input fields (method: collect):
                 "signer": {
                     "id": "example_id_15",
                     "full_name": "Example User",
-                    "email": "user4@example.com"
+                    "email": "user3@example.com"
                 },
                 "field": {
                     "id": "example_id_23",
@@ -2714,13 +2719,13 @@ Example — Create with input fields (method: collect):
                 {
                     "id": "example_id_15",
                     "full_name": "Example User",
-                    "email": "user4@example.com",
+                    "email": "user3@example.com",
                     "completed": false
                 },
                 {
                     "id": "example_id_16",
                     "full_name": "Example User",
-                    "email": "user5@example.com",
+                    "email": "user4@example.com",
                     "completed": false
                 }
             ]
@@ -2748,7 +2753,7 @@ Example — Create with input fields (method: collect):
     "data": {
         "resource": "assignment",
         "id": "example_id_6",
-        "sender_email": "user2@example.com",
+        "sender_email": "user1@example.com",
         "method": "collect",
         "expires_at": "2021-09-30T21:00:00Z",
         "message": null,
@@ -2756,7 +2761,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_17",
                 "full_name": "Example User",
-                "email": "user6@example.com",
+                "email": "user5@example.com",
                 "verification_method": "Email",
                 "notification_methods": [
                     "Email"
@@ -2768,7 +2773,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_18",
                 "full_name": "Example User",
-                "email": "user7@example.com",
+                "email": "user6@example.com",
                 "verification_method": "Whatsapp",
                 "notification_methods": [
                     "Whatsapp"
@@ -2792,7 +2797,7 @@ Example — Create with input fields (method: collect):
                 "signer": {
                     "id": "example_id_17",
                     "full_name": "Example User",
-                    "email": "user6@example.com"
+                    "email": "user5@example.com"
                 },
                 "field": {
                     "id": "example_id_20",
@@ -2823,7 +2828,7 @@ Example — Create with input fields (method: collect):
                 "signer": {
                     "id": "example_id_18",
                     "full_name": "Example User",
-                    "email": "user7@example.com"
+                    "email": "user6@example.com"
                 },
                 "field": {
                     "id": "example_id_20",
@@ -2850,13 +2855,13 @@ Example — Create with input fields (method: collect):
                 {
                     "id": "example_id_17",
                     "full_name": "Example User",
-                    "email": "user6@example.com",
+                    "email": "user5@example.com",
                     "completed": false
                 },
                 {
                     "id": "example_id_18",
                     "full_name": "Example User",
-                    "email": "user7@example.com",
+                    "email": "user6@example.com",
                     "completed": false
                 }
             ]
@@ -3179,7 +3184,7 @@ Example:
     "data": {
         "resource": "assignment",
         "id": "example_id_6",
-        "sender_email": "user2@example.com",
+        "sender_email": "user1@example.com",
         "method": "virtual",
         "expires_at": null,
         "message": "string",
@@ -3205,7 +3210,7 @@ Example:
                 "resource": "signer",
                 "id": "example_id_7",
                 "full_name": "Example User",
-                "email": "user3@example.com",
+                "email": "user2@example.com",
                 "whatsapp_phone_number": "+5500000000000",
                 "has_accepted_terms": false
             }
@@ -3364,7 +3369,7 @@ Example:
 
 ```json
 {
-    "email": "user8@example.com",
+    "email": "user7@example.com",
     "password": "example_secret"
 }
 ```
@@ -3380,7 +3385,7 @@ Example:
         "user": {
             "id": "example_id_27",
             "name": "John Smith",
-            "email": "user9@example.com",
+            "email": "user8@example.com",
             "telephone": "+5500000000000",
             "government_id": "00000000000",
             "is_email_verified": false,
@@ -3443,7 +3448,7 @@ Example:
 
 ```json
 {
-    "email": "user8@example.com"
+    "email": "user7@example.com"
 }
 ```
 
@@ -3454,7 +3459,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user8@example.com"
+        "email": "user7@example.com"
     },
     "status": 200,
     "message": ""
@@ -3491,7 +3496,7 @@ Example:
 
 ```json
 {
-    "email": "user8@example.com",
+    "email": "user7@example.com",
     "token": "example_secret",
     "new_password": "example_secret"
 }
@@ -3504,7 +3509,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user8@example.com"
+        "email": "user7@example.com"
     },
     "status": 200,
     "message": ""
@@ -3551,7 +3556,7 @@ Example:
 
 ```json
 {
-    "email": "user8@example.com",
+    "email": "user7@example.com",
     "password": "example_secret",
     "new_password": "example_secret"
 }
@@ -3564,7 +3569,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user8@example.com"
+        "email": "user7@example.com"
     },
     "status": 200,
     "message": ""
@@ -3638,7 +3643,7 @@ Example:
         "user": {
             "id": "example_id_27",
             "name": "John Smith",
-            "email": "user9@example.com",
+            "email": "user8@example.com",
             "telephone": "+5500000000000",
             "government_id": "00000000000",
             "is_email_verified": false,
@@ -4598,8 +4603,13 @@ The authenticated user's document-funnel KPIs summed across all accounts they cu
             "documents_uploaded": 42,
             "documents_sent": 37,
             "signature_requests": 61,
-            "signature_requests_email": "user1@example.com",
-            "signature_requests_whatsapp": 18,
+            "signature_requests_notification_email": 55,
+            "signature_requests_notification_whatsapp": 18,
+            "signature_requests_notification_bypass": 3,
+            "signature_requests_verification_email": 48,
+            "signature_requests_verification_whatsapp": 6,
+            "signature_requests_verification_bypass": 3,
+            "signature_requests_verification_digital_certificate": 4,
             "signature_requests_viewed": 44,
             "signature_requests_completed": 52,
             "documents_certified": 30
@@ -4657,7 +4667,7 @@ Returns the profile of the user owning the access token.
     "data": {
         "id": "example_id_27",
         "name": "John Smith",
-        "email": "user9@example.com",
+        "email": "user8@example.com",
         "telephone": "+5500000000000",
         "government_id": "00000000000",
         "is_email_verified": false,
@@ -4735,7 +4745,7 @@ Retrieve a publicly shared document by ID. Public endpoint.
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -4761,7 +4771,7 @@ Retrieve a publicly shared document by ID. Public endpoint.
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -4855,7 +4865,7 @@ Example:
 
 ```json
 {
-    "email": "user10@example.com"
+    "email": "user9@example.com"
 }
 ```
 
@@ -4901,7 +4911,7 @@ Return the signer identified by the signer access code, including the `has_signa
         "resource": "signer",
         "id": "example_id_7",
         "full_name": "Example User",
-        "email": "user3@example.com",
+        "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "has_accepted_terms": false
     },
@@ -4973,7 +4983,7 @@ Return the document and the signer's assignment items, scoped to the signer acce
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -4999,7 +5009,7 @@ Return the document and the signer's assignment items, scoped to the signer acce
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -5124,7 +5134,7 @@ Retrieve the document a signer has been invited to sign, using the signer access
         "assignment": {
             "resource": "assignment",
             "id": "example_id_6",
-            "sender_email": "user2@example.com",
+            "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": "string",
@@ -5150,7 +5160,7 @@ Retrieve the document a signer has been invited to sign, using the signer access
                     "resource": "signer",
                     "id": "example_id_7",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "has_accepted_terms": false
                 }
@@ -5557,7 +5567,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user10@example.com",
+    "email": "user9@example.com",
     "government_id": "00000000000"
 }
 ```
@@ -5572,7 +5582,7 @@ Example:
         "resource": "signer",
         "id": "example_id_7",
         "full_name": "Example User",
-        "email": "user3@example.com",
+        "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "has_accepted_terms": false
     },
@@ -5788,7 +5798,7 @@ List the documents a signer is party to. Uses the signer access code.
             "assignment": {
                 "resource": "assignment",
                 "id": "example_id_6",
-                "sender_email": "user2@example.com",
+                "sender_email": "user1@example.com",
                 "method": "virtual",
                 "expires_at": null,
                 "message": "string",
@@ -5814,7 +5824,7 @@ List the documents a signer is party to. Uses the signer access code.
                         "resource": "signer",
                         "id": "example_id_7",
                         "full_name": "Example User",
-                        "email": "user3@example.com",
+                        "email": "user2@example.com",
                         "whatsapp_phone_number": "+5500000000000",
                         "has_accepted_terms": false
                     }
@@ -5930,7 +5940,7 @@ Search the documents a signer is party to (compact representation). Uses the sig
             "assignment": {
                 "resource": "assignment",
                 "id": "example_id_6",
-                "sender_email": "user2@example.com",
+                "sender_email": "user1@example.com",
                 "method": "virtual",
                 "expires_at": null,
                 "message": "string",
@@ -5956,7 +5966,7 @@ Search the documents a signer is party to (compact representation). Uses the sig
                         "resource": "signer",
                         "id": "example_id_7",
                         "full_name": "Example User",
-                        "email": "user3@example.com",
+                        "email": "user2@example.com",
                         "whatsapp_phone_number": "+5500000000000",
                         "has_accepted_terms": false
                     }
@@ -6097,7 +6107,7 @@ List the signers of a workspace.
             "resource": "signer",
             "id": "example_id_7",
             "full_name": "Example User",
-            "email": "user3@example.com",
+            "email": "user2@example.com",
             "whatsapp_phone_number": "+5500000000000",
             "has_accepted_terms": false
         }
@@ -6154,7 +6164,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user3@example.com",
+    "email": "user2@example.com",
     "whatsapp_phone_number": "+5500000000000"
 }
 ```
@@ -6169,7 +6179,7 @@ Example:
         "resource": "signer",
         "id": "example_id_7",
         "full_name": "Example User",
-        "email": "user3@example.com",
+        "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "has_accepted_terms": false
     },
@@ -6233,7 +6243,7 @@ Retrieve a signer's information.
         "resource": "signer",
         "id": "example_id_7",
         "full_name": "Example User",
-        "email": "user3@example.com",
+        "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "has_accepted_terms": false
     },
@@ -6303,7 +6313,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user3@example.com",
+    "email": "user2@example.com",
     "whatsapp_phone_number": "+5500000000000",
     "government_id": "00000000000"
 }
@@ -6319,7 +6329,7 @@ Example:
         "resource": "signer",
         "id": "example_id_7",
         "full_name": "Example User",
-        "email": "user3@example.com",
+        "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "has_accepted_terms": false
     },
@@ -6864,7 +6874,7 @@ Retrieve the current webhook subscription for the account — which events it is
         ],
         "is_active": true,
         "url": "https://example.com/example-url-12",
-        "email": "user11@example.com",
+        "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -6925,7 +6935,7 @@ Example:
     ],
     "is_active": true,
     "url": "https://example.com/example-url-12",
-    "email": "user11@example.com"
+    "email": "user10@example.com"
 }
 ```
 
@@ -6942,7 +6952,7 @@ Example:
         ],
         "is_active": true,
         "url": "https://example.com/example-url-12",
-        "email": "user11@example.com",
+        "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -7007,7 +7017,7 @@ Deactivate the webhook integration for the account. While inactive, no events ar
         ],
         "is_active": true,
         "url": "https://example.com/example-url-12",
-        "email": "user11@example.com",
+        "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,

@@ -43,6 +43,11 @@ describe('WebhookVerifier.verify', () => {
 		const v = new WebhookVerifier(SECRET);
 		expect(v.verify(BODY, 'short')).toBe(false);
 	});
+
+	it('returns false for an unsupported configured algorithm', () => {
+		const v = new WebhookVerifier(SECRET, { algorithm: 'not-a-hash' });
+		expect(v.verify(BODY, 'signature')).toBe(false);
+	});
 });
 
 describe('WebhookVerifier envelope parsing', () => {
@@ -58,6 +63,7 @@ describe('WebhookVerifier envelope parsing', () => {
 	it('reads the event name from `event` then `type`', () => {
 		expect(v.getEventType({ event: 'a' })).toBe('a');
 		expect(v.getEventType({ type: 'b' } as never)).toBe('b');
+		expect(v.getEventType({ event: 1, type: false } as never)).toBeNull();
 		expect(v.getEventType(null)).toBeNull();
 	});
 

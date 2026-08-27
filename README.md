@@ -59,6 +59,36 @@ assinafy send contract.pdf \
   --message "Please sign this contract"
 ```
 
+## Document lifecycle
+
+`send` is the shortest path: it uploads, waits for processing, creates the signers, and requests signatures. For explicit control, the complete owner-side flow is:
+
+```bash
+# Create or locate each signer.
+SIGNER_ID=$(assinafy signers create \
+  --name "Ana Lima" --email ana@example.com --json | jq -r '.id')
+
+# Upload, wait for metadata/page processing, then request the signature.
+DOCUMENT_ID=$(assinafy documents upload contract.pdf \
+  --name "Service agreement" --wait --json | jq -r '.id')
+assinafy assignments create "$DOCUMENT_ID" \
+  --signer-ids "$SIGNER_ID" \
+  --message "Please review and sign"
+
+# Monitor the audit trail and signing progress.
+assinafy documents get "$DOCUMENT_ID" --json
+assinafy documents progress "$DOCUMENT_ID" --json
+assinafy documents activities "$DOCUMENT_ID" --json
+
+# Available after every signer completes and certification finishes.
+assinafy documents download "$DOCUMENT_ID" --artifact certificated \
+  --output signed-contract.pdf
+```
+
+The assignment sends each signer the configured email/WhatsApp invitation. Signer-side commands use that invitation's access code and, where configured, the one-time verification code; the published signer artifact download is public and accepts an optional access code for an SDK identity preflight. Owner API credentials are stripped from public and signer-side requests. Poll with `documents wait` when processing is still underway, or register webhooks for `document_ready`, signer completion/rejection, and processing failures. Keep the certified PDF, certificate page, bundle, and `documents activities` output as the final document record. Delete only disposable documents after their retention obligations are satisfied.
+
+The [API request/response reference](./docs/api-reference.md) contains the complete published payload and response examples for each HTTP operation. The [SDK reference](./docs/sdk-reference.md) maps every SDK method to those payloads and explains SDK envelope unwrapping, pagination, binary results, errors, and compatibility behavior.
+
 ## Authentication & configuration
 
 The CLI resolves every credential with this precedence: **CLI flag → environment variable → config file**.
@@ -129,7 +159,6 @@ assinafy send contract.pdf \
   --signer "Ana <ana@example.com>" \
   --signer "Bruno <+5548999990000>" \
   --message "Please sign" \
-  --expires-at 2026-12-31T23:59:59Z \
   --copy-receivers sig_abc123,sig_def456
 ```
 
@@ -150,8 +179,8 @@ Use `--signers '<json>'` for full control (verification methods, signing order/`
 | `documents activities <id>` | Activity log |
 | `documents delete <id> [-y]` | Delete a document |
 | `documents tags <id>` | List attached tags |
-| `documents tags-set <id> [names...]` | Replace the tag set |
-| `documents tags-add <id> <names...>` | Attach tags by name |
+| `documents tags-set <id> [tagIds...]` | Replace the tag set by ID |
+| `documents tags-add <id> <tagIds...>` | Attach tags by ID |
 | `documents tags-remove <id> <tagId>` | Detach one tag |
 | `documents create-from-template <templateId> --signers <json> [...]` | Create from a template |
 | `documents estimate-template-cost <templateId> --signers <json>` | Estimate template cost |
@@ -167,7 +196,7 @@ Use `--signers '<json>'` for full control (verification methods, signing order/`
 `create` · `list` · `get <id>` · `update <id>` · `delete <id>` · `find-by-email <email>`
 
 ```bash
-assinafy signers create --name "Ana Lima" --email ana@example.com --cpf 123.456.789-00
+assinafy signers create --name "Ana Lima" --email ana@example.com
 ```
 
 ### `assignments`
@@ -204,11 +233,11 @@ assinafy assignments create doc_123 --signer-ids sig_1,sig_2 --message "Please s
 
 `self` · `stats [--granularity] [--month]` · `notification-preferences get|update`
 
-### `signer` — signer-side flows (authenticated by a signer access code)
+### `signer` — signer-side flows
 
 `document <signerId>` · `documents <signerId>` · `download <signerId> <documentId> <artifact>` · `self` · `accept-terms` · `verify-email` · `confirm-data <documentId>` · `upload-signature` · `download-signature` · `assignment` · `sign <documentId> <assignmentId>` · `decline <documentId> <assignmentId>` · `sign-multiple` · `decline-multiple`
 
-Every signer command takes `--access-code <code>` (the one-time link emailed/WhatsApped to the signer); use `ASSINAFY_SIGNER_ACCESS_CODE` to keep it out of process arguments.
+Every signer command except the public artifact `download` requires `--access-code <code>` (the one-time link emailed/WhatsApped to the signer). `download` accepts the code optionally for an identity preflight. Use `ASSINAFY_SIGNER_ACCESS_CODE` to keep it out of process arguments.
 
 ### `auth`
 
@@ -249,14 +278,15 @@ assinafy documents list --status pending_signature --json | jq -r '.data[].id'
 # Upload and capture the new document ID
 DOC=$(assinafy documents upload contract.pdf --json | jq -r '.id')
 
-# Bulk-tag every template-created document
-assinafy documents tags-add "$DOC" legal q4-2026
+# Attach an existing tag by its documented ID
+TAG_ID=$(assinafy tags list --search legal --json | jq -r '.[0].id')
+assinafy documents tags-add "$DOC" "$TAG_ID"
 ```
 
 ## Development
 
 ```bash
-npm install          # install dependencies
+npm ci               # install exactly from package-lock.json
 npm run dev -- --help   # run from source with tsx
 npm run dev:watch    # run from source and restart on changes
 npm run typecheck    # tsc --noEmit
@@ -273,6 +303,8 @@ npm run pack:release # create release archives in dist/release/
 The opt-in `npm run test:sandbox` matrix requires the sandbox variables shown in
 `.env.example`. It creates and cleans up disposable API resources and sends one
 signing-token email to `ASSINAFY_TEST_EMAIL`; do not run it against production.
+The current sandbox requires the legacy `--recipient` form for that token request,
+while `--email` follows the production OpenAPI payload.
 
 ## Release
 

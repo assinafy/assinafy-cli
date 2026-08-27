@@ -24,10 +24,14 @@ export type DocumentArtifactName =
 export type AssignmentMethod = 'virtual' | 'collect';
 
 /** Verification methods accepted by assignment signer entries. */
-export type AssignmentVerificationMethod = 'Email' | 'Whatsapp' | 'DigitalCertificate' | string;
+export type AssignmentVerificationMethod =
+	| 'Email'
+	| 'Whatsapp'
+	| 'DigitalCertificate'
+	| (string & {});
 
 /** Notification methods accepted by assignment signer entries. */
-export type AssignmentNotificationMethod = 'Email' | 'Whatsapp' | string;
+export type AssignmentNotificationMethod = 'Email' | 'Whatsapp' | (string & {});
 
 /** OAuth provider currently accepted by the Assinafy authentication API. */
 export type SocialLoginProvider = 'google';
@@ -83,8 +87,9 @@ export interface ICreateSignerPayload {
 	whatsapp_phone_number?: string;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
-	/** Brazilian tax ID (CPF). Non-digits are stripped before sending. */
+	/** Compatibility extension for a Brazilian CPF; non-digits are stripped. */
 	cpf?: string;
+	/** Compatibility extension for integration-defined signer metadata. */
 	metadata?: Record<string, unknown>;
 }
 
@@ -163,13 +168,7 @@ export type SignerReference =
 			signer_id?: string;
 			verification_method?: AssignmentVerificationMethod;
 			notification_methods?: AssignmentNotificationMethod[];
-			/**
-			 * Positive integer controlling signing order. Signers sharing a step
-			 * sign in parallel; a step is activated (and its signers notified)
-			 * only after every signer in the previous step has signed. If supplied
-			 * for one signer it must be supplied for all, forming a contiguous
-			 * sequence starting at 1.
-			 */
+			/** Integer signing-order value forwarded to the assignment API. */
 			step?: number;
 	  };
 
@@ -432,7 +431,7 @@ export interface IDocumentListItem {
 export type IDocumentListResponse = PaginatedResult<IDocumentListItem>;
 
 /** Query parameters accepted by `documents.list`. */
-export interface IDocumentListParams extends IListParams {
+export interface IDocumentListParams extends IPaginationParams {
 	/** Filter by document status, e.g. `pending_signature`. */
 	status?: DocumentStatus | string;
 	/** Filter by signature method (`virtual` or `collect`). */
@@ -444,7 +443,7 @@ export interface IDocumentListParams extends IListParams {
 }
 
 /** Query parameters accepted by the lightweight document search endpoint. */
-export interface IDocumentSearchParams extends IListParams {
+export interface IDocumentSearchParams extends IPaginationParams {
 	status?: DocumentStatus | string;
 	search?: string;
 	/** Live-verified extension; absent from the published OpenAPI. */
@@ -518,38 +517,42 @@ export interface ISigningProgress {
 	pending: number;
 }
 
-/** Query parameters accepted by paginated list endpoints. */
-export interface IListParams {
+/** Pagination keys shared by current list endpoints. */
+export interface IPaginationParams {
 	page?: number;
 	per_page?: number;
 	'per-page'?: number;
-	/** @deprecated Prefer the endpoint-specific list parameter type. */
+}
+
+/**
+ * @deprecated Use the endpoint-specific list parameter type. Retained for
+ * source compatibility with existing integrations.
+ */
+export interface IListParams extends IPaginationParams {
 	search?: string;
-	/** @deprecated Prefer the endpoint-specific list parameter type. */
 	sort?: string;
-	/** @deprecated Prefer the endpoint-specific list parameter type. */
 	[key: string]: string | number | boolean | undefined;
 }
 
 /** Live-verified assignment list extension; absent from the published OpenAPI. */
-export interface IAssignmentListParams extends IListParams {
+export interface IAssignmentListParams extends IPaginationParams {
 	sort?: 'created_at' | '-created_at';
 }
 
 /** Published template filters plus a live-verified name sort extension. */
-export interface ITemplateListParams extends IListParams {
+export interface ITemplateListParams extends IPaginationParams {
 	search?: string;
 	sort?: 'name' | '-name';
 }
 
 /** Published signer filters plus a live-verified full-name sort extension. */
-export interface ISignerListParams extends IListParams {
+export interface ISignerListParams extends IPaginationParams {
 	search?: string;
 	sort?: 'full_name' | '-full_name';
 }
 
 /** Signer-side document list compatibility filters. */
-export interface ISignerDocumentListParams extends IListParams {
+export interface ISignerDocumentListParams extends IPaginationParams {
 	search?: string;
 	sort?: string;
 }
@@ -615,8 +618,20 @@ export interface IDocumentStatsRow {
 	documents_uploaded: number;
 	documents_sent: number;
 	signature_requests: number;
-	signature_requests_email: number;
-	signature_requests_whatsapp: number;
+	/** Requests notified by email; multi-channel requests count in each notification channel. */
+	signature_requests_notification_email: number;
+	/** Requests notified by WhatsApp; multi-channel requests count in each notification channel. */
+	signature_requests_notification_whatsapp: number;
+	/** Requests created without a notification. */
+	signature_requests_notification_bypass: number;
+	/** Requests verified with an email token. */
+	signature_requests_verification_email: number;
+	/** Requests verified with a WhatsApp token. */
+	signature_requests_verification_whatsapp: number;
+	/** Requests signed without token verification. */
+	signature_requests_verification_bypass: number;
+	/** Requests signed with the signer's ICP-Brasil digital certificate. */
+	signature_requests_verification_digital_certificate: number;
 	signature_requests_viewed: number;
 	signature_requests_completed: number;
 	documents_certified: number;
@@ -670,7 +685,7 @@ export interface IWebhookDispatch {
 	updated_at?: string;
 }
 
-export interface IWebhookDispatchListParams extends IListParams {
+export interface IWebhookDispatchListParams extends IPaginationParams {
 	event?: WebhookEventType | string;
 	delivered?: boolean | 'true' | 'false';
 	from?: number;
@@ -693,12 +708,13 @@ export interface IUploadAndRequestSignaturesSigner {
 	whatsapp_phone_number?: string;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
-	/** Brazilian tax ID (CPF). Non-digits are stripped before sending. */
+	/** Compatibility extension for a Brazilian CPF; non-digits are stripped. */
 	cpf?: string;
+	/** Compatibility extension for integration-defined signer metadata. */
 	metadata?: Record<string, unknown>;
 	verification_method?: AssignmentVerificationMethod;
 	notification_methods?: AssignmentNotificationMethod[];
-	/** Positive sequential signing step, forwarded to the assignment signer reference. */
+	/** Integer signing-order value forwarded to the assignment signer reference. */
 	step?: number;
 }
 
@@ -749,23 +765,8 @@ export interface ITemplateListItem {
 
 export type ITemplateListResponse = PaginatedResult<ITemplateListItem>;
 
-/** Full template details. */
-export interface ITemplateDetailsResponse {
-	resource?: string;
-	id: string;
-	name: string;
-	document_name?: string | null;
-	message?: string | null;
-	status: string;
-	account_id?: string;
-	pages?: ITemplatePage[];
-	roles?: ITemplateRole[];
-	/** Tags attached to the template itself. */
-	tags?: IInlineTag[];
-	/** Tags auto-applied to every document created from this template. */
-	default_document_tags?: IInlineTag[];
-	created_at: string;
-	updated_at?: string;
+/** Full template details, including any platform-specific extension fields. */
+export interface ITemplateDetailsResponse extends ITemplateListItem {
 	[key: string]: unknown;
 }
 
@@ -778,22 +779,28 @@ export interface ITemplateSigner {
 	id: string;
 	verification_method?: AssignmentVerificationMethod;
 	notification_methods?: AssignmentNotificationMethod[];
-	/** Positive integer controlling signing order (see {@link SignerReference}). */
+	/**
+	 * Positive signing order. If used for any role, every role needs a step and
+	 * the distinct values must form a contiguous sequence starting at 1.
+	 */
 	step?: number;
 }
 
-/**
- * Signer entry accepted by the template cost-estimation endpoint, where the
- * signer `id` is optional (the docs mark it "not required for cost estimation").
- */
-export interface ITemplateCostSigner extends Omit<ITemplateSigner, 'id'> {
+/** Signer entry accepted by the template cost-estimation endpoint. */
+export interface ITemplateCostSigner {
+	role_id: string;
+	verification_method?: AssignmentVerificationMethod;
+	notification_methods?: AssignmentNotificationMethod[];
+	/** Compatibility extension retained for integrations that already send a signer ID. */
 	id?: string;
+	/** Compatibility extension retained for integrations that already send a signing step. */
+	step?: number;
 }
 
 /** One editor field value baked into a generated document. */
 export interface ITemplateEditorField {
 	field_id: string;
-	value: unknown;
+	value: string;
 }
 
 /** Options for creating a document from a template. */
@@ -865,7 +872,7 @@ export interface IPublicDocumentInfo {
 }
 
 /** Channel accepted by the `send-token` endpoint. */
-export type SendTokenChannel = 'email' | 'whatsapp' | string;
+export type SendTokenChannel = 'email' | 'whatsapp' | (string & {});
 
 /**
  * Response from `PUT /public/documents/{id}/send-token`.
@@ -965,14 +972,17 @@ export interface ICreateFieldPayload {
 	name: string;
 	regex?: string;
 	is_required?: boolean;
+	/** Compatibility extension; not present in the published create schema. */
 	is_active?: boolean;
 }
 
 /** Payload for updating a field definition. */
 export interface IUpdateFieldPayload {
+	/** Compatibility extension; not present in the published update schema. */
 	type?: string;
 	name?: string;
 	regex?: string | null;
+	/** Compatibility extension; not present in the published update schema. */
 	is_required?: boolean;
 	is_active?: boolean;
 }

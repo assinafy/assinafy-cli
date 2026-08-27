@@ -39,17 +39,15 @@ export class WebhookVerifier {
 	/** Returns `true` if `signature` is a valid HMAC of `payload` under the configured scheme. */
 	verify(payload: string | Buffer, signature: string): boolean {
 		if (!this.webhookSecret || !signature) return false;
-
-		const buf = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
-		const expected = createHmac(this.algorithm, this.webhookSecret)
-			.update(buf)
-			.digest(this.encoding);
-		const provided = signature.trim();
-
-		const a = Buffer.from(expected, 'utf8');
-		const b = Buffer.from(provided, 'utf8');
-		if (a.length !== b.length) return false;
 		try {
+			const buf = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
+			const expected = createHmac(this.algorithm, this.webhookSecret)
+				.update(buf)
+				.digest(this.encoding);
+			const provided = signature.trim();
+			const a = Buffer.from(expected, 'utf8');
+			const b = Buffer.from(provided, 'utf8');
+			if (a.length !== b.length) return false;
 			return timingSafeEqual(a, b);
 		} catch {
 			return false;
@@ -71,8 +69,9 @@ export class WebhookVerifier {
 	/** Extract the event name (`event` or `type`) from an event envelope. */
 	getEventType(event: IWebhookPayload | null | undefined): string | null {
 		if (!event || typeof event !== 'object') return null;
-		const e = event as IWebhookPayload & { type?: string };
-		return e.event ?? e.type ?? null;
+		const e = event as IWebhookPayload & { type?: unknown };
+		if (typeof e.event === 'string') return e.event;
+		return typeof e.type === 'string' ? e.type : null;
 	}
 
 	/**

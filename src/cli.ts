@@ -49,7 +49,7 @@ ${pc.gray('Examples:')}
   ${pc.blue('$ assinafy login')}                              Store an API key
   ${pc.blue('$ assinafy whoami')}                             Verify credentials
   ${pc.blue('$ assinafy documents upload contract.pdf')}      Upload a PDF
-  ${pc.blue('$ assinafy send contract.pdf --signer "Ana <ana@x.com>"')}
+  ${pc.blue('$ assinafy send contract.pdf --signer "Ana <ana@example.com>"')}
 
 ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assinafy.com.br/v1')}
 `,
