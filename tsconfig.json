@@ -19,6 +19,6 @@
 		"declaration": false,
 		"noEmit": true
 	},
-	"include": ["src", "vitest.config.ts", "tsup.config.ts"],
+	"include": ["src", "vitest.config.ts", "tsup.config.ts", "tsup.api.config.ts"],
 	"exclude": ["node_modules", "dist"]
 }

@@ -11,7 +11,13 @@ import type {
 	PaginatedResult,
 	SignerReference,
 } from '../types.js';
-import { cleanParams, requireIso8601, requireSort } from '../utils.js';
+import {
+	cleanParams,
+	requireIso8601,
+	requireSort,
+	validateDigitalCertificateSteps,
+	validateSignerOptions,
+} from '../utils.js';
 import { BaseResource } from './base.js';
 
 /**
@@ -20,21 +26,43 @@ import { BaseResource } from './base.js';
  */
 export function buildAssignmentPayload(
 	payload: ICreateAssignmentPayload,
-	options: { allowSignersWithoutId?: boolean; allowEmptySigners?: boolean } = {},
+	options: {
+		allowSignersWithoutId?: boolean;
+		allowEmptySigners?: boolean;
+		skipDigitalCertificateStepValidation?: boolean;
+	} = {},
 ): Record<string, unknown> {
+	if (
+		payload.method !== undefined &&
+		payload.method !== 'virtual' &&
+		payload.method !== 'collect'
+	) {
+		throw new ValidationError('method must be virtual or collect');
+	}
 	const signers = extractSignerRefs(payload);
 	// Cost estimation for `collect` assignments may legitimately carry zero
 	// signers (the docs mark `signers` "Required for virtual" only), so callers
 	// can opt out of the non-empty guard.
-	if (signers.length === 0 && !options.allowEmptySigners) {
+	if (
+		signers.length === 0 &&
+		(!options.allowEmptySigners || (payload.method ?? 'virtual') !== 'collect')
+	) {
 		throw new ValidationError('At least one signer is required', {
 			signers: payload.signers ?? payload.signer_ids ?? payload.signerIds,
 		});
 	}
+	if (payload.method === 'collect' && !Array.isArray(payload.entries)) {
+		throw new ValidationError('entries are required for collect assignments');
+	}
+
+	const normalisedSigners = signers.map((ref) => normaliseSignerRef(ref, options));
+	if (!options.skipDigitalCertificateStepValidation) {
+		validateDigitalCertificateSteps(normalisedSigners);
+	}
 
 	return cleanParams({
 		method: payload.method ?? 'virtual',
-		signers: signers.map((ref) => normaliseSignerRef(ref, options)),
+		signers: normalisedSigners,
 		message: payload.message,
 		expires_at:
 			payload.expires_at === undefined
@@ -77,6 +105,7 @@ function normaliseSignerRef(
 			step?: number;
 		};
 		const id = input.id ?? input.signer_id;
+		validateSignerOptions(input);
 		const normalised = cleanParams({
 			id,
 			verification_method: input.verification_method,
@@ -153,6 +182,7 @@ export class AssignmentResource extends BaseResource {
 				buildAssignmentPayload(payload, {
 					allowSignersWithoutId: true,
 					allowEmptySigners: true,
+					skipDigitalCertificateStepValidation: true,
 				}),
 			),
 		);
@@ -160,7 +190,8 @@ export class AssignmentResource extends BaseResource {
 
 	/**
 	 * Update the expiration date of an existing assignment.
-	 * Pass `null` to remove the expiration entirely.
+	 * The published API accepts an ISO 8601 timestamp. Deployments that support
+	 * clearing an expiration also accept `null`.
 	 */
 	async resetExpiration(
 		documentId: string,

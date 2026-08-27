@@ -5,7 +5,7 @@
 ```text
 Usage: assinafy signer [options] [command]
 
-Signer-side flows authenticated by a signer access code
+Signer-side flows and public artifact downloads
 
 Options:
   -h, --help                                             display help for command
@@ -93,7 +93,8 @@ Arguments:
                         bundle
 
 Options:
-  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --access-code <code>  Optional signer identity preflight code (env:
+                        ASSINAFY_SIGNER_ACCESS_CODE)
   -o, --output <path>   Output file path
   --force               Overwrite the output file if it already exists
   -h, --help            display help for command

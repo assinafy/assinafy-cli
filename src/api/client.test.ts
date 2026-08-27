@@ -35,6 +35,13 @@ describe('AssinafyClient transport security', () => {
 		).toThrow(/query string or fragment/);
 	});
 
+	it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+		'rejects invalid request timeout %s',
+		(timeout) => {
+			expect(() => new AssinafyClient({ apiKey: 'test-key', timeout })).toThrow(/finite positive/);
+		},
+	);
+
 	it('does not forward credentials through an HTTP redirect', async () => {
 		let targetHits = 0;
 		const target = createServer((_request, response) => {

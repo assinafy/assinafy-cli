@@ -8,7 +8,7 @@ import type {
 	PaginatedResult,
 	WebhookEventType,
 } from '../types.js';
-import { cleanParams, requireSort } from '../utils.js';
+import { cleanParams, requireEmail, requireSort } from '../utils.js';
 import { BaseResource } from './base.js';
 
 const DEFAULT_EVENTS: WebhookEventType[] = [
@@ -26,7 +26,26 @@ export class WebhookResource extends BaseResource {
 		accountId?: string,
 	): Promise<IWebhookSubscription> {
 		if (!payload.url) throw new ValidationError('Webhook URL is required');
-		if (!payload.email) throw new ValidationError('Webhook email is required');
+		let webhookUrl: URL;
+		try {
+			webhookUrl = new URL(payload.url);
+		} catch {
+			throw new ValidationError('Webhook URL must be a valid HTTP(S) URL');
+		}
+		if (webhookUrl.protocol !== 'http:' && webhookUrl.protocol !== 'https:') {
+			throw new ValidationError('Webhook URL must be a valid HTTP(S) URL');
+		}
+		requireEmail(payload.email);
+		if (
+			payload.events !== undefined &&
+			(!Array.isArray(payload.events) ||
+				payload.events.some((event) => typeof event !== 'string' || !event))
+		) {
+			throw new ValidationError('Webhook events must contain non-empty strings');
+		}
+		if (payload.is_active !== undefined && typeof payload.is_active !== 'boolean') {
+			throw new ValidationError('Webhook is_active must be a boolean');
+		}
 
 		const id = this.accountId(accountId);
 		const body = {

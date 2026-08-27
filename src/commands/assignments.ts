@@ -124,11 +124,15 @@ const estimateCostCommand = new Command('estimate-cost')
 	});
 
 const resetExpirationCommand = new Command('reset-expiration')
-	.description('Update or clear an assignment expiration date')
+	.description('Update an assignment expiration date')
 	.argument('<documentId>', 'Document ID')
 	.argument('<assignmentId>', 'Assignment ID')
 	.addOption(new Option('--expires-at <iso8601>', 'New expiration timestamp').conflicts('clear'))
-	.addOption(new Option('--clear', 'Remove the expiration entirely').conflicts('expiresAt'))
+	.addOption(
+		new Option('--clear', 'Remove the expiration when supported by the deployment').conflicts(
+			'expiresAt',
+		),
+	)
 	.action(async (documentId, assignmentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			if (!opts.clear && !opts.expiresAt) {

@@ -120,6 +120,31 @@ describe('buildAssignmentPayload', () => {
 		expect(() => buildAssignmentPayload({ signers: ['a'], signer_ids: ['b'] })).toThrow(
 			'Provide only one',
 		);
+		expect(() => buildAssignmentPayload({ method: 'other' as never, signers: ['a'] })).toThrow(
+			/method/,
+		);
+		expect(() =>
+			buildAssignmentPayload({
+				signers: [{ id: 'a', verification_method: 'SMS' as never }],
+			}),
+		).toThrow(/verification_method/);
+		expect(() =>
+			buildAssignmentPayload({
+				signers: [{ id: 'a', notification_methods: ['SMS' as never] }],
+			}),
+		).toThrow(/notification_methods/);
+		expect(() => buildAssignmentPayload({ signers: [{ id: 'a', step: 1.5 }] })).toThrow(/step/);
+		expect(() =>
+			buildAssignmentPayload({
+				signers: [{ id: 'a', verification_method: 'DigitalCertificate' }, { id: 'b' }],
+			}),
+		).toThrow(/alone/);
+		expect(() =>
+			buildAssignmentPayload({ method: 'virtual', signers: [] }, { allowEmptySigners: true }),
+		).toThrow(/At least one signer/);
+		expect(() => buildAssignmentPayload({ method: 'collect', signers: ['a'] })).toThrow(
+			/entries are required/,
+		);
 	});
 });
 
@@ -158,6 +183,21 @@ describe('DocumentResource', () => {
 				body: { recipient: '+5548999990000', channel: 'whatsapp' },
 			},
 		]);
+	});
+
+	it('rejects invalid token recipients and channels before making a request', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls));
+		await expect(docs.sendToken('doc1', { email: 'invalid' })).rejects.toThrow(
+			'Invalid email address',
+		);
+		await expect(docs.sendToken('doc1', 'invalid', 'email')).rejects.toThrow(
+			'Invalid email address',
+		);
+		await expect(docs.sendToken('doc1', 'recipient', 'sms' as 'email')).rejects.toThrow(
+			'channel must be email or whatsapp',
+		);
+		expect(calls).toHaveLength(0);
 	});
 
 	it('preserves the published status-only send-token response', async () => {
@@ -202,11 +242,11 @@ describe('DocumentResource', () => {
 		const calls: CapturedCall[] = [];
 		const docs = new DocumentResource(mockHttp(calls), 'acc');
 		await docs.replaceTags('doc1', []);
-		await docs.addTags('doc1', ['Legal']);
+		await docs.addTags('doc1', ['tag1']);
 		expect(await docs.detachTag('doc1', 'tag1')).toEqual({ detached: true });
 		expect(calls.map((c) => [c.method, c.url, c.body])).toEqual([
 			['PUT', '/accounts/acc/documents/doc1/tags', { tags: [] }],
-			['POST', '/accounts/acc/documents/doc1/tags', { tags: ['Legal'] }],
+			['POST', '/accounts/acc/documents/doc1/tags', { tags: ['tag1'] }],
 			['DELETE', '/accounts/acc/documents/doc1/tags/tag1', undefined],
 		]);
 	});
@@ -248,6 +288,48 @@ describe('DocumentResource', () => {
 			body: { name: 'New Name.pdf' },
 		});
 		await expect(docs.rename('doc1', '   ')).rejects.toThrow(ValidationError);
+	});
+
+	it('validates template signer payloads before sending them', async () => {
+		const calls: CapturedCall[] = [];
+		const docs = new DocumentResource(mockHttp(calls), 'acc');
+		await docs.createFromTemplate('template1', [
+			{ role_id: 'role1', id: 'signer1', notification_methods: ['Email'], step: 1 },
+		]);
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/accounts/acc/templates/template1/documents',
+		});
+		await expect(
+			docs.createFromTemplate('template1', [{ role_id: '', id: 'signer1' }]),
+		).rejects.toThrow(/role_id/);
+		await expect(
+			docs.createFromTemplate('template1', [{ role_id: 'role1', id: '' }]),
+		).rejects.toThrow(/valid id/);
+		await expect(
+			docs.createFromTemplate('template1', [
+				{
+					role_id: 'role1',
+					id: 'signer1',
+					notification_methods: ['Email', 'Whatsapp'],
+				},
+			]),
+		).rejects.toThrow(/at most one/);
+		await expect(
+			docs.createFromTemplate('template1', [
+				{ role_id: 'role1', id: 'signer1', step: 1 },
+				{ role_id: 'role2', id: 'signer2' },
+			]),
+		).rejects.toThrow(/every signer/);
+		await expect(
+			docs.createFromTemplate('template1', [{ role_id: 'role1', id: 'signer1', step: 0 }]),
+		).rejects.toThrow(/positive integer/);
+		await expect(
+			docs.estimateCostFromTemplate('template1', [
+				{ role_id: 'role1', verification_method: 'SMS' as never },
+			]),
+		).rejects.toThrow(/verification_method/);
+		expect(calls).toHaveLength(1);
 	});
 
 	it('waitUntilReady surfaces a 4xx error immediately instead of masking it as a timeout', async () => {
@@ -341,6 +423,14 @@ describe('SignerResource', () => {
 		await expect(signers.create({ full_name: 'Bad Email', email: 'not-email' })).rejects.toThrow(
 			ValidationError,
 		);
+		await expect(signers.create({ full_name: 'Empty Email', email: '' })).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(signers.update('signer1', { email: 'not-email' })).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(signers.update('signer1', { full_name: '  ' })).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(0);
 	});
 
 	it('creates the documented full-name-only signer', async () => {
@@ -436,6 +526,7 @@ describe('FieldsResource', () => {
 		const calls: CapturedCall[] = [];
 		const fields = new FieldsResource(mockHttp(calls), 'acc');
 		await expect(fields.create({ type: '', name: 'x' } as never)).rejects.toThrow(ValidationError);
+		await expect(fields.validate('field1', undefined)).rejects.toThrow(ValidationError);
 		await fields.validate('field1', '400.676.228-36', { signerAccessCode: 'code-1' });
 		expect(calls[0]).toMatchObject({
 			method: 'POST',
@@ -452,6 +543,12 @@ describe('FieldsResource', () => {
 		const calls: CapturedCall[] = [];
 		const fields = new FieldsResource(mockHttp(calls), 'acc');
 		await expect(fields.validateMultiple([])).rejects.toThrow(ValidationError);
+		await expect(fields.validateMultiple([{ field_id: '', value: 'x' }])).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(fields.validateMultiple([{ field_id: 'f1' } as never])).rejects.toThrow(
+			ValidationError,
+		);
 		await fields.validateMultiple([{ field_id: 'f1', value: 'x' }], { signerAccessCode: 'code-1' });
 		await fields.listTypes();
 		expect(calls.map((c) => [c.method, c.url])).toEqual([
@@ -565,6 +662,28 @@ describe('WebhookResource', () => {
 		await expect(webhooks.retryDispatch('')).rejects.toThrow(ValidationError);
 	});
 
+	it('rejects malformed webhook destinations before making a request', async () => {
+		const calls: CapturedCall[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		await expect(webhooks.register({ url: 'not-a-url', email: 'ops@example.com' })).rejects.toThrow(
+			/HTTP/,
+		);
+		await expect(
+			webhooks.register({ url: 'ftp://example.com/hook', email: 'ops@example.com' }),
+		).rejects.toThrow(/HTTP/);
+		await expect(
+			webhooks.register({ url: 'https://example.com/hook', email: 'not-email' }),
+		).rejects.toThrow(/email/);
+		await expect(
+			webhooks.register({
+				url: 'https://example.com/hook',
+				email: 'ops@example.com',
+				events: [''] as never,
+			}),
+		).rejects.toThrow(/events/);
+		expect(calls).toHaveLength(0);
+	});
+
 	it('rejects ignored dispatch search and unsupported sort values', async () => {
 		const webhooks = new WebhookResource(mockHttp(), 'acc');
 		await expect(webhooks.listDispatches({ search: 'ignored' } as never)).rejects.toThrow(
@@ -577,6 +696,31 @@ describe('WebhookResource', () => {
 });
 
 describe('SignerDocumentsResource', () => {
+	it('downloads from the public route without forwarding owner credentials', async () => {
+		const calls: CapturedCall[] = [];
+		const bytes = new Uint8Array([1, 2, 3]);
+		const http = {
+			...mockHttp(),
+			get: async (url: string, config?: CapturedCall['config']) => {
+				calls.push({ method: 'GET', url, config });
+				return { status: 200, data: bytes.buffer, headers: {} };
+			},
+		} as unknown as AxiosInstance;
+		await expect(
+			new SignerDocumentsResource(http).download('signer1', 'doc1', 'original'),
+		).resolves.toEqual(Buffer.from(bytes));
+		expect(calls).toMatchObject([
+			{
+				method: 'GET',
+				url: '/signers/signer1/documents/doc1/download/original',
+				config: {
+					responseType: 'arraybuffer',
+					headers: { Authorization: undefined, 'X-Api-Key': undefined },
+				},
+			},
+		]);
+	});
+
 	it('preflights signer artifact downloads through a protected identity route', async () => {
 		const calls: CapturedCall[] = [];
 		const bytes = new Uint8Array([1, 2, 3]);
@@ -737,7 +881,12 @@ describe('AssignmentResource', () => {
 		const calls: CapturedCall[] = [];
 		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
 		await assignments.create('doc1', { signers: ['signer1'] });
-		await assignments.estimateCost('doc1', { signers: [{ verification_method: 'Whatsapp' }] });
+		await assignments.estimateCost('doc1', {
+			signers: [
+				{ verification_method: 'DigitalCertificate' },
+				{ verification_method: 'DigitalCertificate' },
+			],
+		});
 		expect(calls).toMatchObject([
 			{
 				method: 'POST',
@@ -747,7 +896,13 @@ describe('AssignmentResource', () => {
 			{
 				method: 'POST',
 				url: '/documents/doc1/assignments/estimate-cost',
-				body: { method: 'virtual', signers: [{ verification_method: 'Whatsapp' }] },
+				body: {
+					method: 'virtual',
+					signers: [
+						{ verification_method: 'DigitalCertificate' },
+						{ verification_method: 'DigitalCertificate' },
+					],
+				},
 			},
 		]);
 	});
@@ -774,7 +929,7 @@ describe('AssignmentResource', () => {
 			url: '/assignments',
 			config: { params: { accountId: 'acc', 'per-page': 10 } },
 		});
-		await assignments.list({ accountId: 'untrusted' });
+		await assignments.list({ accountId: 'untrusted' } as never);
 		expect(calls[1]?.config?.params).toMatchObject({ accountId: 'acc' });
 	});
 
@@ -812,11 +967,11 @@ describe('AssignmentResource', () => {
 	it('estimates cost for a collect assignment with no signers', async () => {
 		const calls: CapturedCall[] = [];
 		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
-		await assignments.estimateCost('doc1', { method: 'collect' });
+		await assignments.estimateCost('doc1', { method: 'collect', entries: [] });
 		expect(calls[0]).toMatchObject({
 			method: 'POST',
 			url: '/documents/doc1/assignments/estimate-cost',
-			body: { method: 'collect', signers: [] },
+			body: { method: 'collect', signers: [], entries: [] },
 		});
 	});
 });

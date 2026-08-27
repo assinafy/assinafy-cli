@@ -1,17 +1,12 @@
 import path from 'node:path';
 import { Command } from '@commander-js/extra-typings';
-import type {
-	IDocumentStatsParams,
-	IDocumentStatsRow,
-	IUpdateWorkspacePayload,
-	NotificationSenderType,
-} from '../api';
+import type { IDocumentStatsParams, IUpdateWorkspacePayload, NotificationSenderType } from '../api';
 import { readBinary, writeBinary } from '../lib/files';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
-import { renderKeyValue, renderTable } from '../lib/table';
+import { renderDocumentStats, renderKeyValue, renderTable } from '../lib/table';
 import { sanitizeTerminalText } from '../lib/terminal';
 
 const createCommand = new Command('create')
@@ -116,7 +111,7 @@ const statsCommand = new Command('stats')
 			const rows = await withSpinner('Fetching workspace statistics', config, () =>
 				client.workspaces.stats(id, params),
 			);
-			printData(rows, config, renderStats);
+			printData(rows, config, renderDocumentStats);
 		});
 	});
 
@@ -216,15 +211,4 @@ function logoContentType(file: string): string {
 			'.webp': 'image/webp',
 		}[path.extname(file).toLowerCase()] ?? 'image/png'
 	);
-}
-
-function renderStats(rows: IDocumentStatsRow[]): string {
-	return renderTable(rows, [
-		{ header: 'PERIOD', value: (row) => row.period },
-		{ header: 'UPLOADED', value: (row) => row.documents_uploaded },
-		{ header: 'SENT', value: (row) => row.documents_sent },
-		{ header: 'REQUESTS', value: (row) => row.signature_requests },
-		{ header: 'COMPLETED', value: (row) => row.signature_requests_completed },
-		{ header: 'CERTIFIED', value: (row) => row.documents_certified },
-	]);
 }

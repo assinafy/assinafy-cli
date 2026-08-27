@@ -69,16 +69,6 @@ export function runWithClient(
 	return withResolvedConfig(command, (config) => handler({ client: createClient(config), config }));
 }
 
-/** Run a command against endpoints that do not require API-key/JWT credentials. */
-export function runWithOptionalClient(
-	command: CommandLike,
-	handler: (ctx: ClientContext) => Promise<void>,
-): Promise<void> {
-	return withResolvedConfig(command, (config) =>
-		handler({ client: createClient(config, { allowUnauthenticated: true }), config }),
-	);
-}
-
 /** Run a public command without forwarding any configured credentials. */
 export function runWithPublicClient(
 	command: CommandLike,

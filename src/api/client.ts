@@ -85,6 +85,12 @@ export class AssinafyClient {
 				'An API key (options.apiKey) or legacy access token (options.token) is required.',
 			);
 		}
+		if (
+			options.timeout !== undefined &&
+			(!Number.isFinite(options.timeout) || options.timeout <= 0)
+		) {
+			throw new ValidationError('timeout must be a finite positive number');
+		}
 
 		this.defaultAccountId = options.accountId;
 		this.logger = options.logger ?? createNoopLogger();

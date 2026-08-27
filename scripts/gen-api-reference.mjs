@@ -3,6 +3,14 @@ import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+	isCredentialKey,
+	isGovernmentKey,
+	isIdentifierKey,
+	isUrlKey,
+	normalizeKey,
+	publicIdentifier,
+} from './api-doc-values.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsUrl = 'https://api.assinafy.com.br/v1/docs';
@@ -11,7 +19,6 @@ const methods = new Set(['get', 'post', 'put', 'patch', 'delete']);
 const exampleIds = new Map();
 const exampleEmails = new Map();
 const exampleUrls = new Map();
-const publicIdentifier = /^(?:document|assignment|signature|signer|user|template)_[a-z_]+$/;
 
 const response = await fetch(specUrl);
 if (!response.ok) throw new Error(`Failed to fetch ${specUrl}: HTTP ${response.status}`);
@@ -147,7 +154,9 @@ function sanitizeJsonValue(value, key = '') {
 	}
 	if (isGovernmentKey(normalizedKey))
 		return normalizedKey === 'cnpj' ? '0'.repeat(14) : '0'.repeat(11);
-	if (/(?:^|_)(?:email)$/.test(normalizedKey)) return placeholderEmail(String(value));
+	if (typeof value === 'string' && /(?:^|_)(?:email)$/.test(normalizedKey)) {
+		return placeholderEmail(value);
+	}
 	if (normalizedKey === 'recipient') {
 		return String(value).includes('@') ? placeholderEmail(String(value)) : '+5500000000000';
 	}
@@ -166,57 +175,6 @@ function sanitizeJsonValue(value, key = '') {
 		return placeholderUrl(value);
 	}
 	return value;
-}
-
-function isCredentialKey(key) {
-	return (
-		key === 'authorization' ||
-		key === 'credential' ||
-		key === 'credentials' ||
-		key.endsWith('_credential') ||
-		key.endsWith('_credentials') ||
-		key === 'secret' ||
-		key.endsWith('_secret') ||
-		key === 'password' ||
-		key.endsWith('_password') ||
-		key === 'token' ||
-		key.endsWith('_token') ||
-		key === 'api_key' ||
-		key === 'access_token' ||
-		key === 'signer_access_code' ||
-		key === 'verification_code'
-	);
-}
-
-function isGovernmentKey(key) {
-	return key === 'government_id' || key === 'tax_id' || key === 'cpf' || key === 'cnpj';
-}
-
-function isIdentifierKey(key) {
-	const normalizedKey = normalizeKey(key);
-	return (
-		normalizedKey === 'id' ||
-		normalizedKey === 'hash' ||
-		normalizedKey === 'copy_receivers' ||
-		/_(?:id|ids)$/.test(normalizedKey)
-	);
-}
-
-function isUrlKey(key) {
-	return (
-		key === 'url' ||
-		key.endsWith('_url') ||
-		key === 'uri' ||
-		key.endsWith('_uri') ||
-		key === 'endpoint'
-	);
-}
-
-function normalizeKey(key) {
-	return key
-		.replace(/([a-z\d])([A-Z])/g, '$1_$2')
-		.replaceAll('-', '_')
-		.toLowerCase();
 }
 
 function placeholderId(value) {

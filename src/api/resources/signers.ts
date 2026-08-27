@@ -8,21 +8,13 @@ import type {
 	ISignerListResponse,
 	IUpdateSignerPayload,
 } from '../types.js';
-import { cleanParams, requireSort } from '../utils.js';
+import { cleanParams, requireEmail, requireSort } from '../utils.js';
 import { BaseResource } from './base.js';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Validate the locally knowable fields before creating a signer. */
 export function validateCreateSignerPayload(payload: ICreateSignerPayload): void {
 	if (!payload.full_name?.trim()) throw new ValidationError('Signer full name is required');
-	if (payload.email) assertEmail(payload.email);
-}
-
-function assertEmail(email: string): void {
-	if (!email || !EMAIL_RE.test(email)) {
-		throw new ValidationError('Invalid email address', { email });
-	}
+	if (payload.email !== undefined) requireEmail(payload.email);
 }
 
 export class SignerResource extends BaseResource {
@@ -92,6 +84,10 @@ export class SignerResource extends BaseResource {
 	): Promise<ICreateSignerResponse> {
 		const id = this.accountId(accountId);
 		const sid = this.requireId(signerId, 'Signer ID');
+		if (payload.full_name !== undefined && !payload.full_name.trim()) {
+			throw new ValidationError('Signer full name cannot be blank');
+		}
+		if (payload.email !== undefined) requireEmail(payload.email);
 		return this.call('Failed to update signer', () =>
 			this.http.put(`/accounts/${id}/signers/${sid}`, normaliseSignerPayload(payload, true)),
 		);
@@ -108,7 +104,7 @@ export class SignerResource extends BaseResource {
 
 	/** Find a signer by email via the API's `search` parameter. Returns `null` if none match. */
 	async findByEmail(email: string, accountId?: string): Promise<ISigner | null> {
-		assertEmail(email);
+		requireEmail(email);
 		try {
 			const { data } = await this.list({ search: email, per_page: 100 }, accountId);
 			const lower = email.toLowerCase();

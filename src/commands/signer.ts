@@ -74,7 +74,11 @@ const downloadCommand = new Command('download')
 	.argument('<signerId>', 'Signer ID')
 	.argument('<documentId>', 'Document ID')
 	.argument('<artifact>', 'original | certificated | certificate-page | pades | bundle')
-	.addOption(accessCodeOption())
+	.addOption(
+		new Option('--access-code <code>', 'Optional signer identity preflight code').env(
+			'ASSINAFY_SIGNER_ACCESS_CODE',
+		),
+	)
 	.option('-o, --output <path>', 'Output file path')
 	.option('--force', 'Overwrite the output file if it already exists')
 	.action(async (signerId, documentId, artifact, opts, command) => {
@@ -296,7 +300,7 @@ const declineMultipleCommand = new Command('decline-multiple')
 	});
 
 export const signerCommand = new Command('signer')
-	.description('Signer-side flows authenticated by a signer access code')
+	.description('Signer-side flows and public artifact downloads')
 	.addCommand(documentCommand)
 	.addCommand(documentsCommand)
 	.addCommand(searchCommand)

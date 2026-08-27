@@ -28,7 +28,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node-version: 22.12.0
+            node-version: 22.x
           - os: ubuntu-latest
             node-version: 24.x
           - os: ubuntu-latest
@@ -63,11 +63,18 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Audit dependencies
+        if: runner.os == 'Linux' && matrix.node-version == '24.x'
+        run: npm audit --audit-level=high
+
       - name: Build
         run: npm run build
 
       - name: Verify bundle
         run: npm run verify:bundle
+
+      - name: Verify API documentation
+        run: npm run verify:api-docs
 
       - name: Verify generated files are up to date
         run: |

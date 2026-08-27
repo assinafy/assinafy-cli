@@ -2,11 +2,18 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+	isCredentialKey,
+	isGovernmentKey,
+	isIdentifierKey,
+	isUrlKey,
+	normalizeKey,
+	publicIdentifier,
+} from './api-doc-values.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(path.join(root, 'docs', 'api-operations.json'), 'utf8'));
 const reference = readFileSync(path.join(root, 'docs', 'api-reference.md'), 'utf8');
-const publicIdentifier = /^(?:document|assignment|signature|signer|user|template)_[a-z_]+$/;
 
 for (const operation of manifest.operations) {
 	const marker = `\`${operation.method} ${operation.path}\``;
@@ -99,7 +106,13 @@ function verifyPlaceholderValues(value, key = '') {
 		}
 		return;
 	}
-	if (/(?:^|_)(?:email)$/.test(normalizedKey)) {
+	if (
+		/^(?:documents_(?:uploaded|sent|certified)|signature_requests(?:_|$))/.test(normalizedKey) &&
+		(!Number.isInteger(value) || value < 0)
+	) {
+		throw new Error(`API reference contains a non-numeric statistics counter in ${key}`);
+	}
+	if (typeof value === 'string' && /(?:^|_)(?:email)$/.test(normalizedKey)) {
 		if (!/^user[1-9]\d*@example\.com$/.test(value)) {
 			throw new Error(`API reference contains a non-placeholder ${key}`);
 		}
@@ -149,55 +162,4 @@ function verifyIdentifier(value, key) {
 	if (!publicIdentifier.test(value) && !/^example_id_[1-9]\d*$/.test(value)) {
 		throw new Error(`API reference contains a non-placeholder identifier in ${key}`);
 	}
-}
-
-function isCredentialKey(key) {
-	return (
-		key === 'authorization' ||
-		key === 'credential' ||
-		key === 'credentials' ||
-		key.endsWith('_credential') ||
-		key.endsWith('_credentials') ||
-		key === 'secret' ||
-		key.endsWith('_secret') ||
-		key === 'password' ||
-		key.endsWith('_password') ||
-		key === 'token' ||
-		key.endsWith('_token') ||
-		key === 'api_key' ||
-		key === 'access_token' ||
-		key === 'signer_access_code' ||
-		key === 'verification_code'
-	);
-}
-
-function isGovernmentKey(key) {
-	return key === 'government_id' || key === 'tax_id' || key === 'cpf' || key === 'cnpj';
-}
-
-function isIdentifierKey(key) {
-	const normalizedKey = normalizeKey(key);
-	return (
-		normalizedKey === 'id' ||
-		normalizedKey === 'hash' ||
-		normalizedKey === 'copy_receivers' ||
-		/_(?:id|ids)$/.test(normalizedKey)
-	);
-}
-
-function isUrlKey(key) {
-	return (
-		key === 'url' ||
-		key.endsWith('_url') ||
-		key === 'uri' ||
-		key.endsWith('_uri') ||
-		key === 'endpoint'
-	);
-}
-
-function normalizeKey(key) {
-	return key
-		.replace(/([a-z\d])([A-Z])/g, '$1_$2')
-		.replaceAll('-', '_')
-		.toLowerCase();
 }

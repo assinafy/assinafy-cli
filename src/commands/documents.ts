@@ -258,14 +258,14 @@ const tagsCommand = new Command('tags')
 	});
 
 const tagsSetCommand = new Command('tags-set')
-	.description('Replace a document tag set (names; unknown names are auto-created)')
+	.description('Replace a document tag set by tag ID')
 	.argument('<id>', 'Document ID')
-	.argument('[names...]', 'Tag names (pass none to detach all)')
-	.action(async (id, names, _opts, command) => {
+	.argument('[tagIds...]', 'Tag IDs (pass none to detach all)')
+	.action(async (id, tagIds, _opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const tags = await withSpinner('Replacing tags', config, () =>
-				client.documents.replaceTags(id, names ?? [], accountId),
+				client.documents.replaceTags(id, tagIds ?? [], accountId),
 			);
 			printSuccess(`Document now has ${tags.length} tag(s)`, config);
 			printData(tags, config);
@@ -273,14 +273,14 @@ const tagsSetCommand = new Command('tags-set')
 	});
 
 const tagsAddCommand = new Command('tags-add')
-	.description('Attach additional tags by name without removing existing ones')
+	.description('Attach additional tag IDs without removing existing ones')
 	.argument('<id>', 'Document ID')
-	.argument('<names...>', 'Tag names to attach')
-	.action(async (id, names, _opts, command) => {
+	.argument('<tagIds...>', 'Tag IDs to attach')
+	.action(async (id, tagIds, _opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const tags = await withSpinner('Adding tags', config, () =>
-				client.documents.addTags(id, names, accountId),
+				client.documents.addTags(id, tagIds, accountId),
 			);
 			printSuccess(`Document now has ${tags.length} tag(s)`, config);
 			printData(tags, config);

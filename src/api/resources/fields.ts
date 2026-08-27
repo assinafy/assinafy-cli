@@ -101,6 +101,7 @@ export class FieldsResource extends BaseResource {
 	): Promise<IFieldValidationResult> {
 		const id = this.accountId(options.accountId);
 		const fid = this.requireId(fieldId, 'Field ID');
+		if (value === undefined) throw new ValidationError('value is required');
 		return this.call('Failed to validate field value', () =>
 			this.http.post(
 				`/accounts/${id}/fields/${fid}/validate`,
@@ -117,6 +118,18 @@ export class FieldsResource extends BaseResource {
 	): Promise<IFieldValidationResult[]> {
 		if (!Array.isArray(entries) || entries.length === 0) {
 			throw new ValidationError('entries must be a non-empty array');
+		}
+		if (
+			entries.some(
+				(entry) =>
+					!entry ||
+					typeof entry !== 'object' ||
+					typeof entry.field_id !== 'string' ||
+					!entry.field_id ||
+					entry.value === undefined,
+			)
+		) {
+			throw new ValidationError('each entry must contain field_id and value');
 		}
 		const id = this.accountId(options.accountId);
 		return this.call('Failed to validate field values', () =>
