@@ -1,54 +1,46 @@
 # @assinafy/cli
 
-The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track the audit trail, and download certified documents — from a terminal, a shell script, or an application.
+*Português · [Read in English](README.en.md)*
 
-The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 89 published API operations.
+A interface de linha de comando e o SDK Node.js oficiais da
+[API Assinafy](https://api.assinafy.com.br/v1/docs) — plataforma brasileira de assinatura eletrônica.
+Envie PDFs, gerencie signatários, solicite assinaturas, acompanhe a trilha de auditoria e baixe
+documentos certificados — do terminal, de um script shell ou de uma aplicação.
 
-This document reads top to bottom: install, authenticate, send your first signature request, then understand the model well enough to automate it. The [command reference](#command-reference) and [SDK](#nodejs-sdk) sections near the end are lookup tables you can jump to once the flow makes sense.
+A CLI é um único executável autocontido. Ela imprime tabelas legíveis por padrão e JSON estruturado
+com `--json`, então os mesmos comandos servem tanto ao uso interativo quanto à automação. O mesmo
+pacote expõe um SDK totalmente tipado em `@assinafy/cli/api`, cobrindo as 89 operações publicadas da
+API.
 
-## Contents
+> **Referência completa em inglês.** Este documento cobre instalação, autenticação e o fluxo
+> principal. A referência de comandos e do SDK está em **[README.en.md](README.en.md)**.
 
-1. [Requirements](#requirements)
-2. [Installation](#installation)
-3. [Authentication](#authentication)
-4. [Quick start](#quick-start)
-5. [How signing works](#how-signing-works)
-6. [The complete owner workflow](#the-complete-owner-workflow)
-7. [The signer side](#the-signer-side)
-8. [Webhooks](#webhooks)
-9. [Output and scripting](#output-and-scripting)
-10. [Configuration](#configuration)
-11. [Command reference](#command-reference)
-12. [Node.js SDK](#nodejs-sdk)
-13. [Security](#security)
-14. [Development](#development)
-15. [Release](#release)
-16. [Contract boundaries](#contract-boundaries)
-17. [License](#license)
+## Requisitos
 
-## Requirements
+- Node.js `>=22.12.0`. O Node.js 24 LTS é recomendado e é o que a CI usa para publicar; a CI também
+  testa 22 e 26.
+- Uma conta Assinafy e uma chave de API (veja [Autenticação](#autenticação)).
+- Linux, macOS ou Windows. Os arquivos de release são publicados para `linux-x64`, `linux-arm64`,
+  `darwin-x64`, `darwin-arm64`, `windows-x64` e `windows-arm64`.
 
-- Node.js `>=22.12.0`. Node.js 24 LTS is recommended and is what CI publishes with; CI also tests 22 and 26.
-- An Assinafy account and an API key (see [Authentication](#authentication)).
-- Linux, macOS, or Windows. Release archives ship for `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`, and `windows-arm64`.
+## Instalação
 
-## Installation
-
-### From npm
+### Pelo npm
 
 ```bash
-npm install -g @assinafy/cli@<version>
+npm install -g @assinafy/cli@<versão>
 assinafy --help
 ```
 
-Pin `@<version>` in anything reproducible; omit it only when you deliberately want the newest published release.
+Fixe `@<versão>` em qualquer coisa que precise ser reprodutível; omita apenas quando você
+deliberadamente quiser o release publicado mais recente.
 
-### From a GitHub release
+### Por um release do GitHub
 
-Download and read the installer from the same immutable version tag you are installing, then run it:
+Baixe e **leia** o instalador da mesma tag imutável que você está instalando, e então execute:
 
 ```bash
-ASSINAFY_VERSION=vX.Y.Z # replace with a published release tag
+ASSINAFY_VERSION=vX.Y.Z # substitua por uma tag de release publicada
 curl -fsSLo assinafy-install.sh \
   "https://raw.githubusercontent.com/assinafy/assinafy-cli/${ASSINAFY_VERSION}/install.sh"
 less assinafy-install.sh
@@ -58,467 +50,137 @@ bash assinafy-install.sh "$ASSINAFY_VERSION"
 Windows PowerShell:
 
 ```powershell
-$Version = 'vX.Y.Z' # replace with a published release tag
+$Version = 'vX.Y.Z' # substitua por uma tag de release publicada
 Invoke-WebRequest "https://raw.githubusercontent.com/assinafy/assinafy-cli/$Version/install.ps1" -OutFile .\assinafy-install.ps1
 Get-Content .\assinafy-install.ps1
 & .\assinafy-install.ps1 -Version $Version
 ```
 
-The installers fetch the matching release archive and verify it against that release's `SHA256SUMS` before replacing the executable. They install to `~/.assinafy/bin`; set `ASSINAFY_INSTALL` to choose another directory, or `ASSINAFY_NO_PATH_UPDATE=1` to leave `PATH` untouched.
+Os instaladores buscam o arquivo de release correspondente e o verificam contra o `SHA256SUMS`
+daquele release antes de substituir o executável. Instalam em `~/.assinafy/bin`; defina
+`ASSINAFY_INSTALL` para escolher outro diretório, ou `ASSINAFY_NO_PATH_UPDATE=1` para não mexer no
+`PATH`.
 
-### Without installing
+### Sem instalar
 
 ```bash
 npx @assinafy/cli whoami
 ```
 
-## Authentication
+## Autenticação
 
-Assinafy accepts two credentials. Prefer the API key.
+A Assinafy aceita duas credenciais. Prefira a chave de API.
 
-| Credential | Header sent | Use it for |
+| Credencial | Header enviado | Usar para |
 | --- | --- | --- |
-| API key | `X-Api-Key: <key>` | Everything, including unattended automation. |
-| JWT access token | `Authorization: Bearer <jwt>` | Legacy sessions and the few user-session endpoints that require one. |
+| Chave de API | `X-Api-Key: <chave>` | Tudo, inclusive automação não assistida. |
+| Token de acesso JWT | `Authorization: Bearer <jwt>` | Sessões legadas e os poucos endpoints de sessão de usuário que exigem um. |
 
-Generate an API key from the Assinafy dashboard, or from the CLI with an existing session:
+Gere uma chave de API no painel da Assinafy, ou pela CLI com uma sessão existente:
 
 ```bash
-assinafy auth login you@example.com          # returns a JWT
-assinafy auth api-keys create --token <jwt>  # generates (and rotates) the key
+assinafy auth login voce@exemplo.com.br      # devolve um JWT
+assinafy auth api-keys create --token <jwt>  # gera (e rotaciona) a chave
 ```
 
-Store the key once, then confirm it works:
+Guarde a chave uma vez e confirme que funciona:
 
 ```bash
-assinafy login    # prompts for the API key and default workspace ID
-assinafy whoami   # lists the workspaces the credential can reach
+assinafy login    # pergunta a chave de API e o ID do workspace padrão
+assinafy whoami   # lista os workspaces que a credencial alcança
 ```
 
-`whoami` printing your workspaces means the credential, the base URL, and the account ID are all correct. Most commands are workspace-scoped, so set a default account ID during `login` (or pass `--account-id` per command) to avoid repeating it.
+Se o `whoami` imprime seus workspaces, então a credencial, a URL base e o ID da conta estão todos
+corretos. A maioria dos comandos tem escopo de workspace — defina um ID de conta padrão durante o
+`login` (ou passe `--account-id` por comando) para não repetir.
 
-Credentials resolve with a fixed precedence — **CLI flag → environment variable → config file** — which is covered in full under [Configuration](#configuration).
+As credenciais são resolvidas com precedência fixa — **flag da CLI → variável de ambiente → arquivo
+de configuração**.
 
-## Quick start
+## Início rápido
 
 ```bash
-assinafy send contract.pdf \
-  --signer "Ana Lima <ana@example.com>" \
+assinafy send contrato.pdf \
+  --signer "Ana Lima <ana@exemplo.com.br>" \
   --signer "Bruno Souza <+5548999990000>" \
-  --message "Please sign this contract"
+  --message "Por favor, assine este contrato"
 ```
 
-`send` is the whole happy path in one command: it uploads the PDF, waits for the platform to finish processing it, creates or reuses each signer, and creates the signature assignment that sends out the invitations. A signer given only a phone number defaults to WhatsApp verification and notification; otherwise the platform's own defaults apply. Pass `--signers '<json>'` to set them explicitly.
+`send` é todo o caminho feliz em um comando: envia o PDF, aguarda a plataforma terminar o
+processamento, cria ou reutiliza cada signatário, e cria o assignment de assinatura que dispara os
+convites. Um signatário informado só com telefone assume verificação e notificação por WhatsApp;
+fora isso, valem os padrões da plataforma. Passe `--signers '<json>'` para defini-los explicitamente.
 
-It prints the document ID, the assignment ID, and the signer IDs — the three handles every later command needs.
+O comando imprime o ID do documento, o ID do assignment e os IDs dos signatários — os três
+identificadores de que todo comando posterior precisa.
 
-If a step fails after the upload, the error names the document and signers that were already created, so nothing is left orphaned in your workspace without a handle:
+Se um passo falhar depois do upload, o erro nomeia o documento e os signatários que já haviam sido
+criados, para que nada fique órfão no seu workspace sem um identificador:
 
 ```text
 error: Saldo insuficiente. (document doc_abc123 and 2 signer(s) were already created)
   (HTTP 402)
 ```
 
-Under `--json` the same information is machine-readable in `error.details`.
+Com `--json`, a mesma informação vem legível por máquina em `error.details`.
 
-## How signing works
+## Métodos de verificação do signatário
 
-Four resources make up the model:
-
-- **Document** — an uploaded PDF. It moves through `uploading` → `uploaded` → `metadata_processing` → `metadata_ready`, then `pending_signature` once an assignment exists, and finally `certificating` → `certificated`. Terminal failure states are `expired`, `failed`, `rejected_by_signer`, and `rejected_by_user`. Run `assinafy documents statuses` for the authoritative list and which states allow deletion.
-- **Signer** — a person in your workspace, identified by name plus an email address and/or a WhatsApp number. Signers are reusable across documents, and creating one with an email address that already exists reuses the existing record rather than duplicating it.
-- **Assignment** — the request that binds signers to a document and sends the invitations. `--method virtual` (the default) collects signatures; `--method collect` also gathers custom field values and requires `--entries` describing where each field sits on the page.
-- **Artifact** — the downloadable output. `original` is what you uploaded; `certificated` is the signed PDF; `certificate-page` is the signature-certificate sheet; `pades` is the PAdES-conformant PDF; `bundle` is a ZIP of everything. Only `original` exists before signing completes.
-
-Two side notes worth knowing before you script anything:
-
-- Processing is asynchronous. A freshly uploaded document is not immediately assignable — wait for `metadata_ready` with `documents upload --wait`, `documents wait`, or the `document_ready` webhook.
-- Assignments cost credits. `assignments estimate-cost` and `documents estimate-template-cost` tell you the price, your balance, and any blocking reason before you commit.
-
-## The complete owner workflow
-
-`send` is the shortcut. When you need explicit control over signing order, verification methods, tags, or expiration, run the steps yourself:
-
-```bash
-# 1. Create (or find) each signer. Creation is idempotent by email address.
-SIGNER_ID=$(assinafy signers create \
-  --name "Ana Lima" --email ana@example.com --json | jq -r '.id')
-
-# 2. Upload the PDF and wait for the platform to finish processing it.
-DOCUMENT_ID=$(assinafy documents upload contract.pdf \
-  --name "Service agreement" --wait --json | jq -r '.id')
-
-# 3. Check the price before spending credits.
-assinafy assignments estimate-cost "$DOCUMENT_ID" --signer-ids "$SIGNER_ID" --json
-
-# 4. Request the signatures. This is what sends the invitations.
-assinafy assignments create "$DOCUMENT_ID" \
-  --signer-ids "$SIGNER_ID" \
-  --message "Please review and sign" \
-  --expires-at "2026-12-31T23:59:59Z"
-
-# 5. Track it.
-assinafy documents progress "$DOCUMENT_ID" --json
-assinafy documents activities "$DOCUMENT_ID" --json
-
-# 6. Collect the record once every signer has completed.
-assinafy documents download "$DOCUMENT_ID" --artifact certificated -o signed-contract.pdf
-assinafy documents download "$DOCUMENT_ID" --artifact bundle -o signed-contract-bundle.zip
-```
-
-For ordered signing or mixed verification methods, replace `--signer-ids` with `--signers` and pass the full objects:
-
-```bash
-assinafy assignments create "$DOCUMENT_ID" --signers '[
-  {"id":"sig_1","verification_method":"Email","notification_methods":["Email"],"step":1},
-  {"id":"sig_2","verification_method":"Whatsapp","notification_methods":["Whatsapp"],"step":2}
-]'
-```
-
-Steps must form a contiguous sequence starting at `1`, and a `DigitalCertificate` signer must be alone in its step — both are validated locally before the request is sent. `--copy-receivers` takes **signer IDs** (people who only receive a copy of the finished document), not arbitrary email addresses.
-
-To start from a saved template instead of a PDF:
-
-```bash
-assinafy templates list --json
-assinafy documents create-from-template tmpl_123 --signers '[
-  {"role_id":"role_1","id":"sig_1","verification_method":"Email","notification_methods":["Email"]}
-]' --name "Q1 NDA"
-```
-
-If a signer needs chasing, `assignments resend <documentId> <assignmentId> <signerId>` re-sends their invitation (priced by `assignments estimate-resend-cost`), and `assignments reset-expiration` moves the deadline.
-
-Keep the certified PDF, the certificate page, the bundle, and the `documents activities` output together as the document record. Delete only disposable documents, and only once their retention obligations are satisfied.
-
-## The signer side
-
-Signers do not use your API key. Each invitation carries a one-time **access code**, and the `assinafy signer` commands act as that signer:
-
-```bash
-export ASSINAFY_SIGNER_ACCESS_CODE=<code-from-the-invitation>
-
-assinafy signer self                              # who the code belongs to
-assinafy signer assignment                        # the document as the signer sees it
-assinafy signer accept-terms
-assinafy signer upload-signature --file signature.png
-assinafy signer sign <documentId> <assignmentId> --entries '[
-  {"itemId":"item_1","fieldId":"field_1","pageId":"page_1","value":"..."}
-]'
-```
-
-Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code: `documents send-token <documentId> --email <email>` issues it and `signer verify-email --code <otp>` redeems it. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
-
-Owner API credentials are stripped from every public and signer-side request, so an access-code flow can never leak your workspace key. The published signer artifact download is public; passing `--access-code` adds an identity preflight that confirms the code belongs to the signer being downloaded for.
-
-## Webhooks
-
-Polling works, but webhooks are the right way to react to signing events:
-
-```bash
-assinafy webhooks event-types                       # what the platform can send
-assinafy webhooks register \
-  --url https://example.com/hooks/assinafy \
-  --email ops@example.com \
-  --events document_ready,signer_signed_document,signer_rejected_document
-
-assinafy webhooks dispatches --delivered false      # what failed to deliver
-assinafy webhooks retry <dispatchId>                # redeliver one event
-assinafy webhooks get                               # current subscription
-assinafy webhooks inactivate                        # stop deliveries
-```
-
-One subscription exists per workspace; `register` replaces it. Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. The API has no delete-subscription operation — use `inactivate` to stop deliveries, and note that `retry` only works while the subscription is active.
-
-Assinafy does not publish a webhook signing scheme, so the SDK's `WebhookVerifier` is experimental. See [Contract boundaries](#contract-boundaries).
-
-## Output and scripting
-
-Human output goes to **stdout**; spinners and status lines go to **stderr**, so pipes stay clean.
-
-- `--json` — structured JSON on stdout, with errors as JSON on stderr. Always machine-readable.
-- `-q, --quiet` — suppress spinners and status messages.
-
-Exit codes are `0` on success, `1` on error, and `130` on Ctrl-C. Paginated JSON keeps both the rows and the metadata:
-
-```bash
-# IDs of every pending document
-assinafy documents list --status pending_signature --json | jq -r '.data[].id'
-
-# Page through a large workspace
-assinafy documents list --page 2 --per-page 50 --json | jq '.meta'
-
-# Upload and capture the new document ID
-DOC=$(assinafy documents upload contract.pdf --json | jq -r '.id')
-
-# Attach an existing tag by its ID
-TAG_ID=$(assinafy tags list --search legal --json | jq -r '.[0].id')
-assinafy documents tags-add "$DOC" "$TAG_ID"
-```
-
-JSON errors carry a stable shape:
-
-```json
-{
-  "error": {
-    "message": "Saldo insuficiente. (document doc_abc123 and 2 signer(s) were already created)",
-    "code": "api_error",
-    "statusCode": 402,
-    "details": { "documentId": "doc_abc123", "signerIds": ["sig_1", "sig_2"] }
-  }
-}
-```
-
-Destructive commands prompt for confirmation and refuse to run unattended unless you pass `-y, --yes`.
-
-## Configuration
-
-### Precedence
-
-Every setting resolves as **CLI flag → environment variable → config-file profile → built-in default**.
-
-| What | Flag | Environment variable |
+| Método | Como funciona | Custo por signatário |
 | --- | --- | --- |
-| API key (preferred, sent as `X-Api-Key`) | `--api-key` | `ASSINAFY_API_KEY` |
-| Legacy JWT token (sent as `Bearer`) | `--token` | `ASSINAFY_TOKEN` |
-| Default account / workspace ID | `--account-id` | `ASSINAFY_ACCOUNT_ID` |
-| API base URL | `--base-url` | `ASSINAFY_BASE_URL` |
-| Config profile | `-p, --profile` | `ASSINAFY_PROFILE` |
-| Config directory | — | `ASSINAFY_CONFIG_DIR` |
-| Experimental webhook-verifier secret | _(config only)_ | `ASSINAFY_WEBHOOK_SECRET` |
-| Password / new password | `--password` / `--new-password` | `ASSINAFY_PASSWORD` / `ASSINAFY_NEW_PASSWORD` |
-| Social provider / reset token | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN` |
-| Signer access code / email OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
+| `Email` *(padrão)* | Código de uso único (OTP) por e-mail, exigido antes de assinar | Gratuito |
+| `Whatsapp` | Código de uso único (OTP) por WhatsApp | Verificação gratuita; notificação 0,45 crédito, só em planos pagos |
+| `DigitalCertificate` | O signatário assina com o **próprio certificado ICP-Brasil (A1/A3)**, pela extensão de navegador Web PKI, gerando uma assinatura **PAdES qualificada** | 2 créditos |
 
-`.env.example` documents every variable, including the installer and sandbox-test ones.
+O método de verificação e o de notificação são **acoplados**: envie um, os dois ou nenhum — o lado
+que faltar é inferido. Sem nenhum dos dois, ambos assumem `Email`. Combinações permitidas: `Email` →
+`Email`; `Whatsapp` → `Whatsapp`; `DigitalCertificate` → `Email` **ou** `Whatsapp`.
 
-Public document verification and lookup, password reset, login and social login, and all signer access-code flows work without stored credentials.
+Verifique o preço antes de gastar créditos — o subcomando de estimativa de custo devolve o
+detalhamento por item. O certificado digital exige o recurso na conta (planos Standard e Pro), CPF ou
+CNPJ em `government_id`, e que o signatário esteja **sozinho no seu passo de assinatura**.
 
-### Config file and profiles
+Signatários por certificado não completam pelo endpoint comum de assinatura: a assinatura deles é
+produzida por um handshake de dois passos com a extensão Web PKI
+(`/v1/signers/certificate/start` + `/complete`), que são rotas **somente de produção** — o sandbox
+não as expõe.
 
-`assinafy login` and `assinafy config set` write a JSON config file with owner-only (`0600`) permissions:
+## Trilha de auditoria e artefatos
 
-- Linux / macOS: `~/.config/assinafy/config.json` (honours `XDG_CONFIG_HOME`)
-- Windows: `%APPDATA%\assinafy\config.json`
-- Anywhere: `ASSINAFY_CONFIG_DIR`
+As atividades de um documento devolvem todos os eventos registrados, cada um com um snapshot do
+`payload` do evento e a `origin` da requisição (`ip`, `user-agent`).
 
-Writes go through a temp file and a rename, so an interrupted write can never truncate the file. Read-only commands warn about and ignore a malformed config; `login`, `logout`, and profile mutations refuse to overwrite it, so its contents stay recoverable.
+Artefatos disponíveis para download:
 
-Profiles keep separate credentials — production and sandbox, or one per client:
-
-```bash
-assinafy --profile sandbox \
-  --base-url "https://sandbox.assinafy.com.br/v1" \
-  login                       # prompts for that profile's key and account ID
-
-assinafy config use sandbox   # make it the default
-assinafy config list          # list profiles
-assinafy config get           # effective config, secrets masked
-assinafy config path          # where the file lives
-```
-
-### Sandbox
-
-Assinafy runs a **separate sandbox** at `https://sandbox.assinafy.com.br/v1`. It has its own accounts and its own keys: a sandbox key returns `401` against production and vice versa. Target it per command with `--base-url`, for a session with `ASSINAFY_BASE_URL`, or permanently by storing it in a profile as shown above.
-
-## Command reference
-
-Run `assinafy <command> --help` for the full flags of any command. Every command's help output is mirrored under [`docs/`](./docs), the [API reference](./docs/api-reference.md) holds the official request/response payloads for all 89 published operations, and the [SDK reference](./docs/sdk-reference.md) maps each SDK method to its operation.
-
-Global flags accepted by every command: `--api-key`, `--token`, `--account-id`, `--base-url`, `-p, --profile`, `--json`, `-q, --quiet`. `assinafy -v` prints the version.
-
-### `send` — upload and request signatures
-
-```bash
-assinafy send contract.pdf \
-  --signer "Ana <ana@example.com>" \
-  --signer "Bruno <+5548999990000>" \
-  --message "Please sign" \
-  --expires-at "2026-12-31T23:59:59Z" \
-  --copy-receivers sig_abc123,sig_def456
-```
-
-`--signers '<json>'` replaces `--signer` when you need verification methods or signing order; `--no-wait` skips waiting for processing; `--metadata '<json>'` attaches integration data to the document.
-
-### `documents`
-
-| Command | Description |
+| Artefato | Conteúdo |
 | --- | --- |
-| `documents upload <file> [--name] [--metadata] [--wait]` | Upload a PDF (max 25 MiB) |
-| `documents list [--status] [--method] [--tags] [--page] [--per-page] [--search] [--sort]` | List documents |
-| `documents search [query] [--status] [--page] [--per-page] [--sort]` | Lightweight type-ahead search |
-| `documents get <id>` | Show document details |
-| `documents rename <id> <name>` | Rename a document (before signing starts) |
-| `documents download <id> [--artifact] [-o] [--force]` | Download an artifact (`original`/`certificated`/`certificate-page`/`pades` PDFs, or `bundle` ZIP) |
-| `documents thumbnail <id> [-o] [--force]` | Download the thumbnail (JPEG) |
-| `documents download-page <id> <pageId> [-o] [--force]` | Download one page (JPEG) |
-| `documents activities <id>` | Activity log |
-| `documents delete <id> [-y]` | Delete a document |
-| `documents tags <id>` | List attached tags |
-| `documents tags-set <id> [tagIds...]` | Replace the tag set by ID (none detaches all) |
-| `documents tags-add <id> <tagIds...>` | Attach tags by ID |
-| `documents tags-remove <id> <tagId>` | Detach one tag |
-| `documents create-from-template <templateId> --signers <json> [...]` | Create from a template |
-| `documents estimate-template-cost <templateId> --signers <json>` | Estimate template cost |
-| `documents verify <hash>` | Verify by signature hash (public) |
-| `documents statuses` | List every document status and whether it is deletable |
-| `documents public <id>` | Public unauthenticated lookup |
-| `documents send-token <id> --email <email>` | Send a verification token (`--recipient`/`--channel` remains for the live legacy form) |
-| `documents progress <id>` | Signing progress |
-| `documents wait <id> [--timeout] [--interval]` | Poll until ready, failed, or timed out |
+| `original` | O PDF enviado, como recebido |
+| `certificated` | O documento assinado, com a certificação da plataforma |
+| `certificate-page` | Apenas a página de certificação |
+| `pades` | Assinaturas ICP-Brasil dos signatários + caixa de certificação — só existe em documentos que tiveram signatários por certificado digital |
+| `bundle` | Zip com `original`, `certificated` e `certificate-page`, mais o `pades` quando houver |
 
-### `signers`
+## Saída e scripting
 
-`create` · `list` · `get <id>` · `update <id>` · `delete <id> [-y]` · `find-by-email <email>`
+`--json` transforma qualquer comando em saída estruturada, para uso com `jq` e afins. O fluxo
+completo de dono do documento, o lado do signatário, webhooks e a referência de comandos estão
+detalhados em [README.en.md](README.en.md).
 
-```bash
-assinafy signers create --name "Ana Lima" --email ana@example.com --cpf 000.000.000-00
-```
+## Ambientes
 
-Only `--name` is required. `--cpf` strips non-digits. `list` supports `--search`, `--page`, `--per-page`, and `--sort full_name|-full_name`.
+| | |
+| --- | --- |
+| Produção | `https://api.assinafy.com.br/v1` |
+| Sandbox | `https://sandbox.assinafy.com.br/v1` |
 
-### `assignments`
+O sandbox é gratuito e espelha a produção para testar a integração de ponta a ponta — com a exceção
+das rotas de certificado digital, que existem apenas em produção.
 
-`list` · `create <documentId>` · `estimate-cost <documentId>` · `reset-expiration <documentId> <assignmentId>` · `resend <documentId> <assignmentId> <signerId>` · `estimate-resend-cost <documentId> <assignmentId> <signerId>` · `whatsapp-notifications <documentId> <assignmentId>`
+## Documentação
 
-```bash
-assinafy assignments create doc_123 --signer-ids sig_1,sig_2 --message "Please sign"
-assinafy assignments reset-expiration doc_123 asg_1 --expires-at "2026-12-31T23:59:59Z"
-```
+- **[README.en.md](README.en.md)** — referência de comandos e do SDK, em inglês
+- [Documentação da API](https://api.assinafy.com.br/v1/docs)
 
-`reset-expiration --clear` removes the expiration where the deployment supports it.
+## Licença
 
-### `templates`
-
-`list [--search] [--sort]` · `get <id>` · `download-page <templateId> <pageId> [-o] [--force]`
-
-### `tags`
-
-`list [--search]` · `create --name [--color]` · `update <id> [--name] [--color] [--clear-color]` · `delete <id> [--force] [-y]`
-
-Deleting a tag that is still attached to documents fails until you pass `--force`, which detaches it everywhere first.
-
-### `fields`
-
-`create --type --name [--regex] [--required] [--inactive]` · `list [--include-inactive] [--include-standard]` · `get <id>` · `update <id> [...]` · `delete <id> [-y]` · `validate <id> <value> [--signer-access-code]` · `validate-multiple --entries <json> [--signer-access-code]` · `types`
-
-Field definitions are what `--method collect` assignments gather. Run `fields types` for the supported types.
-
-### `webhooks`
-
-`register --url --email [--events] [--inactive]` · `get` · `inactivate` · `event-types` · `dispatches [--event] [--delivered] [--from] [--to] [--page] [--per-page] [--sort]` · `retry <dispatchId>`
-
-### `workspaces` (alias `accounts`)
-
-`create --name [--notification-sender] [--primary-color] [--secondary-color]` · `list` · `get <id>` · `theme <id>` · `stats <id> [--granularity] [--month]` · `logo download|upload|delete` · `update <id> [...]` · `delete <id> [--force] [-y]`
-
-### `users`
-
-`self` · `stats [--granularity] [--month]` · `notification-preferences get|update`
-
-`--granularity daily` requires `--month YYYY-MM`.
-
-### `signer` — signer-side flows
-
-`document <signerId>` · `documents <signerId>` · `search <signerId> <query>` · `download <signerId> <documentId> <artifact>` · `self` · `accept-terms` · `verify-email --code` · `confirm-data <documentId>` · `upload-signature --file` · `download-signature` · `assignment` · `sign <documentId> <assignmentId> --entries` · `decline <documentId> <assignmentId> --reason` · `sign-multiple --document-ids` · `decline-multiple --document-ids --reason`
-
-Every signer command except the public artifact `download` requires `--access-code <code>`; `download` accepts it optionally for an identity preflight. Use `ASSINAFY_SIGNER_ACCESS_CODE` to keep the code out of process arguments.
-
-### `auth`
-
-`login <email>` · `social-login` · `link-social-login` · `change-password` · `request-password-reset <email>` · `reset-password --reset-token` · `api-keys create|get|delete`
-
-For server-to-server use, prefer an API key (`assinafy login` or `--api-key`) and skip this group. `auth login`, `auth social-login`, `auth request-password-reset`, and `auth reset-password` run without stored credentials; the rest accept the API key or JWT documented for their endpoint.
-
-### Meta
-
-`login` · `logout` · `whoami` · `config set|get|list|use|remove|path` · `docs [--open]`
-
-## Node.js SDK
-
-The same package ships a typed SDK. It covers every published operation, unwraps the API envelope, and validates input before a request leaves the process.
-
-```ts
-import { AssinafyClient, ApiError, PartialWorkflowError } from '@assinafy/cli/api';
-
-const client = AssinafyClient.create(
-  process.env.ASSINAFY_API_KEY!,
-  process.env.ASSINAFY_ACCOUNT_ID!,
-);
-
-const { data, meta } = await client.documents.list({ status: 'pending_signature' });
-
-const document = await client.documents.upload(
-  { filePath: './contract.pdf' },
-  { name: 'Service agreement', metadata: { external_id: 'order-123' } },
-);
-await client.documents.waitUntilReady(document.id);
-```
-
-CommonJS uses `require('@assinafy/cli/api')`. JSON `data` envelopes are unwrapped, paginated calls resolve to `{ data, meta }` built from the `X-Pagination-*` headers, downloads resolve to a `Buffer`, and status-only responses keep their documented object.
-
-Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCode` and `responseData`) for HTTP failures, `NetworkError` for transport failures, and `PartialWorkflowError` when `uploadAndRequestSignatures` fails after creating resources — it exposes the `documentId` and `signerIds` that already exist so you can clean up or resume:
-
-```ts
-try {
-  await client.uploadAndRequestSignatures({ source: { filePath: './contract.pdf' }, signers });
-} catch (error) {
-  if (error instanceof PartialWorkflowError) {
-    if (error.documentId) await client.documents.delete(error.documentId);
-    for (const signerId of error.signerIds) await client.signers.delete(signerId);
-  }
-  throw error;
-}
-```
-
-Full method signatures, payload types, binary formats, and runtime caveats are in the [SDK reference](./docs/sdk-reference.md); every underlying HTTP payload is in the [API reference](./docs/api-reference.md).
-
-## Security
-
-- **Transport.** Clients require HTTPS, reject redirects, and reject base URLs carrying credentials, a query string, or a fragment. The SDK's `allowInsecureHttp` escape hatch is limited to loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`), so an API key can never be sent in cleartext to a remote host.
-- **Credential scope.** Owner credentials are stripped from every public and signer-access-code request. Axios request configuration — which carries auth headers and bodies — is never attached to a thrown error.
-- **At rest.** The config file is written `0600` inside a `0700` directory, atomically, and re-`chmod`ed on every write so a previously loose file cannot keep loose permissions.
-- **On the command line.** Secret-bearing flags are visible in shell history and process listings. Prefer the hidden `login` prompt, the config file, or the environment variables listed under [Configuration](#configuration). Never put API keys, tokens, passwords, reset or provider tokens, or signer access codes in shared scripts or logs.
-- **Terminal output.** Values echoed from the API are stripped of control and bidirectional-override characters before they reach a terminal line.
-
-Report vulnerabilities per [SECURITY.md](./SECURITY.md).
-
-## Development
-
-```bash
-npm ci                   # install exactly from package-lock.json
-npm run dev -- --help    # run from source with tsx
-npm run dev:watch        # run from source, restart on change
-npm run typecheck        # tsc --noEmit
-npm run lint             # biome check
-npm test                 # vitest
-npm run build            # bundle dist/cli.cjs plus the SDK ESM/CJS/types
-npm run verify:bundle    # verify the bundled executable and packed SDK
-npm run docs             # regenerate docs/ from CLI --help output
-npm run docs:api         # regenerate the HTTP payload reference from the live OpenAPI
-npm run verify:api-docs  # assert every published operation is documented and implemented
-npm run pack:release     # build reproducible release archives in dist/release/
-```
-
-`npm run test:sandbox` is opt-in and needs the sandbox variables from `.env.example`. It creates a disposable workspace, exercises the full resource lifecycle inside it, cleans up after itself, and sends one signing-token email to `ASSINAFY_TEST_EMAIL`. Never run it against production. The current sandbox requires the legacy `--recipient` form of the token request, while `--email` follows the production OpenAPI payload.
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow.
-
-## Release
-
-CI runs typecheck, lint, tests, bundle verification, generated-file checks, installer checks, reproducible-archive checks, and package-content checks on Node 22, 24, and 26 across Linux, macOS, and Windows.
-
-Publishing a `vX.Y.Z` tag runs a three-stage release: `verify` rebuilds and re-checks the tagged commit and uploads a single verified payload; `live-gate` exercises that commit against the live sandbox API and re-confirms the published contract; only then does `publish` upload the release assets and publish to both registries. A missing sandbox credential fails the gate rather than skipping it, so no version ships unverified against the real API.
-
-The [release runbook](./docs/releasing.md) covers tags, mirroring, trusted publishing, and recovery.
-
-## Contract boundaries
-
-- The production OpenAPI publishes 89 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
-- The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths but are used by the official PHP SDK and verified live.
-- The API's digital-certificate prose mentions certificate start/complete routes that are not defined as OpenAPI paths. The SDK does not invent contracts for them.
-- Both the published and legacy `send-token` payloads are supported until the upstream contract converges.
-- `WebhookVerifier` is **experimental**. Assinafy does not publish the signature header, algorithm, encoding, timestamp, or replay-protection scheme, so it is not a production trust boundary until the exact scheme is published or independently verified against real deliveries.
-
-## License
-
-MIT © Assinafy
+Distribuído sob a licença [MIT](LICENSE).
