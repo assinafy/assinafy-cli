@@ -1,8 +1,8 @@
 # Release runbook
 
-Releases originate from the source GitLab repository. Its push mirror must send
-branches and `v*` tags to GitHub; GitHub Release objects are created by
-`.github/workflows/release.yml`, not by the mirror.
+This repository is hosted directly on GitHub. Push `main` and the matching
+annotated `v*` tag to `assinafy/assinafy-cli`. GitHub Release objects are created
+by `.github/workflows/release.yml` after verification and the live sandbox gate.
 
 ## One-time repository setup
 
@@ -29,7 +29,7 @@ branches and `v*` tags to GitHub; GitHub Release objects are created by
    the release commit. Commit the generated API reference when the official
    contract changes.
 2. Set `package.json` to the exact SemVer version and push the matching signed or
-   annotated `vX.Y.Z` tag from GitLab.
+   annotated `vX.Y.Z` tag to GitHub.
 3. Confirm the GitHub workflow verifies that exact tag/commit, uploads its checked
    artifact, publishes both registries, and only then publishes the draft release.
 

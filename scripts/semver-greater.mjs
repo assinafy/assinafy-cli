@@ -7,9 +7,13 @@ const SEMVER =
 function parse(value) {
 	const match = SEMVER.exec(value);
 	if (!match) throw new Error(`Invalid SemVer: ${value}`);
+	const prerelease = match[4]?.split('.') ?? [];
+	if (prerelease.some((part) => /^0\d+$/.test(part))) {
+		throw new Error(`Invalid SemVer: ${value}`);
+	}
 	return {
 		core: [BigInt(match[1]), BigInt(match[2]), BigInt(match[3])],
-		prerelease: match[4]?.split('.') ?? [],
+		prerelease,
 	};
 }
 

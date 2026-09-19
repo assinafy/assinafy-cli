@@ -7,9 +7,10 @@ import type {
 	ITemplateEditorField,
 	ITemplateSigner,
 } from '../api';
+import { PartialWorkflowError } from '../api';
 import { requireDocumentArtifactName } from '../api/utils';
 import { requireAccountId } from '../lib/client';
-import { CliError } from '../lib/errors';
+import { CliError, errorMessage } from '../lib/errors';
 import { defaultArtifactFilename, writeBinary } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
 import { addListOptions } from '../lib/options';
@@ -35,14 +36,23 @@ const uploadCommand = new Command('upload')
 			if (metadata) uploadOptions.metadata = metadata;
 			if (opts.name) uploadOptions.name = opts.name;
 
-			const doc = await withSpinner('Uploading document', config, () =>
+			let doc = await withSpinner('Uploading document', config, () =>
 				client.documents.upload({ filePath: file }, uploadOptions),
 			);
 
 			if (opts.wait) {
-				await withSpinner('Waiting for processing', config, () =>
-					client.documents.waitUntilReady(doc.id),
-				);
+				try {
+					const ready = await withSpinner('Waiting for processing', config, () =>
+						client.documents.waitUntilReady(doc.id),
+					);
+					doc = { ...doc, ...ready };
+				} catch (error) {
+					throw new PartialWorkflowError(
+						`${errorMessage(error)} (document ${doc.id} was uploaded)`,
+						{ documentId: doc.id },
+						{ cause: error },
+					);
+				}
 			}
 
 			printSuccess(`Uploaded document ${doc.id}`, config);

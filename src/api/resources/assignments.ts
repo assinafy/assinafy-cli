@@ -15,8 +15,8 @@ import {
 	cleanParams,
 	requireIso8601,
 	requireSort,
-	validateDigitalCertificateSteps,
 	validateSignerOptions,
+	validateSigningSteps,
 } from '../utils.js';
 import { BaseResource } from './base.js';
 
@@ -57,7 +57,7 @@ export function buildAssignmentPayload(
 
 	const normalisedSigners = signers.map((ref) => normaliseSignerRef(ref, options));
 	if (!options.skipDigitalCertificateStepValidation) {
-		validateDigitalCertificateSteps(normalisedSigners);
+		validateSigningSteps(normalisedSigners);
 	}
 
 	return cleanParams({

@@ -126,6 +126,12 @@ describe('AssinafyClient transport security', () => {
 
 describe('AssinafyClient.uploadAndRequestSignatures', () => {
 	it.each([
+		{ signers: [{ name: 'Ana', verification_method: 'SMS' }] },
+		{ signers: [{ name: 'Ana', notification_methods: ['SMS'] }] },
+		{ signers: [{ name: 'Ana', step: 1.5 }] },
+		{ signers: [{ name: 'Ana', step: 2 }] },
+		{ signers: [{ name: 'Ana', step: 1 }, { name: 'Bruno' }] },
+		{ signers: [{ name: 'Ana', verification_method: 'DigitalCertificate' }, { name: 'Bruno' }] },
 		{ signers: [{ name: '', email: 'ana@example.com' }] },
 		{ signers: [{ name: 'Ana Lima', email: 'not-an-email' }] },
 		{

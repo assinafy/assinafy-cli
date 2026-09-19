@@ -54,7 +54,15 @@ function assertBundle() {
 }
 
 function copyDocs(targetDir) {
-	for (const file of ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+	for (const file of [
+		'README.md',
+		'README.en.md',
+		'CONTRIBUTING.md',
+		'SECURITY.md',
+		'.env.example',
+		'LICENSE',
+		'THIRD_PARTY_NOTICES.md',
+	]) {
 		const source = path.join(root, file);
 		if (existsSync(source)) copyFileSync(source, path.join(targetDir, file));
 	}

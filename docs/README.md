@@ -2,10 +2,11 @@
 
 Command pages are auto-generated from `assinafy <command> --help`.
 
-- [`api-reference.md`](./api-reference.md) — all 89 published HTTP operations with official request/response payloads
+- [`api-reference.md`](./api-reference.md) — all 93 published HTTP operations with official request/response payloads
 - [`sdk-reference.md`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat
+- [`oauth-guide.md`](./oauth-guide.md) — authorization, PKCE, token rotation, and marketplace connections
 - [`migration-v2.md`](./migration-v2.md) — version 2 runtime and response compatibility notes
-- [`releasing.md`](./releasing.md) — mirrored-tag release and registry-publishing runbook
+- [`releasing.md`](./releasing.md) — GitHub release and registry-publishing runbook
 
 ## Commands
 
@@ -21,6 +22,7 @@ Command pages are auto-generated from `assinafy <command> --help`.
 - [users](./users.md)
 - [signer](./signer.md)
 - [auth](./auth.md)
+- [oauth](./oauth.md)
 - [login](./login.md)
 - [logout](./logout.md)
 - [whoami](./whoami.md)

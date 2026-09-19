@@ -28,6 +28,7 @@ export function isIdentifierKey(key) {
 	const normalizedKey = normalizeKey(key);
 	return (
 		normalizedKey === 'id' ||
+		normalizedKey === 'sub' ||
 		normalizedKey === 'hash' ||
 		normalizedKey === 'copy_receivers' ||
 		/_(?:id|ids)$/.test(normalizedKey)

@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "47fe244e05d7acd9cef0561da4b8c042e1eb549b015f731233475093b5602087",
+  "hash": "6b55ce24462cd0f9393061a075f2c296fbe742fae493c9ba81c7def402618456",
   "operations": [
     {
       "method": "GET",
@@ -345,6 +345,30 @@
       "summary": "Update my notification preferences",
       "operationId": "12356f56a66792b8a3e54010a1d4639f",
       "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/oauth/token",
+      "tag": "OAuth",
+      "summary": "Exchange a code or refresh token for an access token",
+      "operationId": "b214b71efe5b11ac52d79597108ab2ba",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/oauth/revoke",
+      "tag": "OAuth",
+      "summary": "Revoke a token",
+      "operationId": "4da9798b52b228fa0be9ddc534b42eee",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/oauth/userinfo",
+      "tag": "OAuth",
+      "summary": "OpenID Connect userinfo",
+      "operationId": "b920740c01ff33773b9e6c13be139f7f",
+      "hasRequestBody": false
     },
     {
       "method": "GET",
@@ -704,6 +728,14 @@
       "tag": "Webhooks",
       "summary": "Retry webhook delivery",
       "operationId": "70960dceda68fdccf3c821c362638e87",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource",
+      "tag": "OAuth",
+      "summary": "OAuth 2.0 protected resource metadata",
+      "operationId": "94f8ad95c46aea75be0241484f573ed6",
       "hasRequestBody": false
     },
     {

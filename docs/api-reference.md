@@ -6,8 +6,8 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 
 - OpenAPI: 3.0.0
 - API document version: 1.0.0
-- Operations: 89
-- Contract SHA-256: `47fe244e05d7acd9cef0561da4b8c042e1eb549b015f731233475093b5602087`
+- Operations: 93
+- Contract SHA-256: `6b55ce24462cd0f9393061a075f2c296fbe742fae493c9ba81c7def402618456`
 
 ## Accounts
 
@@ -472,6 +472,8 @@ Remove the account logo image.
 `GET /v1/accounts`
 
 List the workspace accounts the authenticated user belongs to.
+
+Called with an OAuth application token, this returns exactly one workspace: the one the user chose when they authorized the application. Use its `id` as the `{accountId}` segment of every other endpoint — a token is bound to a single workspace, and any request naming a different one is refused. This endpoint needs no particular scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -2927,7 +2929,7 @@ Per-unit costs (in credits) used to build the estimate:
 | WhatsApp notification | 0.45 credits |
 | Digital certificate signature (per signer) | 2 credits |
 
-A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code.
+Verification methods are not priced separately — every line in the `breakdown` is a notification or a signature. A `Whatsapp`-verified signer therefore shows up as a WhatsApp notification, because that channel is mandatory for that verification method. A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4700,6 +4702,238 @@ Returns the profile of the user owning the access token.
 }
 ```
 
+## OAuth
+
+### Exchange a code or refresh token for an access token
+
+`POST /v1/oauth/token`
+
+Implements the RFC 6749 §5.1/§5.2 token-endpoint body contract in
+     *         both directions: a successful exchange returns a flat JSON object with
+     *         `access_token` at the top level, and a failure returns a flat
+     *         `{error, error_description}` object — neither is wrapped in this API's
+     *         usual response envelope, since no standard OAuth client library (or MCP
+     *         connector) would find `access_token` or `error` inside a `data` key.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `grant_type` (string, required)
+- `code` (string)
+- `redirect_uri` (string)
+- `code_verifier` (string) — RFC 7636: 43-128 characters from [A-Za-z0-9-._~]. Shorter values are rejected with `invalid_grant`.
+- `refresh_token` (string)
+- `client_id` (string, required)
+- `client_secret` (string) — Confidential clients only. Public clients authenticate with PKCE and are never issued a secret.
+- `resource` (string) — RFC 8707 resource indicator. Optional; when present it must be the `resource` value published by /.well-known/oauth-protected-resource and must match the one sent to /authorize, otherwise `invalid_target`.
+
+Example:
+
+```json
+{
+    "grant_type": "authorization_code",
+    "code": "string",
+    "redirect_uri": "https://example.com/example-url-11",
+    "code_verifier": "string",
+    "refresh_token": "example_secret",
+    "client_id": "example_id_5",
+    "client_secret": "example_secret",
+    "resource": "string"
+}
+```
+
+#### Responses
+
+##### 200 — The token response
+
+```json
+{
+    "access_token": "example_credential",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "refresh_token": "example_secret",
+    "scope": "documents:read",
+    "id_token": "example_secret"
+}
+```
+
+##### 400 — `invalid_grant` (bad, expired, replayed, or wrong-client authorization code; a `code_verifier` outside the RFC 7636 grammar of 43-128 unreserved characters; redirect_uri mismatch; a refresh token whose authorization no longer includes `offline_access`), `invalid_target` (a `resource` this server does not issue tokens for, or one disagreeing with the authorized value), or `unsupported_grant_type`
+
+```json
+{
+    "error": "invalid_grant",
+    "error_description": "string"
+}
+```
+
+##### 401 — `invalid_client` — unknown/disabled client or failed client authentication. The description never reveals whether client_id exists.
+
+```json
+{
+    "error": "invalid_client",
+    "error_description": "Client authentication failed."
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Revoke a token
+
+`POST /v1/oauth/revoke`
+
+Revokes an access or refresh token. Every token outcome always returns 200 — including a token that does not exist, is already revoked, or is malformed — so the endpoint can never be used to probe whether a token exists. The one exception is failed client authentication, which returns 401.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `token` (string, required)
+- `token_type_hint` (string)
+- `client_id` (string, required)
+- `client_secret` (string)
+
+Example:
+
+```json
+{
+    "token": "example_secret",
+    "token_type_hint": "access_token",
+    "client_id": "example_id_5",
+    "client_secret": "example_secret"
+}
+```
+
+#### Responses
+
+##### 200 — Revoked
+
+##### 401 — `invalid_client` — the only case that is not reported as success. Every token outcome (revoked, already revoked, unknown, malformed) always returns 200; only failed client authentication returns 401.
+
+```json
+{
+    "error": "invalid_client",
+    "error_description": "Client authentication failed."
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### OpenID Connect userinfo
+
+`GET /v1/oauth/userinfo`
+
+Claims about the user who authorized this token. Requires the openid scope; name requires profile and email requires email. Per OIDC Core §5.3.2, the response is a flat JSON object of claims — never this API's usual `{status, data, message}` envelope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The user's claims
+
+```json
+{
+    "sub": "example_id_29",
+    "name": "Maria Silva",
+    "email": "user9@example.com",
+    "email_verified": true
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### OAuth 2.0 protected resource metadata
+
+`GET /.well-known/oauth-protected-resource`
+
+RFC 9728. Identifies this API as a protected resource, the
+     *         authorization server(s) that can issue tokens for it, and the scopes it
+     *         accepts. `scopes_supported` deliberately excludes `offline_access` — per the
+     *         MCP specification, requesting a refresh token is a client concern, not
+     *         something a resource is protected by. Also referenced from the
+     *         `WWW-Authenticate: Bearer resource_metadata="..."` challenge on a 401/403.
+     *         Per RFC 8615, the response is the bare metadata object itself — never this
+     *         API's usual `{status, data, message}` envelope. The `authorization_servers` entry names the host that owns the browser-facing flow — start every integration by fetching `{authorization_servers[0]}/.well-known/oauth-authorization-server` (RFC 8414) from there, not from this API.
+
+**Authentication:** none (public endpoint).
+
+#### Responses
+
+##### 200 — The protected resource metadata
+
+```json
+{
+    "resource": "string",
+    "authorization_servers": [
+        "string"
+    ],
+    "scopes_supported": [
+        "string"
+    ],
+    "bearer_methods_supported": [
+        "header"
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
 ## Signing
 
 ### View public document
@@ -5319,7 +5553,7 @@ The signer declines to sign the document, giving a reason. Uses the signer acces
 
 Fields (`application/json`):
 
-- `decline_reason` (string, required) — Descriptive reason for declining.
+- `decline_reason` (string, required) — Descriptive reason for declining. Up to 2000 characters; longer values return 400.
 
 Example:
 
@@ -5380,8 +5614,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_29",
-        "example_id_30"
+        "example_id_30",
+        "example_id_31"
     ]
 }
 ```
@@ -5431,15 +5665,15 @@ Decline several documents in one request. Uses the signer access code.
 Fields (`application/json`):
 
 - `document_ids` (array, required) — IDs of the documents to decline.
-- `decline_reason` (string, required) — Reason for declining.
+- `decline_reason` (string, required) — Reason for declining. Up to 2000 characters; longer values return 400.
 
 Example:
 
 ```json
 {
     "document_ids": [
-        "example_id_29",
-        "example_id_30"
+        "example_id_30",
+        "example_id_31"
     ],
     "decline_reason": "Unfavorable terms."
 }
@@ -6770,7 +7004,7 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_31",
+            "id": "example_id_32",
             "name": "template.pdf",
             "document_name": "string",
             "message": "string",
@@ -7119,7 +7353,7 @@ Retrieve the delivery history for webhooks sent to the account's configured endp
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_32",
+            "id": "example_id_33",
             "event": "document_ready",
             "activity_id": 456,
             "endpoint": "https://example.com/example-url-13",
@@ -7180,7 +7414,7 @@ Manually retry a webhook delivery for a specific entry, without waiting for auto
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_32",
+        "id": "example_id_33",
         "event": "document_ready",
         "activity_id": 456,
         "endpoint": "https://example.com/example-url-13",

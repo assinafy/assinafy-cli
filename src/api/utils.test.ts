@@ -63,6 +63,26 @@ describe('requireIso8601', () => {
 });
 
 describe('toSdkError', () => {
+	it('decodes JSON API errors returned from binary download requests', () => {
+		const wrapped = toSdkError(
+			{
+				isAxiosError: true,
+				response: {
+					status: 404,
+					data: Buffer.from('{"status":404,"message":"Artifact unavailable","data":null}'),
+				},
+			},
+			'Download failed',
+		);
+		expect(wrapped).toBeInstanceOf(ApiError);
+		expect(wrapped.message).toBe('Artifact unavailable');
+		expect((wrapped as ApiError).responseData).toEqual({
+			status: 404,
+			message: 'Artifact unavailable',
+			data: null,
+		});
+	});
+
 	it('does not retain Axios request credentials or payloads on network errors', () => {
 		const error = new AxiosError('socket closed', 'ECONNRESET', {
 			headers: { 'X-Api-Key': 'header-secret' },

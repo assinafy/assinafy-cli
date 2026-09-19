@@ -4,6 +4,7 @@ import { AssignmentResource } from './resources/assignments.js';
 import { AuthenticationResource } from './resources/authentication.js';
 import { DocumentResource, type DocumentUploadSource } from './resources/documents.js';
 import { FieldsResource } from './resources/fields.js';
+import { OAuthResource } from './resources/oauth.js';
 import { SignerDocumentsResource } from './resources/signer-documents.js';
 import { SignerResource, validateCreateSignerPayload } from './resources/signers.js';
 import { TagResource } from './resources/tags.js';
@@ -21,7 +22,13 @@ import type {
 	Logger,
 	SignerReference,
 } from './types.js';
-import { createNoopLogger, normalizeBaseUrl, requireIso8601 } from './utils.js';
+import {
+	createNoopLogger,
+	normalizeBaseUrl,
+	requireIso8601,
+	validateSignerOptions,
+	validateSigningSteps,
+} from './utils.js';
 
 /** Flexible input accepted by {@link AssinafyClient.fromConfig} (snake_case or camelCase). */
 export interface ClientConfigInput {
@@ -83,6 +90,7 @@ export class AssinafyClient {
 	public readonly templates: TemplateResource;
 	public readonly tags: TagResource;
 	public readonly auth: AuthenticationResource;
+	public readonly oauth: OAuthResource;
 	public readonly fields: FieldsResource;
 	public readonly users: UsersResource;
 	public readonly signerDocuments: SignerDocumentsResource;
@@ -91,7 +99,7 @@ export class AssinafyClient {
 	constructor(options: AssinafyClientOptions) {
 		if (!options.apiKey && !options.token && !options.allowUnauthenticated) {
 			throw new ValidationError(
-				'An API key (options.apiKey) or legacy access token (options.token) is required.',
+				'An API key (options.apiKey) or access token (options.token) is required.',
 			);
 		}
 		if (
@@ -163,6 +171,7 @@ export class AssinafyClient {
 		this.templates = new TemplateResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.tags = new TagResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.auth = new AuthenticationResource(this.axiosInstance, undefined, this.logger);
+		this.oauth = new OAuthResource(this.axiosInstance, undefined, this.logger);
 		this.fields = new FieldsResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.users = new UsersResource(this.axiosInstance, undefined, this.logger);
 		this.signerDocuments = new SignerDocumentsResource(
@@ -222,11 +231,15 @@ export class AssinafyClient {
 		copyReceivers?: string[];
 		accountId?: string;
 	}): Promise<IUploadAndRequestSignaturesResult> {
-		if (!options.signers || options.signers.length === 0) {
+		if (!Array.isArray(options.signers) || options.signers.length === 0) {
 			throw new ValidationError('At least one signer is required');
 		}
 		if (options.expiresAt !== undefined) requireIso8601(options.expiresAt, 'expiresAt');
 		const preparedSigners = options.signers.map((signer) => {
+			if (!signer || typeof signer !== 'object') {
+				throw new ValidationError('Each signer must be an object');
+			}
+			validateSignerOptions(signer);
 			const payload: ICreateSignerPayload = { full_name: signer.name };
 			if (signer.email !== undefined) payload.email = signer.email;
 			const phone = signer.whatsapp_phone_number ?? signer.phone;
@@ -236,6 +249,7 @@ export class AssinafyClient {
 			validateCreateSignerPayload(payload);
 			return { signer, payload, phone };
 		});
+		validateSigningSteps(options.signers);
 
 		this.logger.info('Starting upload + signature workflow', {
 			signerCount: options.signers.length,
@@ -291,7 +305,7 @@ export class AssinafyClient {
 			});
 			const reason = err instanceof Error ? err.message : String(err);
 			throw new PartialWorkflowError(
-				`${reason} (document ${document.id} and ${signerIds.length} signer(s) were already created)`,
+				`${reason} (document ${document.id} exists; ${signerIds.length} signer(s) created or reused)`,
 				{ documentId: document.id, signerIds },
 				{ cause: err },
 			);

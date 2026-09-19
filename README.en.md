@@ -4,7 +4,7 @@
 
 The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track the audit trail, and download certified documents — from a terminal, a shell script, or an application.
 
-The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 89 published API operations.
+The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 93 published API operations.
 
 This document reads top to bottom: install, authenticate, send your first signature request, then understand the model well enough to automate it. The [command reference](#command-reference) and [SDK](#nodejs-sdk) sections near the end are lookup tables you can jump to once the flow makes sense.
 
@@ -76,12 +76,13 @@ npx @assinafy/cli whoami
 
 ## Authentication
 
-Assinafy accepts two credentials. Prefer the API key.
+Use an API key for direct owner integrations, OAuth for customer-consented marketplace connections, or a user JWT for user-session operations.
 
 | Credential | Header sent | Use it for |
 | --- | --- | --- |
-| API key | `X-Api-Key: <key>` | Everything, including unattended automation. |
-| JWT access token | `Authorization: Bearer <jwt>` | Legacy sessions and the few user-session endpoints that require one. |
+| API key | `X-Api-Key: <key>` | Direct owner integrations and permitted account operations. |
+| OAuth access token | `Authorization: Bearer <token>` | Marketplace connections, limited to granted scopes and one workspace. |
+| User JWT | `Authorization: Bearer <jwt>` | User sessions and permitted account operations. |
 
 Generate an API key from the Assinafy dashboard, or from the CLI with an existing session:
 
@@ -97,9 +98,35 @@ assinafy login    # prompts for the API key and default workspace ID
 assinafy whoami   # lists the workspaces the credential can reach
 ```
 
-`whoami` printing your workspaces means the credential, the base URL, and the account ID are all correct. Most commands are workspace-scoped, so set a default account ID during `login` (or pass `--account-id` per command) to avoid repeating it.
+`whoami` lists accessible workspaces and validates the credential and base URL. Confirm that your configured account ID appears in that list. Most commands are workspace-scoped, so set a default account ID during `login` (or pass `--account-id` per command) to avoid repeating it.
 
 Credentials resolve with a fixed precedence — **CLI flag → environment variable → config file** — which is covered in full under [Configuration](#configuration).
+
+### OAuth marketplace connections
+
+The CLI includes the official application's public client ID and uses PKCE S256 without a client secret. Automatic browser return uses this exact HTTPS redirect URI, without an extension or trailing slash, served by `integrations-generic-callback`:
+
+```text
+https://integrations.assinafy.com.br/assinafy-cli/oauth-callback
+```
+
+The CLI requests all nine scopes by default: `account:read documents:read documents:write templates:read templates:write openid profile email offline_access`, including template read/write access. The application registration must permit all nine; existing connections need fresh consent to gain additional permissions. An explicit `--scope` requests a smaller set.
+
+No `ASSINAFY_OAUTH_CLIENT_ID` configuration is needed for the official application. For your own application or another environment, use `--client-id` or that variable; the flag takes precedence. Register the callback URI and scopes for the selected application. In a private directory outside the repository:
+
+```bash
+umask 077
+assinafy oauth connect --json > tokens.json
+unset ASSINAFY_API_KEY
+export ASSINAFY_TOKEN="$(jq -er '.access_token' tokens.json)"
+assinafy workspaces list --json
+```
+
+The command opens the system browser and waits for consent. The HTTPS return page forwards the authorization response to a temporary listener on `127.0.0.1`. The CLI validates state and issuer, closes the listener, and exchanges the code using its local PKCE verifier. Use a browser on the same computer as the CLI. Tokens travel directly between the CLI and Assinafy.
+
+Use `--no-browser` to open the URL printed to stderr manually while keeping automatic callback reception. `--timeout` sets the browser wait from 1 to 600 seconds (default 180), `--scope` selects permissions, and `--redirect-uri` selects another registered HTTPS page implementing the relay protocol. Ctrl+C cancels the wait. Token JSON goes to stdout; protect it from logs. `connect` does not modify a profile or automatically refresh tokens.
+
+Select the single workspace returned and set `ASSINAFY_ACCOUNT_ID`. Keep refreshes serialized per connection and store each rotated result atomically. The existing `oauth authorize` and `oauth exchange` commands also support applications with their own callbacks and confidential server credentials. The [OAuth guide](./docs/oauth-guide.md#cli-flow) documents both flows, complete payloads, token rotation, identity validation, and disconnect behavior.
 
 ## Quick start
 
@@ -114,10 +141,10 @@ assinafy send contract.pdf \
 
 It prints the document ID, the assignment ID, and the signer IDs — the three handles every later command needs.
 
-If a step fails after the upload, the error names the document and signers that were already created, so nothing is left orphaned in your workspace without a handle:
+If a step fails after the upload, the error names the document and signers that were created or reused, so nothing is left orphaned in your workspace without a handle:
 
 ```text
-error: Saldo insuficiente. (document doc_abc123 and 2 signer(s) were already created)
+error: Saldo insuficiente. (document doc_abc123 exists; 2 signer(s) created or reused)
   (HTTP 402)
 ```
 
@@ -134,7 +161,7 @@ Four resources make up the model:
 
 Two side notes worth knowing before you script anything:
 
-- Processing is asynchronous. A freshly uploaded document is not immediately assignable — wait for `metadata_ready` with `documents upload --wait`, `documents wait`, or the `document_ready` webhook.
+- Processing is asynchronous. Wait for `metadata_ready` with `documents upload --wait` or `documents wait` before referencing pages in a collect assignment. Virtual assignments can also be submitted during processing. The `document_ready` webhook signals the last signature, not initial upload processing.
 - Assignments cost credits. `assignments estimate-cost` and `documents estimate-template-cost` tell you the price, your balance, and any blocking reason before you commit.
 
 ## The complete owner workflow
@@ -262,7 +289,7 @@ JSON errors carry a stable shape:
 ```json
 {
   "error": {
-    "message": "Saldo insuficiente. (document doc_abc123 and 2 signer(s) were already created)",
+    "message": "Saldo insuficiente. (document doc_abc123 exists; 2 signer(s) created or reused)",
     "code": "api_error",
     "statusCode": 402,
     "details": { "documentId": "doc_abc123", "signerIds": ["sig_1", "sig_2"] }
@@ -276,12 +303,12 @@ Destructive commands prompt for confirmation and refuse to run unattended unless
 
 ### Precedence
 
-Every setting resolves as **CLI flag → environment variable → config-file profile → built-in default**.
+Every setting resolves as **CLI flag → environment variable → config-file profile → built-in default**. Credentials are selected together from the first level that supplies either type; an API key wins only when both types are supplied at that same level. Saving one credential type with `config set` clears the other from that profile. The CLI reads process environment variables; it does not automatically load `.env` files. The OAuth variables are listed in [.env.example](./.env.example).
 
 | What | Flag | Environment variable |
 | --- | --- | --- |
-| API key (preferred, sent as `X-Api-Key`) | `--api-key` | `ASSINAFY_API_KEY` |
-| Legacy JWT token (sent as `Bearer`) | `--token` | `ASSINAFY_TOKEN` |
+| API key (sent as `X-Api-Key`) | `--api-key` | `ASSINAFY_API_KEY` |
+| OAuth access token or user JWT (sent as `Bearer`) | `--token` | `ASSINAFY_TOKEN` |
 | Default account / workspace ID | `--account-id` | `ASSINAFY_ACCOUNT_ID` |
 | API base URL | `--base-url` | `ASSINAFY_BASE_URL` |
 | Config profile | `-p, --profile` | `ASSINAFY_PROFILE` |
@@ -324,7 +351,7 @@ Assinafy runs a **separate sandbox** at `https://sandbox.assinafy.com.br/v1`. It
 
 ## Command reference
 
-Run `assinafy <command> --help` for the full flags of any command. Every command's help output is mirrored under [`docs/`](./docs), the [API reference](./docs/api-reference.md) holds the official request/response payloads for all 89 published operations, and the [SDK reference](./docs/sdk-reference.md) maps each SDK method to its operation.
+Run `assinafy <command> --help` for the full flags of any command. Every command's help output is mirrored under [`docs/`](./docs), the [API reference](./docs/api-reference.md) holds the official request/response payloads for all 93 published operations, and the [SDK reference](./docs/sdk-reference.md) maps each SDK method to its operation.
 
 Global flags accepted by every command: `--api-key`, `--token`, `--account-id`, `--base-url`, `-p, --profile`, `--json`, `-q, --quiet`. `assinafy -v` prints the version.
 
@@ -431,6 +458,12 @@ Every signer command except the public artifact `download` requires `--access-co
 
 For server-to-server use, prefer an API key (`assinafy login` or `--api-key`) and skip this group. `auth login`, `auth social-login`, `auth request-password-reset`, and `auth reset-password` run without stored credentials; the rest accept the API key or JWT documented for their endpoint.
 
+### `oauth`
+
+`connect` · `metadata` · `discovery <issuer>` · `authorize --redirect-uri --scope` · `exchange --request --callback-url` · `refresh --refresh-token` · `revoke --revoke-token` · `userinfo`
+
+`connect`, `authorize`, `refresh`, and `revoke` use the bundled public client ID unless overridden by `--client-id` or `ASSINAFY_OAUTH_CLIENT_ID`. Client secrets and sensitive callback/token flags have environment-variable alternatives. The [OAuth guide](./docs/oauth-guide.md) documents every method and payload.
+
 ### Meta
 
 `login` · `logout` · `whoami` · `config set|get|list|use|remove|path` · `docs [--open]`
@@ -458,15 +491,15 @@ await client.documents.waitUntilReady(document.id);
 
 CommonJS uses `require('@assinafy/cli/api')`. JSON `data` envelopes are unwrapped, paginated calls resolve to `{ data, meta }` built from the `X-Pagination-*` headers, downloads resolve to a `Buffer`, and status-only responses keep their documented object.
 
-Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCode` and `responseData`) for HTTP failures, `NetworkError` for transport failures, and `PartialWorkflowError` when `uploadAndRequestSignatures` fails after creating resources — it exposes the `documentId` and `signerIds` that already exist so you can clean up or resume:
+Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCode`, `responseData`, `wwwAuthenticate`, and `retryAfter`) for HTTP failures, `NetworkError` for transport failures, and `PartialWorkflowError` when `uploadAndRequestSignatures` fails after creating resources — it exposes the `documentId` and `signerIds` that already exist so you can inspect and resume. Never automatically delete these signers: they may have been reused from other documents. For example:
 
 ```ts
 try {
   await client.uploadAndRequestSignatures({ source: { filePath: './contract.pdf' }, signers });
 } catch (error) {
   if (error instanceof PartialWorkflowError) {
-    if (error.documentId) await client.documents.delete(error.documentId);
-    for (const signerId of error.signerIds) await client.signers.delete(signerId);
+    console.error({ documentId: error.documentId, signerIds: error.signerIds });
+    // Inspect the document before resuming; signer IDs can belong to reused records.
   }
   throw error;
 }
@@ -509,16 +542,16 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow.
 
 CI runs typecheck, lint, tests, bundle verification, generated-file checks, installer checks, reproducible-archive checks, and package-content checks on Node 22, 24, and 26 across Linux, macOS, and Windows.
 
-Publishing a `vX.Y.Z` tag runs a three-stage release: `verify` rebuilds and re-checks the tagged commit and uploads a single verified payload; `live-gate` exercises that commit against the live sandbox API and re-confirms the published contract; only then does `publish` upload the release assets and publish to both registries. A missing sandbox credential fails the gate rather than skipping it, so no version ships unverified against the real API.
+This repository is hosted directly on GitHub. Push changes to `main` and publish an annotated `vX.Y.Z` tag to run a three-stage release: `verify` rebuilds and re-checks the tagged commit and uploads a single verified payload; `live-gate` exercises that commit against the live sandbox API and re-confirms the published contract; only then does `publish` upload the release assets and publish to both registries. A missing sandbox credential fails the gate rather than skipping it, so no version ships unverified against the real API.
 
-The [release runbook](./docs/releasing.md) covers tags, mirroring, trusted publishing, and recovery.
+The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and recovery.
 
 ## Contract boundaries
 
-- The production OpenAPI publishes 89 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
-- The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths but are used by the official PHP SDK and verified live.
+- The production OpenAPI publishes 93 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
+- The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
 - The API's digital-certificate prose mentions certificate start/complete routes that are not defined as OpenAPI paths. The SDK does not invent contracts for them.
-- Both the published and legacy `send-token` payloads are supported until the upstream contract converges.
+- Both the published and legacy `send-token` payloads are supported for compatible deployments.
 - `WebhookVerifier` is **experimental**. Assinafy does not publish the signature header, algorithm, encoding, timestamp, or replay-protection scheme, so it is not a production trust boundary until the exact scheme is published or independently verified against real deliveries.
 
 ## License

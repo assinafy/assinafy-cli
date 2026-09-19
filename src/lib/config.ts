@@ -167,10 +167,15 @@ export function resolveConfig(globals: GlobalOptions): ResolvedConfig {
 
 	const baseUrl =
 		pick(globals.baseUrl, process.env.ASSINAFY_BASE_URL, profile.base_url) ?? DEFAULT_BASE_URL;
+	const credentials = [
+		{ apiKey: globals.apiKey, token: globals.token },
+		{ apiKey: process.env.ASSINAFY_API_KEY, token: process.env.ASSINAFY_TOKEN },
+		{ apiKey: profile.api_key, token: profile.token },
+	].find(({ apiKey, token }) => apiKey !== undefined || token !== undefined);
 
 	return {
-		apiKey: pick(globals.apiKey, process.env.ASSINAFY_API_KEY, profile.api_key),
-		token: pick(globals.token, process.env.ASSINAFY_TOKEN, profile.token),
+		apiKey: credentials?.apiKey,
+		token: credentials?.token,
 		accountId: pick(globals.accountId, process.env.ASSINAFY_ACCOUNT_ID, profile.account_id),
 		baseUrl: normalizeBaseUrl(baseUrl),
 		webhookSecret: pick(undefined, process.env.ASSINAFY_WEBHOOK_SECRET, profile.webhook_secret),

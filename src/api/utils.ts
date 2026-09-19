@@ -53,7 +53,7 @@ export function toSdkError(error: unknown, fallbackMessage: string): AssinafyErr
 	if (axios.isAxiosError(error)) {
 		const status = error.response?.status;
 		if (status) {
-			return ApiError.fromResponse(status, error.response?.data ?? null);
+			return ApiError.fromResponse(status, error.response?.data ?? null, error.response?.headers);
 		}
 		// Axios errors retain the complete request config, including auth headers,
 		// body, and query values. Never attach the raw error as a public cause.
@@ -185,7 +185,7 @@ export function validateSignerOptions(input: {
 	}
 }
 
-/** Validate the sequencing rules published for template-document signers. */
+/** Validate the sequencing rules for assignments and template-document signers. */
 export function validateSigningSteps(
 	signers: readonly { verification_method?: unknown; step?: unknown }[],
 ): void {

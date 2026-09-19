@@ -88,7 +88,12 @@ describe('buildAssignmentPayload', () => {
 			buildAssignmentPayload({
 				signers: [
 					{ id: 'a', step: 1 },
-					{ signer_id: 'b', verification_method: 'Whatsapp', notification_methods: ['Whatsapp'] },
+					{
+						signer_id: 'b',
+						verification_method: 'Whatsapp',
+						notification_methods: ['Whatsapp'],
+						step: 2,
+					},
 				],
 				message: 'Please sign',
 			}),
@@ -96,7 +101,7 @@ describe('buildAssignmentPayload', () => {
 			method: 'virtual',
 			signers: [
 				{ id: 'a', step: 1 },
-				{ id: 'b', verification_method: 'Whatsapp', notification_methods: ['Whatsapp'] },
+				{ id: 'b', verification_method: 'Whatsapp', notification_methods: ['Whatsapp'], step: 2 },
 			],
 			message: 'Please sign',
 		});
@@ -146,6 +151,16 @@ describe('buildAssignmentPayload', () => {
 			/entries are required/,
 		);
 	});
+});
+
+it('rejects incomplete or noncontiguous assignment steps before posting', () => {
+	for (const signers of [
+		[{ id: 'a', step: 0 }],
+		[{ id: 'a', step: 2 }],
+		[{ id: 'a', step: 1 }, { id: 'b' }],
+	]) {
+		expect(() => buildAssignmentPayload({ signers })).toThrow(ValidationError);
+	}
 });
 
 describe('DocumentResource', () => {
@@ -441,6 +456,26 @@ describe('SignerResource', () => {
 			url: '/accounts/acc/signers',
 			body: { full_name: 'No Contact' },
 		});
+	});
+
+	it('reuses an exact email match on a later search page', async () => {
+		const get = vi
+			.fn()
+			.mockResolvedValueOnce(
+				ok([{ id: 'other', email: 'other@example.com' }], { 'x-pagination-page-count': '2' }),
+			)
+			.mockResolvedValueOnce(
+				ok([{ id: 'existing', email: 'ANA@example.com' }], { 'x-pagination-page-count': '2' }),
+			);
+		const http = { ...mockHttp(calls), get } as unknown as AxiosInstance;
+		const resource = new SignerResource(http, 'acc');
+		await expect(
+			resource.create({ full_name: 'Ana', email: 'ana@example.com' }),
+		).resolves.toMatchObject({ id: 'existing' });
+		expect(get).toHaveBeenLastCalledWith('/accounts/acc/signers', {
+			params: { search: 'ana@example.com', 'per-page': 100, page: 2 },
+		});
+		expect(calls).toHaveLength(0);
 	});
 
 	it('creates WhatsApp-only signers without an email lookup', async () => {
@@ -815,6 +850,23 @@ describe('SignerDocumentsResource', () => {
 		await expect(signerDocs.decline('doc', 'assignment', 'code', '')).rejects.toThrow(
 			ValidationError,
 		);
+	});
+
+	it('enforces the published decline reason limit on single and bulk rejection', async () => {
+		const calls: CapturedCall[] = [];
+		const resource = new SignerDocumentsResource(mockHttp(calls));
+		for (const reason of [' ', 'x'.repeat(2001)]) {
+			await expect(resource.decline('doc', 'assignment', 'code', reason)).rejects.toThrow(
+				ValidationError,
+			);
+			await expect(resource.declineMultiple(['doc'], reason, 'code')).rejects.toThrow(
+				ValidationError,
+			);
+		}
+		expect(calls).toHaveLength(0);
+		await resource.decline('doc', 'assignment', 'code', 'x'.repeat(2000));
+		await resource.declineMultiple(['doc'], 'x'.repeat(2000), 'code');
+		expect(calls).toHaveLength(2);
 	});
 
 	it('sends the access code as a query param for accept-terms (not the body)', async () => {

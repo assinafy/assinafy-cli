@@ -106,9 +106,13 @@ export class SignerResource extends BaseResource {
 	async findByEmail(email: string, accountId?: string): Promise<ISigner | null> {
 		requireEmail(email);
 		try {
-			const { data } = await this.list({ search: email, per_page: 100 }, accountId);
 			const lower = email.toLowerCase();
-			return data.find((s) => (s.email ?? '').toLowerCase() === lower) ?? null;
+			for (let page = 1; ; page++) {
+				const { data, meta } = await this.list({ search: email, per_page: 100, page }, accountId);
+				const match = data.find((s) => (s.email ?? '').toLowerCase() === lower);
+				if (match) return match;
+				if (!data.length || !meta?.last_page || page >= meta.last_page) return null;
+			}
 		} catch (err) {
 			if (err instanceof ApiError && err.statusCode === 404) {
 				return null;

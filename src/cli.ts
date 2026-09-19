@@ -8,6 +8,7 @@ import { documentsCommand } from './commands/documents';
 import { fieldsCommand } from './commands/fields';
 import { loginCommand } from './commands/login';
 import { logoutCommand } from './commands/logout';
+import { oauthCommand } from './commands/oauth';
 import { sendCommand } from './commands/send';
 import { signerCommand } from './commands/signer';
 import { signersCommand } from './commands/signers';
@@ -35,7 +36,7 @@ const program = new Command()
 	})
 	.version(`${PACKAGE_NAME} v${VERSION}`, '-v, --version', 'Output the current version')
 	.option('--api-key <key>', 'API key (overrides env/config)')
-	.option('--token <token>', 'Legacy JWT access token (overrides env/config)')
+	.option('--token <token>', 'OAuth access token or user JWT (overrides env/config)')
 	.option('--account-id <id>', 'Default account/workspace ID (overrides env/config)')
 	.option('--base-url <url>', 'API base URL (overrides env/config)')
 	.option('-p, --profile <name>', 'Config profile to use (overrides ASSINAFY_PROFILE)')
@@ -69,6 +70,7 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	// Signer-side + auth
 	.addCommand(signerCommand)
 	.addCommand(authCommand)
+	.addCommand(oauthCommand)
 	// Account / meta
 	.addCommand(loginCommand)
 	.addCommand(logoutCommand)

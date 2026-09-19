@@ -14,6 +14,7 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(path.join(root, 'docs', 'api-operations.json'), 'utf8'));
 const reference = readFileSync(path.join(root, 'docs', 'api-reference.md'), 'utf8');
+const sdkReference = readFileSync(path.join(root, 'docs', 'sdk-reference.md'), 'utf8');
 
 for (const operation of manifest.operations) {
 	const marker = `\`${operation.method} ${operation.path}\``;
@@ -78,6 +79,22 @@ const resourceDir = path.join(root, 'src', 'api', 'resources');
 for (const file of readdirSync(resourceDir)) {
 	if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
 	const source = readFileSync(path.join(resourceDir, file), 'utf8');
+	if (file !== 'base.ts') {
+		const resource =
+			file === 'authentication.ts'
+				? 'auth'
+				: file === 'signer-documents.ts'
+					? 'signerDocuments'
+					: file.slice(0, -3);
+		const start = sdkReference.indexOf(`(\`client.${resource}\`)`);
+		if (start === -1) throw new Error(`Missing SDK documentation for client.${resource}`);
+		const end = sdkReference.indexOf('\n## ', start);
+		const section = sdkReference.slice(start, end === -1 ? undefined : end);
+		for (const [, method] of source.matchAll(/^\tasync (\w+)\(/gm)) {
+			if (!section.includes(`\`${method}(`))
+				throw new Error(`Missing SDK method documentation: ${resource}.${method}`);
+		}
+	}
 	for (const match of source.matchAll(
 		/this\.http\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*(?:`([^`]+)`|'([^']+)')/g,
 	)) {

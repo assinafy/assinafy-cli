@@ -1,6 +1,6 @@
 {
 	"name": "@assinafy/cli",
-	"version": "2.0.3",
+	"version": "2.1.0",
 	"description": "The official command-line interface for the Assinafy digital-signature API",
 	"license": "MIT",
 	"type": "module",
@@ -30,6 +30,9 @@
 		"install.ps1",
 		"README.md",
 		"README.en.md",
+		"CONTRIBUTING.md",
+		"SECURITY.md",
+		".env.example",
 		"LICENSE",
 		"THIRD_PARTY_NOTICES.md"
 	],

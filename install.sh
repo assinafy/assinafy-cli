@@ -83,10 +83,10 @@ main() {
 	mv -f "$assinafy_replacement" "$executable"
 	assinafy_replacement=""
 
-	if [ -f "$extract_dir/README.md" ]; then cp "$extract_dir/README.md" "$install_dir/README.md"; fi
-	if [ -f "$extract_dir/LICENSE" ]; then cp "$extract_dir/LICENSE" "$install_dir/LICENSE"; fi
-	if [ -f "$extract_dir/THIRD_PARTY_NOTICES.md" ]; then cp "$extract_dir/THIRD_PARTY_NOTICES.md" "$install_dir/THIRD_PARTY_NOTICES.md"; fi
-	if [ -f "$extract_dir/VERSION" ]; then cp "$extract_dir/VERSION" "$install_dir/VERSION"; fi
+	for file in README.md README.en.md CONTRIBUTING.md SECURITY.md .env.example LICENSE THIRD_PARTY_NOTICES.md VERSION; do
+		if [ -f "$extract_dir/$file" ]; then cp "$extract_dir/$file" "$install_dir/$file"; fi
+	done
+	if [ -d "$extract_dir/docs" ]; then cp -R "$extract_dir/docs/." "$install_dir/docs"; fi
 
 	ensure_path "$bin_dir"
 	success "Installed $installed_version to $executable"
@@ -265,7 +265,7 @@ validate_archive() {
 				fi
 				;;
 			VERSION) version_count=$((version_count + 1)) ;;
-			README.md | LICENSE | THIRD_PARTY_NOTICES.md | docs/*.md | docs/api-operations.json) ;;
+			README.md | README.en.md | CONTRIBUTING.md | SECURITY.md | .env.example | LICENSE | THIRD_PARTY_NOTICES.md | docs/*.md | docs/api-operations.json) ;;
 			*) fail "Release archive contained an unexpected path: $entry" ;;
 		esac
 	done < <(tar -tzf "$archive")

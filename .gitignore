@@ -11,3 +11,5 @@ coverage/
 
 # Claude Code local settings can hold credentials; never commit them.
 .claude/
+AGENTS.md
+CLAUDE.md

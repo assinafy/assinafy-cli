@@ -17,20 +17,40 @@ export class AssinafyError extends Error {
 export class ApiError extends AssinafyError {
 	public readonly statusCode: number;
 	public readonly responseData: unknown;
+	/** Bearer challenge, including insufficient_scope and resource_metadata when provided. */
+	public readonly wwwAuthenticate: string | undefined;
+	/** Server retry delay (seconds or HTTP date), when provided. */
+	public readonly retryAfter: string | undefined;
 
 	constructor(
 		message: string,
 		statusCode: number,
 		responseData: unknown = null,
-		options?: { cause?: unknown },
+		options?: { cause?: unknown; wwwAuthenticate?: string; retryAfter?: string },
 	) {
 		super(message, { statusCode, responseData }, options);
 		this.name = 'ApiError';
 		this.statusCode = statusCode;
 		this.responseData = responseData;
+		this.wwwAuthenticate = options?.wwwAuthenticate;
+		this.retryAfter = options?.retryAfter;
 	}
 
-	static fromResponse(statusCode: number, responseData: unknown): ApiError {
+	static fromResponse(
+		statusCode: number,
+		responseData: unknown,
+		headers: Record<string, unknown> = {},
+	): ApiError {
+		if (Buffer.isBuffer(responseData) || responseData instanceof ArrayBuffer) {
+			const text = (
+				Buffer.isBuffer(responseData) ? responseData : Buffer.from(responseData)
+			).toString('utf8');
+			try {
+				responseData = JSON.parse(text);
+			} catch {
+				responseData = text;
+			}
+		}
 		const data = (responseData ?? {}) as Record<string, unknown>;
 		const rawMessage = data.message;
 		const rawError = data.error;
@@ -40,7 +60,11 @@ export class ApiError extends AssinafyError {
 				: typeof rawError === 'string'
 					? rawError
 					: 'API request failed';
-		return new ApiError(message, statusCode, responseData);
+		return new ApiError(message, statusCode, responseData, {
+			wwwAuthenticate:
+				typeof headers['www-authenticate'] === 'string' ? headers['www-authenticate'] : undefined,
+			retryAfter: typeof headers['retry-after'] === 'string' ? headers['retry-after'] : undefined,
+		});
 	}
 }
 
@@ -69,7 +93,7 @@ export class NetworkError extends AssinafyError {
  *
  * Without this, a failure part-way through
  * {@link AssinafyClient.uploadAndRequestSignatures} would leave an uploaded
- * document and freshly created signers in the workspace with no handle for the
+ * document and created or reused signers in the workspace with no handle for the
  * caller to resume from or clean up. The original failure is preserved in
  * {@link Error.cause}.
  *
@@ -79,8 +103,8 @@ export class NetworkError extends AssinafyError {
  *   await client.uploadAndRequestSignatures({ source, signers });
  * } catch (err) {
  *   if (err instanceof PartialWorkflowError) {
- *     if (err.documentId) await client.documents.delete(err.documentId);
- *     for (const id of err.signerIds) await client.signers.delete(id);
+ *     console.error({ documentId: err.documentId, signerIds: err.signerIds });
+ *     // Inspect the document before resuming. Signers may already be in use elsewhere.
  *   }
  *   throw err;
  * }

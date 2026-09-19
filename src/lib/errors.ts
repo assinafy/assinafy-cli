@@ -28,6 +28,8 @@ export interface NormalizedError {
 	message: string;
 	code: string;
 	statusCode?: number;
+	wwwAuthenticate?: string;
+	retryAfter?: string;
 	/** Process exit code to use (carried from {@link CliError}); defaults to 1. */
 	exitCode?: number;
 	details?: unknown;
@@ -44,6 +46,8 @@ export function normalizeError(err: unknown): NormalizedError {
 			code: 'api_error',
 			statusCode: err.statusCode,
 			details: err.responseData ?? undefined,
+			...(err.wwwAuthenticate ? { wwwAuthenticate: err.wwwAuthenticate } : {}),
+			...(err.retryAfter ? { retryAfter: err.retryAfter } : {}),
 		};
 	}
 	// Keep the underlying code/status so a half-finished workflow still reports
@@ -56,6 +60,8 @@ export function normalizeError(err: unknown): NormalizedError {
 			details: err.context,
 		};
 		if (cause.statusCode !== undefined) normalized.statusCode = cause.statusCode;
+		if (cause.wwwAuthenticate !== undefined) normalized.wwwAuthenticate = cause.wwwAuthenticate;
+		if (cause.retryAfter !== undefined) normalized.retryAfter = cause.retryAfter;
 		return normalized;
 	}
 	if (err instanceof ValidationError) {

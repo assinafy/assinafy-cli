@@ -32,7 +32,7 @@ const client = AssinafyClient.create(
 );
 ```
 
-For the sandbox, add `baseUrl: 'https://sandbox.assinafy.com.br/v1'`. Create an unauthenticated client only for public or signer-access-code endpoints:
+For the sandbox, add `baseUrl: 'https://sandbox.assinafy.com.br/v1'`. Create an unauthenticated client for public, OAuth bootstrap, or signer-access-code endpoints:
 
 ```ts
 const publicClient = new AssinafyClient({ allowUnauthenticated: true });
@@ -44,19 +44,19 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 
 | Field | Type | Behavior |
 | --- | --- | --- |
-| `apiKey` | `string` | Preferred credential; sent as `X-Api-Key`. |
-| `token` | `string` | JWT fallback; sent as `Authorization: Bearer`. `apiKey` wins when both are set. |
+| `apiKey` | `string` | Direct owner credential; sent as `X-Api-Key`. |
+| `token` | `string` | OAuth access token or user JWT; sent as `Authorization: Bearer`. `apiKey` wins when both are set. |
 | `accountId` | `string` | Default for account-scoped methods; most methods also accept an override. |
 | `baseUrl` | `string` | HTTPS URL; defaults to `https://api.assinafy.com.br/v1`. Redirects are rejected. |
 | `allowInsecureHttp` | `boolean` | Opt-in for a plaintext `http://` base URL. Restricted to loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`); any other host is rejected even with this enabled, so the API key can never travel in cleartext. |
 | `timeout` | `number` | Request timeout in milliseconds; default `30_000`. |
 | `logger` | `Logger` | Optional `debug`/`info`/`warn`/`error` functions; otherwise no-op. |
-| `allowUnauthenticated` | `boolean` | Permit construction without `apiKey`/`token`; use only for public and signer-code flows. |
+| `allowUnauthenticated` | `boolean` | Permit construction without `apiKey`/`token`; use only for public, OAuth bootstrap, and signer-code flows. |
 | `webhookSecret` | `string` | Used only by the experimental `webhookVerifier`; see [Webhook verification](#webhook-verification-experimental). |
 
 | API | Result |
 | --- | --- |
-| `new AssinafyClient(options: AssinafyClientOptions)` | Client with `documents`, `signers`, `workspaces`, `assignments`, `webhooks`, `templates`, `tags`, `auth`, `fields`, `users`, `signerDocuments`, and `webhookVerifier`. |
+| `new AssinafyClient(options: AssinafyClientOptions)` | Client with `documents`, `signers`, `workspaces`, `assignments`, `webhooks`, `templates`, `tags`, `auth`, `oauth`, `fields`, `users`, `signerDocuments`, and `webhookVerifier`. |
 | `AssinafyClient.create(apiKey, accountId, options?)` | Convenience constructor. |
 | `AssinafyClient.fromConfig(config: ClientConfigInput)` | Accepts snake-case or camel-case configuration keys. |
 | `client.uploadAndRequestSignatures(options)` | Uploads a PDF, optionally waits for processing, creates/reuses signers, and creates a virtual assignment; returns `IUploadAndRequestSignaturesResult`. |
@@ -89,7 +89,7 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 
 It resolves to `{ document: IDocumentUploadResponse; assignment: IAssignment; signer_ids: string[] }`. A phone-only signer defaults to WhatsApp verification and notification unless those controls are supplied explicitly.
 
-The workflow is not transactional. Once the upload succeeds, any later failure rejects with a `PartialWorkflowError` naming everything that already exists, so cleanup or a resume never needs to search the workspace for orphans. Nothing is deleted automatically — the caller decides.
+The workflow is not transactional. Once the upload succeeds, any later failure rejects with a `PartialWorkflowError` naming everything that already exists, so cleanup or a resume never needs to search the workspace for orphans. Nothing is deleted automatically. Signer IDs include reused records; never delete them as an automatic rollback. Validate local signer options before uploading, then inspect the document state before resuming a partially completed workflow.
 
 ```ts
 import { PartialWorkflowError } from '@assinafy/cli/api';
@@ -99,8 +99,8 @@ try {
 } catch (error) {
   if (error instanceof PartialWorkflowError) {
     console.error(error.message, error.cause); // original API/validation failure
-    if (error.documentId) await client.documents.delete(error.documentId);
-    for (const signerId of error.signerIds) await client.signers.delete(signerId);
+    console.error({ documentId: error.documentId, signerIds: error.signerIds });
+    // Inspect before resuming: these signers may be shared with existing documents.
   }
   throw error;
 }
@@ -192,7 +192,7 @@ Assignment payload:
 }
 ```
 
-`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. `create` requires at least one signer and enforces the documented one-digital-certificate-signer-per-step rule. The estimate schema has no `step`, so `estimateCost` does not apply that create-only rule and permits zero signers for `collect`. Assignment list params are pagination plus the live-verified `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. The sandbox ignored an assignment `search` query, so the SDK does not expose it.
+`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. It resolves synchronously to the JSON assignment body above; no HTTP call occurs. Options are `{ allowSignersWithoutId?: boolean; allowEmptySigners?: boolean; skipDigitalCertificateStepValidation?: boolean }`, all false by default. The first two support cost estimation; the third bypasses signing-order and certificate-step checks for estimates. `allowEmptySigners` applies only to `collect`. `create` requires at least one signer, enforces complete contiguous signing steps from 1 when supplied, and requires each digital-certificate signer to be alone in its step. The estimate schema has no `step`, so `estimateCost` does not apply that create-only rule and permits zero signers for `collect`. Assignment list params are pagination plus the compatible `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. Assignment `search` is unsupported and rejected locally.
 
 ## Signers (`client.signers`)
 
@@ -205,7 +205,7 @@ Assignment payload:
 | `delete(signerId, accountId?)` | [`DELETE /accounts/{accountId}/signers/{signerId}`](./api-reference.md#delete-signer) | `IEmptyResult` (`unknown[]`) |
 | `findByEmail(email, accountId?)` | SDK helper over `list({ search: email })` | `ISigner | null` |
 
-Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; new integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. List params support published `search` and live-verified `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
+Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; new integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. List params support published `search` and compatible `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
 
 ## Signer-side flows (`client.signerDocuments`)
 
@@ -282,7 +282,7 @@ Notification counters can overlap when a request uses multiple delivery channels
 | `getNotificationPreferences()` | [`GET /users/self/notification-preferences`](./api-reference.md#get-my-notification-preferences) | `INotificationPreferences` |
 | `updateNotificationPreferences(payload)` | [`PUT /users/self/notification-preferences`](./api-reference.md#update-my-notification-preferences) | `INotificationPreferences` |
 
-`IUserSelfResponse` accepts the published user object and the sandbox-observed `{ user, accounts }` envelope. Preference payloads are a non-empty partial mapping of the exported `NOTIFICATION_PREFERENCE_CODES` to booleans. The production OpenAPI publishes these routes; a lagging sandbox deployment may return route-level 404s for statistics/preferences.
+`IUserSelfResponse` accepts the published user object and the compatible `{ user, accounts }` envelope. Preference payloads are a non-empty partial mapping of the exported `NOTIFICATION_PREFERENCE_CODES` to booleans. The production OpenAPI publishes these routes; a lagging sandbox deployment may return route-level 404s for statistics/preferences.
 
 ## Authentication (`client.auth`)
 
@@ -299,6 +299,22 @@ Notification counters can overlap when a request uses multiple delivery channels
 | `deleteApiKey()` | [`DELETE /users/api-keys`](./api-reference.md#delete-api-key) | `IEmptyResult` (`unknown[]`) |
 
 Login/social/reset bootstrap calls can use an unauthenticated client. The published authenticated user endpoints permit either a bearer JWT or `X-Api-Key`; use the credential type appropriate to the account and endpoint policy.
+
+## OAuth (`client.oauth`)
+
+| SDK method | HTTP operation / behavior | Resolves to |
+| --- | --- | --- |
+| `metadata()` | [`GET /.well-known/oauth-protected-resource`](./api-reference.md#oauth-20-protected-resource-metadata), at the API origin outside `/v1` | `IOAuthProtectedResource` |
+| `discovery(issuer)` | `GET {issuer}/.well-known/oauth-authorization-server`; requires HTTPS and matching issuer | `IOAuthAuthorizationServer` |
+| `authorize({ clientId, redirectUri, scopes })` | Discover resource/server and generate a fresh S256 verifier, state, and optional OIDC nonce | `IOAuthAuthorizationRequest` |
+| `exchangeCode(callbackUrl, request, clientSecret?)` | Validate callback URI/state/issuer and submit the authorization code | `IOAuthTokenResponse` |
+| `token(payload)` | [`POST /oauth/token`](./api-reference.md#exchange-a-code-or-refresh-token-for-an-access-token), with code or refresh grant | `IOAuthTokenResponse` |
+| `revoke(payload)` | [`POST /oauth/revoke`](./api-reference.md#revoke-a-token) | `void` |
+| `userinfo()` | `GET /oauth/userinfo`, using the current OAuth bearer token with `openid` | `IOAuthUserInfo` |
+
+All request types, full payload examples and response shapes are in the [OAuth guide](./oauth-guide.md). `IOAuthTokenPayload` is a discriminated union: code exchange requires `code`, `redirect_uri`, and `code_verifier`; refresh requires `refresh_token`; both require `client_id` and optionally accept `client_secret` and `resource`. `IOAuthRevokePayload` requires `token` and `client_id`, with optional `client_secret` and `token_type_hint`.
+
+Metadata, discovery, token, and revoke calls remove owner headers. UserInfo uses the configured credential; construct the client with `token` for OAuth. OAuth bodies have no Assinafy envelope. The SDK returns credentials to the caller and does not persist, retry, or automatically refresh them. Store authorization requests in a single-use session; serialize refreshes across workers and atomically save the rotated result. Use an OIDC library to validate ID tokens before relying on identity claims.
 
 ## Fields (`client.fields`)
 
@@ -369,7 +385,7 @@ interface ITemplateDetailsResponse {
 
 `downloadPage` returns the raw JPEG response as a Node.js `Buffer`; it does not unwrap JSON.
 
-Template list params support pagination, published `search`, and live-verified `sort?: 'name' | '-name'`; ignored sort fields are rejected locally. `ITemplatePage` contains document page dimensions/URL plus typed `ITemplateField[]` entries (`id`, `field_id`, `role_id`, `label`, `display_settings`, and timestamps). Template document creation accepts `editor_fields?: Array<{ field_id: string; value: string }>`.
+Template list params support pagination, published `search`, and compatible `sort?: 'name' | '-name'`; ignored sort fields are rejected locally. `ITemplatePage` contains document page dimensions/URL plus typed `ITemplateField[]` entries (`id`, `field_id`, `role_id`, `label`, `display_settings`, and timestamps). Template document creation accepts `editor_fields?: Array<{ field_id: string; value: string }>`.
 
 ## Webhooks (`client.webhooks`)
 
@@ -382,16 +398,18 @@ Template list params support pagination, published `search`, and live-verified `
 | `listDispatches(params?, accountId?)` | [`GET /accounts/{accountId}/webhooks`](./api-reference.md#list-webhook-deliveries) | `PaginatedResult<IWebhookDispatch>` |
 | `retryDispatch(dispatchId, accountId?)` | [`POST /accounts/{accountId}/webhooks/{dispatchId}/retry`](./api-reference.md#retry-webhook-delivery) | `IWebhookDispatch` |
 
-Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a live-verified extension. The sandbox ignored dispatch `search`, so it is rejected locally. The API does not expose a delete-subscription operation; use `inactivate`.
+Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch `search` is unsupported and rejected locally. The API does not expose a delete-subscription operation; use `inactivate`.
+
+Decline operations require a non-empty reason of at most 2,000 Unicode characters. `signers.findByEmail` follows pagination metadata until an exact case-insensitive email match is found or the search is exhausted.
 
 ## Responses, pagination, errors, and binary data
 
 - JSON responses with `data` are unwrapped from the API envelope; direct status bodies remain `IStatusResponse`. Paginated calls resolve to `{ data: T[]; meta?: { current_page?, last_page?, per_page?, total? } }`; metadata comes from `X-Pagination-*` headers.
 - Binary methods resolve to Node.js `Buffer`; the SDK is not a browser package. It never writes downloaded data to disk.
-- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode` and `responseData`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
+- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode`, `responseData`, `wwwAuthenticate` and `retryAfter`; binary JSON error bodies are decoded before normalization. OAuth responses are flat JSON, and OAuth revocation resolves to `undefined`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports `documents upload --wait` or a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
 - `normalizeBaseUrl(url)` is exported and removes one trailing slash.
 
-Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause? }?)`, `ApiError.fromResponse(statusCode, responseData)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
+Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause?, wwwAuthenticate?, retryAfter? }?)`, `ApiError.fromResponse(statusCode, responseData, headers?)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
 
 ```ts
 try {
@@ -417,7 +435,7 @@ Assinafy's published API does **not** define a signature header, algorithm, dige
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 89 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Production OpenAPI currently publishes 93 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
 - The API's digital-certificate description mentions certificate start/complete routes that are not defined as OpenAPI paths. The SDK does not invent undocumented request/response contracts for them.
-- The SDK retains the two template compatibility routes above and both published/legacy public `sendToken` payloads until the upstream contract converges.
-- The sandbox raw signer-artifact route ignored an invalid access code during sandbox verification. The SDK adds the identity preflight described above, but direct HTTP consumers remain exposed until Assinafy fixes the route.
+- The SDK retains the two template compatibility routes above and both published/legacy public `sendToken` payloads for compatible deployments.
+- Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

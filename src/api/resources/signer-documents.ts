@@ -117,7 +117,7 @@ export class SignerDocumentsResource extends BaseResource {
 		if (!Array.isArray(documentIds) || documentIds.length === 0) {
 			throw new ValidationError('documentIds must be a non-empty array');
 		}
-		if (!declineReason) throw new ValidationError('declineReason is required');
+		validateDeclineReason(declineReason);
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to decline multiple documents', () =>
 			this.http.put(
@@ -283,7 +283,7 @@ export class SignerDocumentsResource extends BaseResource {
 		const did = this.requireId(documentId, 'Document ID');
 		const aid = this.requireId(assignmentId, 'Assignment ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
-		if (!declineReason) throw new ValidationError('declineReason is required');
+		validateDeclineReason(declineReason);
 		return this.call('Failed to decline assignment', () =>
 			this.http.put(
 				`/documents/${did}/assignments/${aid}/reject`,
@@ -291,5 +291,14 @@ export class SignerDocumentsResource extends BaseResource {
 				signerAccessConfig(code),
 			),
 		);
+	}
+}
+
+function validateDeclineReason(value: string): void {
+	if (typeof value !== 'string' || !value.trim()) {
+		throw new ValidationError('declineReason is required');
+	}
+	if ([...value].length > 2000) {
+		throw new ValidationError('declineReason must contain at most 2000 characters');
 	}
 }

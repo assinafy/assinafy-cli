@@ -103,6 +103,25 @@ describe('activeProfileName', () => {
 });
 
 describe('resolveConfig precedence', () => {
+	it('selects a credential source before choosing API key or bearer token', () => {
+		writeConfigFile({ profiles: { default: { api_key: 'stored-owner-key' } } });
+		process.env.ASSINAFY_API_KEY = 'environment-owner-key';
+		expect(resolveConfig({ token: 'oauth-token' })).toMatchObject({
+			apiKey: undefined,
+			token: 'oauth-token',
+		});
+		delete process.env.ASSINAFY_API_KEY;
+		process.env.ASSINAFY_TOKEN = 'environment-oauth-token';
+		expect(resolveConfig({})).toMatchObject({
+			apiKey: undefined,
+			token: 'environment-oauth-token',
+		});
+		expect(resolveConfig({ apiKey: 'explicit-key' })).toMatchObject({
+			apiKey: 'explicit-key',
+			token: undefined,
+		});
+	});
+
 	it('uses the built-in base URL when nothing is configured', () => {
 		const cfg = resolveConfig({});
 		expect(cfg.baseUrl).toBe(DEFAULT_BASE_URL);

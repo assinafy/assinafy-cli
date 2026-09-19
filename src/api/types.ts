@@ -49,13 +49,12 @@ export interface AssinafyClientOptions {
 	/** Assinafy API key. Preferred authentication method (sends `X-Api-Key` header). */
 	apiKey?: string;
 	/**
-	 * Legacy access token. If provided (and `apiKey` is not), the client will send
-	 * `Authorization: Bearer <token>` instead. Kept for backwards compatibility.
+	 * OAuth access token or user JWT. Sends `Authorization: Bearer <token>`.
+	 * `apiKey` takes precedence when both options are supplied.
 	 */
 	token?: string;
 	/**
-	 * Build a client without API-key/JWT credentials. Intended only for public
-	 * endpoints and signer-access-code flows.
+	 * Build a client without credentials for public, OAuth bootstrap, or signer-code calls.
 	 */
 	allowUnauthenticated?: boolean;
 	/** Default account (workspace) ID applied to account-scoped endpoints. */
@@ -1071,4 +1070,89 @@ export interface IDetachTagResponse {
 /** Confirmation returned after deleting a tag. */
 export interface IDeleteTagResponse {
 	deleted: boolean;
+}
+
+/** RFC 9728 metadata served at the API origin (outside `/v1`). */
+export interface IOAuthProtectedResource {
+	resource: string;
+	authorization_servers: string[];
+	scopes_supported: string[];
+	bearer_methods_supported: string[];
+}
+
+/** RFC 8414 metadata served by the authorization server. */
+export interface IOAuthAuthorizationServer {
+	issuer: string;
+	authorization_endpoint: string;
+	token_endpoint: string;
+	revocation_endpoint?: string;
+	userinfo_endpoint?: string;
+	jwks_uri?: string;
+	response_types_supported: string[];
+	scopes_supported?: string[];
+	grant_types_supported?: string[];
+	code_challenge_methods_supported?: string[];
+	token_endpoint_auth_methods_supported?: string[];
+	authorization_response_iss_parameter_supported?: boolean;
+	client_id_metadata_document_supported?: boolean;
+	[key: string]: unknown;
+}
+
+/** Input to `oauth.authorize`; redirectUri must exactly match an HTTPS registered URI. */
+export interface IOAuthAuthorizationOptions {
+	clientId: string;
+	redirectUri: string;
+	scopes: string[];
+}
+
+/** Store server-side per user connection attempt; consume once when handling the callback. */
+export interface IOAuthAuthorizationRequest {
+	authorization_url: string;
+	code_verifier: string;
+	state: string;
+	issuer: string;
+	client_id: string;
+	redirect_uri: string;
+	resource: string;
+	/** Generated when requesting openid. Validate it when verifying the ID token. */
+	nonce?: string;
+}
+
+/** JSON request body for `POST /oauth/token`. PKCE is mandatory for all code exchanges. */
+export type IOAuthTokenPayload = {
+	client_id: string;
+	/** Confidential applications only; public applications omit this field. */
+	client_secret?: string;
+	resource?: string;
+} & (
+	| { grant_type: 'authorization_code'; code: string; redirect_uri: string; code_verifier: string }
+	| { grant_type: 'refresh_token'; refresh_token: string }
+);
+
+/** Flat OAuth response. Persist rotated tokens atomically before making further requests. */
+export interface IOAuthTokenResponse {
+	access_token: string;
+	token_type: string;
+	expires_in: number;
+	scope: string;
+	/** Present only with offline_access consent. Reusing the old token revokes the connection. */
+	refresh_token?: string | null;
+	/** Present only with openid. Must be verified by an OIDC library before use as identity. */
+	id_token?: string | null;
+}
+
+/** JSON body for `POST /oauth/revoke`; failed client authentication still returns 401. */
+export interface IOAuthRevokePayload {
+	token: string;
+	client_id: string;
+	client_secret?: string;
+	token_type_hint?: 'access_token' | 'refresh_token';
+}
+
+/** Flat `GET /oauth/userinfo` claims. Additional claims depend on consented scopes. */
+export interface IOAuthUserInfo {
+	sub: string;
+	name?: string | null;
+	email?: string | null;
+	email_verified?: boolean | null;
 }

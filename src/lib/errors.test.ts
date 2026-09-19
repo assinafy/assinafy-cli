@@ -26,10 +26,31 @@ describe('normalizeError', () => {
 		expect(n.details).toEqual({ field: 'email' });
 	});
 
+	it('preserves OAuth challenges and retry delays through a partial workflow', () => {
+		const cause = ApiError.fromResponse(
+			403,
+			{ error: 'insufficient_scope' },
+			{
+				'www-authenticate': 'Bearer error="insufficient_scope", scope="documents:write"',
+				'retry-after': '60',
+			},
+		);
+		for (const error of [
+			cause,
+			new PartialWorkflowError('Incomplete', { documentId: 'doc' }, { cause }),
+		]) {
+			expect(normalizeError(error)).toMatchObject({
+				statusCode: 403,
+				wwwAuthenticate: cause.wwwAuthenticate,
+				retryAfter: '60',
+			});
+		}
+	});
+
 	it('keeps the underlying status and exposes the resources a partial workflow left behind', () => {
 		const n = normalizeError(
 			new PartialWorkflowError(
-				'Saldo insuficiente. (document doc1 and 2 signer(s) were already created)',
+				'Saldo insuficiente. (document doc1 exists; 2 signer(s) created or reused)',
 				{ documentId: 'doc1', signerIds: ['sig1', 'sig2'] },
 				{ cause: new ApiError('Saldo insuficiente.', 402) },
 			),

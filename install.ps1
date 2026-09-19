@@ -58,7 +58,7 @@ function Test-ArchiveLayout([string]$Archive, [string]$Target) {
 			Fail "Release archive contained an unsafe path"
 		}
 		$allowed = $expectedExecutables -ccontains $entry -or
-			$entry -cin @("VERSION", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md") -or
+			$entry -cin @("VERSION", "README.md", "README.en.md", "CONTRIBUTING.md", "SECURITY.md", ".env.example", "LICENSE", "THIRD_PARTY_NOTICES.md") -or
 			$entry -cmatch '^docs/[^/]+\.md$' -or $entry -ceq "docs/api-operations.json"
 		if (-not $allowed) {
 			Fail "Release archive contained an unexpected path: $entry"
@@ -205,11 +205,18 @@ try {
 	Move-Item $cmdReplacement $exe -Force
 	$cmdReplacement = $null
 
-	foreach ($file in @("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "VERSION")) {
+	foreach ($file in @("README.md", "README.en.md", "CONTRIBUTING.md", "SECURITY.md", ".env.example", "LICENSE", "THIRD_PARTY_NOTICES.md", "VERSION")) {
 		$source = Join-Path $extractDir $file
 		if (Test-Path $source) {
 			Copy-Item $source (Join-Path $installDir $file) -Force
 		}
+	}
+
+	$docsSource = Join-Path $extractDir "docs"
+	if (Test-Path $docsSource) {
+		$docsDestination = Join-Path $installDir "docs"
+		New-Item -ItemType Directory -Path $docsDestination -Force | Out-Null
+		Copy-Item (Join-Path $docsSource "*") $docsDestination -Recurse -Force
 	}
 
 	if ($env:ASSINAFY_NO_PATH_UPDATE -ne "1") {

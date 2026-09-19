@@ -67,6 +67,11 @@ const esmApi = await import(`${pkg.name}/api`);
 if (typeof cjsApi.AssinafyClient !== 'function' || typeof esmApi.AssinafyClient !== 'function') {
 	fail('SDK entry points do not export AssinafyClient');
 }
+for (const api of [cjsApi, esmApi]) {
+	const client = new api.AssinafyClient({ allowUnauthenticated: true });
+	if (!(client.oauth instanceof api.OAuthResource))
+		fail('SDK entry point is missing OAuthResource');
+}
 
 const consumer = mkdtempSync(path.join(tmpdir(), 'assinafy-sdk-consumer-'));
 let consumerError;
@@ -110,7 +115,13 @@ try {
 	}
 	writeFileSync(
 		path.join(consumer, 'index.ts'),
-		"import { type AssinafyClient, type ISendTokenResponse } from '@assinafy/cli/api';\ndeclare const client: AssinafyClient;\nconst response: Promise<ISendTokenResponse> = client.documents.sendToken('document1', { email: 'signer@example.com' });\nvoid response;\n",
+		`import { type AssinafyClient, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest } from '@assinafy/cli/api';
+declare const client: AssinafyClient;
+const response: Promise<ISendTokenResponse> = client.documents.sendToken('document1', { email: 'signer@example.com' });
+const request: Promise<IOAuthAuthorizationRequest> = client.oauth.authorize({ clientId: 'example-app', redirectUri: 'https://example.com/callback', scopes: ['documents:read'] });
+const tokens: Promise<IOAuthTokenResponse> = client.oauth.token({ grant_type: 'refresh_token', client_id: 'example-app', refresh_token: 'example-refresh' });
+void [response, request, tokens];
+`,
 	);
 	writeFileSync(
 		path.join(consumer, 'tsconfig.json'),

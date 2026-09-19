@@ -44,10 +44,12 @@ const setCommand = new Command('set')
 			let changed = false;
 			if (merged.apiKey !== undefined) {
 				profile.api_key = merged.apiKey;
+				profile.token = undefined;
 				changed = true;
 			}
 			if (merged.token !== undefined) {
 				profile.token = merged.token;
+				if (merged.apiKey === undefined) profile.api_key = undefined;
 				changed = true;
 			}
 			if (merged.accountId !== undefined) {

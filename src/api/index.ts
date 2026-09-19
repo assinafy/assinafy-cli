@@ -8,6 +8,7 @@ export { AuthenticationResource } from './resources/authentication.js';
 export type { DocumentUploadSource, IDocumentUploadOptions } from './resources/documents.js';
 export { DocumentResource } from './resources/documents.js';
 export { FieldsResource } from './resources/fields.js';
+export { OAuthResource } from './resources/oauth.js';
 export { SignerDocumentsResource } from './resources/signer-documents.js';
 export { SignerResource } from './resources/signers.js';
 export { TagResource } from './resources/tags.js';

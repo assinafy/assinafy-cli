@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bin = path.join(root, 'dist', 'cli.cjs');
 const docsDir = path.join(root, 'docs');
+const { operations } = JSON.parse(readFileSync(path.join(docsDir, 'api-operations.json'), 'utf8'));
 
 function help(args) {
 	try {
@@ -62,8 +63,7 @@ for (const file of readdirSync(docsDir)) {
 
 let index =
 	'# Command reference\n\nCommand pages are auto-generated from `assinafy <command> --help`.\n\n';
-index +=
-	'- [`api-reference.md`](./api-reference.md) — all 89 published HTTP operations with official request/response payloads\n- [`sdk-reference.md`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [`migration-v2.md`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [`releasing.md`](./releasing.md) — mirrored-tag release and registry-publishing runbook\n\n## Commands\n\n';
+index += `- [\`api-reference.md\`](./api-reference.md) — all ${operations.length} published HTTP operations with official request/response payloads\n- [\`sdk-reference.md\`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [\`oauth-guide.md\`](./oauth-guide.md) — authorization, PKCE, token rotation, and marketplace connections\n- [\`migration-v2.md\`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [\`releasing.md\`](./releasing.md) — GitHub release and registry-publishing runbook\n\n## Commands\n\n`;
 
 for (const name of topLevel) {
 	const md = `${`# \`assinafy ${name}\`\n\n${section([name], 0)}`.trimEnd()}\n`;
