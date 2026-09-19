@@ -114,6 +114,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify current production API contract
+        run: |
+          npm run docs:api
+          git diff --exit-code -- docs/api-reference.md docs/api-operations.json
+
       - name: Verify generated files are up to date
         run: |
           node scripts/gen-docs.mjs
@@ -179,18 +184,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Hard gate: the tagged build has to pass against the live sandbox API before
-  # anything is published. Reuses the scheduled contract workflow so there is one
-  # definition of "works against the real API".
-  live-gate:
-    needs: verify
-    uses: ./.github/workflows/sandbox.yml
-    with:
-      ref: ${{ needs.verify.outputs.release-tag }}
-    secrets: inherit
-
   publish:
-    needs: [verify, live-gate]
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release

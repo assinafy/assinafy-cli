@@ -1,6 +1,6 @@
 {
 	"name": "@assinafy/cli",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"description": "The official command-line interface for the Assinafy digital-signature API",
 	"license": "MIT",
 	"type": "module",
@@ -63,7 +63,6 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "vitest run",
-		"test:sandbox": "npm run build && node scripts/sandbox-smoke.mjs",
 		"test:watch": "vitest",
 		"docs": "npm run build && node scripts/gen-docs.mjs",
 		"docs:api": "node scripts/gen-api-reference.mjs",

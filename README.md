@@ -416,9 +416,9 @@ npm run docs
 npm run pack:release
 ```
 
-`npm run docs:api` atualiza a referência a partir do OpenAPI oficial. `npm run docs` gera a ajuda a partir da CLI compilada. Os testes usam respostas controladas para verificar contratos e condições de erro; não substituem consentimento OAuth e operações reais autorizadas.
+`npm run docs:api` atualiza a referência a partir do OpenAPI oficial. `npm run docs` gera a ajuda a partir da CLI compilada.
 
-`npm run test:sandbox` é uma verificação opcional com recursos descartáveis. Configure as variáveis de [.env.example](.env.example) e destinatários sob seu controle: o fluxo inclui envio de código de verificação e limpeza do workspace temporário. Não aponte esse teste para produção. Operações de credenciais, fluxos de certificado e recursos indisponíveis podem exigir verificações próprias.
+`npm test` verifica contratos, validações, comandos e callbacks OAuth com dados sintéticos, transportes controlados e servidores locais, sem exigir credenciais Assinafy. A publicação também verifica a documentação pública atual da API, os arquivos gerados, os pacotes, os instaladores e os checksums antes de publicar os artefatos verificados.
 
 Este repositório é hospedado diretamente no GitHub. Envie as alterações para `main`, preserve tags de release anotadas e use o [procedimento de publicação](docs/releasing.md). Os workflows usam Actions fixadas por SHA, permissões mínimas e publicação npm via OIDC. A CI verifica Node.js 22/24/26, Linux/macOS/Windows, tipos, testes, pacotes, documentação, instaladores e arquivos reproduzíveis. [CONTRIBUTING.md](CONTRIBUTING.md) descreve as verificações e [SECURITY.md](SECURITY.md) orienta o relato de vulnerabilidades.
 

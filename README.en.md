@@ -318,7 +318,7 @@ Every setting resolves as **CLI flag → environment variable → config-file pr
 | Social provider / reset token | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN` |
 | Signer access code / email OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
 
-`.env.example` documents every variable, including the installer and sandbox-test ones.
+`.env.example` documents every CLI and installer environment variable.
 
 Public document verification and lookup, password reset, login and social login, and all signer access-code flows work without stored credentials.
 
@@ -534,7 +534,7 @@ npm run verify:api-docs  # assert every published operation is documented and im
 npm run pack:release     # build reproducible release archives in dist/release/
 ```
 
-`npm run test:sandbox` is opt-in and needs the sandbox variables from `.env.example`. It creates a disposable workspace, exercises the full resource lifecycle inside it, cleans up after itself, and sends one signing-token email to `ASSINAFY_TEST_EMAIL`. Never run it against production. The current sandbox requires the legacy `--recipient` form of the token request, while `--email` follows the production OpenAPI payload.
+`npm test` checks SDK contracts, validation, CLI behavior, and OAuth callbacks with synthetic data, controlled transports, and local servers. It requires no Assinafy credentials. Release verification also checks the current public API documentation and packaged artifacts.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow.
 
@@ -542,7 +542,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow.
 
 CI runs typecheck, lint, tests, bundle verification, generated-file checks, installer checks, reproducible-archive checks, and package-content checks on Node 22, 24, and 26 across Linux, macOS, and Windows.
 
-This repository is hosted directly on GitHub. Push changes to `main` and publish an annotated `vX.Y.Z` tag to run a three-stage release: `verify` rebuilds and re-checks the tagged commit and uploads a single verified payload; `live-gate` exercises that commit against the live sandbox API and re-confirms the published contract; only then does `publish` upload the release assets and publish to both registries. A missing sandbox credential fails the gate rather than skipping it, so no version ships unverified against the real API.
+This repository is hosted directly on GitHub. Push changes to `main` and publish an annotated `vX.Y.Z` tag to run a two-stage release: `verify` rebuilds and checks the tagged commit, automated tests, current public API contract, and packaged artifacts, then uploads a single verified payload; `publish` consumes that payload, uploads the release assets, and publishes to both registries through the protected release environment.
 
 The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and recovery.
 
