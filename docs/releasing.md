@@ -40,6 +40,12 @@ real API and re-confirmed the published contract. The gate runs with
 than silently skipping the check. A sandbox outage therefore blocks the release —
 re-dispatch the same tag once the sandbox recovers; the publish job is idempotent.
 
+If the live gate reports missing environment variables, configure the four
+`sandbox` environment secrets using the mapping in [CONTRIBUTING.md](../CONTRIBUTING.md).
+The public CLI client ID is not a sandbox API key. Validate the sandbox key and
+workspace, then re-run the release workflow for the existing tag. Credential
+configuration changes do not require moving the tag or creating another version.
+
 Prerelease versions advance the `next` registry tag and are not marked as the
 latest GitHub release. Stable versions advance `latest`. The workflow compares
 SemVer precedence before moving either registry/GitHub pointer; an older backfill

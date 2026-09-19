@@ -8,13 +8,14 @@ const REQUIRED_ENV = [
 	'ASSINAFY_TEST_EMAIL',
 	'ASSINAFY_TEST_EMAIL_ALT',
 ];
-const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+const required = process.env.ASSINAFY_SANDBOX_REQUIRED === '1';
+const missing = REQUIRED_ENV.filter((name) => !process.env[name]?.trim());
 
 if (missing.length > 0) {
 	console.log(
 		JSON.stringify(
 			{
-				status: 'SKIPPED',
+				status: required ? 'FAILED' : 'SKIPPED',
 				reason: 'sandbox credentials are not configured',
 				missing,
 			},
@@ -22,7 +23,7 @@ if (missing.length > 0) {
 			2,
 		),
 	);
-	process.exit(process.env.ASSINAFY_SANDBOX_REQUIRED === '1' ? 2 : 0);
+	process.exit(required ? 2 : 0);
 }
 
 const baseUrl = process.env.ASSINAFY_SANDBOX_BASE_URL ?? 'https://sandbox.assinafy.com.br/v1';
