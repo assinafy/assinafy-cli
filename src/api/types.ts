@@ -133,6 +133,13 @@ export interface ISignerSelf extends ISigner {
 	is_signature_reusable: boolean;
 }
 
+/** Signer data returned after accepting the platform terms. */
+export interface ISignerTermsAcceptance {
+	full_name: string;
+	email: string | null;
+	has_accepted_terms: boolean;
+}
+
 export type ICreateSignerResponse = ISigner;
 
 /** Pagination metadata extracted from `X-Pagination-*` response headers. */
@@ -155,7 +162,7 @@ export interface IStatusResponse {
 	message: string;
 }
 
-/** Unwrapped `data: []` returned by successful delete operations. */
+/** Unwrapped `data: []` returned by successful operations without result data. */
 export type IEmptyResult = unknown[];
 
 /** @deprecated use {@link PaginatedResult} — retained for existing type imports. */
@@ -170,6 +177,7 @@ export type SignerReference =
 			id?: string;
 			signer_id?: string;
 			verification_method?: AssignmentVerificationMethod;
+			/** Production defaults an empty array to Email; it does not disable invitations. */
 			notification_methods?: AssignmentNotificationMethod[];
 			/** Integer signing-order value forwarded to the assignment API. */
 			step?: number;
@@ -337,7 +345,14 @@ export interface IEstimateCostResponse {
 }
 
 /** Cost-estimation response for resending a single signer notification. */
-export type IResendCostEstimate = IEstimateCostResponse;
+export type IResendCostEstimate =
+	| IEstimateCostResponse
+	| {
+			total: number;
+			breakdown: Pick<IEstimateCostBreakdownItem, 'code' | 'name' | 'cost'>[];
+			credit_balance: number;
+			has_sufficient_credits: boolean;
+	  };
 
 /** Webhook payload envelope. */
 export interface IWebhookPayload {

@@ -240,7 +240,10 @@ const signCommand = new Command('sign')
 	.argument('<documentId>', 'Document ID')
 	.argument('<assignmentId>', 'Assignment ID')
 	.addOption(accessCodeOption())
-	.requiredOption('--entries <json>', 'JSON array of { itemId, fieldId, pageId, value } entries')
+	.requiredOption(
+		'--entries <json>',
+		'JSON array of { itemId, fieldId, pageId, value } entries; use [] for virtual assignments',
+	)
 	.action(async (documentId, assignmentId, opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const entries = parseJsonArray(opts.entries, '--entries') as ISignFieldEntry[];

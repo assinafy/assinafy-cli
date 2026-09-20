@@ -263,6 +263,8 @@ assinafy assignments create "$DOCUMENT_ID" --signers '[
 
 Passos explícitos devem ser contíguos a partir de `1`. Um signatário `DigitalCertificate` deve estar sozinho no seu passo e ter os dados exigidos pela plataforma. O fluxo normal de `sign` não executa o handshake Web PKI. As rotas de certificado citadas na descrição da API não têm contratos OpenAPI publicados; o SDK não fornece chamadas especulativas para elas.
 
+Em produção, `notification_methods: []` assume `['Email']` e envia o convite. Para escolher o canal, informe-o explicitamente; o array vazio não desativa notificações.
+
 `--copy-receivers` recebe IDs de signatários que receberão uma cópia final. Para coletar campos, use `assignments create --method collect --entries ...` com páginas, campos e signatários do documento; os formatos completos estão em [assignments](docs/assignments.md) e [SDK](docs/sdk-reference.md#assignments-clientassignments).
 
 Para iniciar a partir de um template:
@@ -279,9 +281,11 @@ assinafy documents create-from-template example_template --name 'Contrato' --sig
 
 Cada papel deve corresponder ao template escolhido. Campos de editor, tags, mensagem e vencimento são opcionais. Use IDs reais obtidos na sua conta ao executar os exemplos.
 
+Para organizar documentos, `documents tags-set <id> Contratos` substitui as tags e `documents tags-add <id> Contratos` acrescenta nomes. Nomes inexistentes são criados. `documents tags-remove <id> <tagId>` e o filtro `documents list --tags <ids>` usam IDs obtidos em `documents tags <id>`.
+
 ## Fluxo do signatário
 
-Os comandos `signer` usam o código do convite, separado da credencial do proprietário. Configure `ASSINAFY_SIGNER_ACCESS_CODE` de forma privada. A aplicação deve apresentar termos, dados e documento à pessoa antes de enviar suas decisões:
+Os comandos `signer` usam o código privado do link de verificação, separado da credencial do proprietário. Na verificação por e-mail, use o link e o código de seis dígitos da mesma mensagem; um convite que contém apenas o ID do documento e o destinatário não contém essa credencial. Configure `ASSINAFY_SIGNER_ACCESS_CODE` de forma privada e confirme o signatário e o documento. A aplicação deve apresentar termos, dados e documento à pessoa antes de enviar suas decisões:
 
 ```bash
 assinafy signer self --json
@@ -295,9 +299,20 @@ assinafy signer sign "$DOCUMENT_ID" example_assignment --entries '[
 ]' --json
 ```
 
-Os IDs e valores de campos vêm do assignment apresentado ao signatário. Quando for exigida verificação de e-mail, `documents send-token <id> --email <email>` envia o código e `signer verify-email --code <otp>` confirma; a variável `ASSINAFY_VERIFICATION_CODE` evita colocar o código nos argumentos. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
+Os IDs e valores de campos vêm do assignment apresentado ao signatário. Quando for exigida verificação de e-mail, `documents send-token <id> --recipient <email> --channel email` envia o código e `signer verify-email --code <otp>` confirma; a variável `ASSINAFY_VERIFICATION_CODE` evita colocar o código nos argumentos. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
 
-O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. A sobrecarga de `send-token` com `--recipient` e `--channel` permanece disponível para deployments que usam esse formato.
+O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. Em produção, `send-token` usa `--recipient` e `--channel`; `--email` mantém o formato publicado para deployments que o aceitam.
+
+Verificação, confirmação de dados e envio da imagem de assinatura podem retornar `[]` em caso de sucesso. Consulte `signer self` para obter o perfil atualizado e confirme o progresso e os artefatos certificados após assinar. Os exemplos completos de requisição e resposta estão na [referência do SDK para signatários](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
+
+Para um assignment virtual, confirme os dados do signatário e envie um array vazio:
+
+```bash
+assinafy signer confirm-data "$DOCUMENT_ID" --full-name 'Ana Lima' --email ana@example.com
+assinafy signer sign "$DOCUMENT_ID" example_assignment --entries '[]'
+```
+
+Os comandos de confirmação de dados, assinatura e recusa de um único documento verificam se o código de acesso corresponde ao documento e ao assignment antes de enviar a alteração.
 
 ## Eventos e webhooks
 

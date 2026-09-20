@@ -445,6 +445,8 @@ describe('published HTTP contracts', () => {
 			const expectedPath = templatePath.replace(/\{([^}]+)\}/g, (_match, key) =>
 				key === 'artifactName' ? 'original' : key === 'signatureType' ? 'signature' : id,
 			);
+			const preflightsSignerDocument =
+				auth === 'signer' && /^(POST|PUT) \/v1\/documents\//.test(operation);
 			const payload =
 				kind === 'list' || kind === 'array'
 					? [{ id }]
@@ -458,13 +460,25 @@ describe('published HTTP contracts', () => {
 				requests++;
 				const url = new URL(client.getAxiosInstance().getUri(config));
 				expect(url.origin).toBe('https://api.example.com');
-				expect(url.pathname).toBe(expectedPath);
-				expect(config.method?.toUpperCase()).toBe(method);
 				expect(config.headers.get('X-Api-Key')).toBeUndefined();
 				expect(config.headers.get('Authorization')).toBe(
 					auth ? undefined : 'Bearer example-owner-token',
 				);
 				if (auth === 'signer') expect(url.searchParams.get('signer-access-code')).toBe(code);
+				if (preflightsSignerDocument && requests === 1) {
+					expect(url.pathname).toBe('/v1/sign');
+					expect(config.method).toBe('get');
+					expect(config.data).toBeUndefined();
+					return {
+						config,
+						data: { status: 200, data: { id, assignment: { id } } },
+						status: 200,
+						statusText: 'OK',
+						headers: {},
+					};
+				}
+				expect(url.pathname).toBe(expectedPath);
+				expect(config.method?.toUpperCase()).toBe(method);
 				if (body === 'multipart') {
 					expect(config.data).toBeInstanceOf(FormData);
 					expect([...config.data.values()].some((value) => value instanceof Blob)).toBe(true);
@@ -493,7 +507,7 @@ describe('published HTTP contracts', () => {
 				};
 			};
 			const result = await invoke(client);
-			expect(requests).toBe(1);
+			expect(requests).toBe(preflightsSignerDocument ? 2 : 1);
 			expect(result).toEqual(
 				kind === 'void'
 					? undefined

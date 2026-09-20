@@ -208,6 +208,8 @@ assinafy assignments create "$DOCUMENT_ID" --signers '[
 
 Steps must form a contiguous sequence starting at `1`, and a `DigitalCertificate` signer must be alone in its step — both are validated locally before the request is sent. `--copy-receivers` takes **signer IDs** (people who only receive a copy of the finished document), not arbitrary email addresses.
 
+In production, `notification_methods: []` defaults to `['Email']` and sends an invitation. Select the intended channel explicitly; an empty array does not disable notifications.
+
 To start from a saved template instead of a PDF:
 
 ```bash
@@ -223,10 +225,10 @@ Keep the certified PDF, the certificate page, the bundle, and the `documents act
 
 ## The signer side
 
-Signers do not use your API key. Each invitation carries a one-time **access code**, and the `assinafy signer` commands act as that signer:
+Signers do not use your API key. The `assinafy signer` commands use a private **access code** from the signing verification link. For email verification, use the link and six-digit code from the same email; an invitation containing only a document ID and recipient does not contain this credential. Confirm the signer and document before submitting a decision:
 
 ```bash
-export ASSINAFY_SIGNER_ACCESS_CODE=<code-from-the-invitation>
+export ASSINAFY_SIGNER_ACCESS_CODE=<code-from-the-verification-link>
 
 assinafy signer self                              # who the code belongs to
 assinafy signer assignment                        # the document as the signer sees it
@@ -237,7 +239,18 @@ assinafy signer sign <documentId> <assignmentId> --entries '[
 ]'
 ```
 
-Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code: `documents send-token <documentId> --email <email>` issues it and `signer verify-email --code <otp>` redeems it. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
+Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code: `documents send-token <documentId> --recipient <email> --channel email` issues it and `signer verify-email --code <otp>` redeems it. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
+
+Verification, data confirmation, and signature upload may return `[]` on success. Fetch `signer self` for the updated profile and check document progress and certified artifacts after signing. Full request and response examples are in the [signer SDK reference](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
+
+For a virtual assignment, confirm the signer's data and submit an empty entry array:
+
+```bash
+assinafy signer confirm-data <documentId> --full-name 'Ana Lima' --email ana@example.com
+assinafy signer sign <documentId> <assignmentId> --entries '[]'
+```
+
+Single-document confirmation, signing, and decline commands verify that the access code matches the requested document and assignment before writing.
 
 Owner API credentials are stripped from every public and signer-side request, so an access-code flow can never leak your workspace key. The published signer artifact download is public; passing `--access-code` adds an identity preflight that confirms the code belongs to the signer being downloaded for.
 
@@ -385,15 +398,15 @@ assinafy send contract.pdf \
 | `documents activities <id>` | Activity log |
 | `documents delete <id> [-y]` | Delete a document |
 | `documents tags <id>` | List attached tags |
-| `documents tags-set <id> [tagIds...]` | Replace the tag set by ID (none detaches all) |
-| `documents tags-add <id> <tagIds...>` | Attach tags by ID |
+| `documents tags-set <id> [tags...]` | Replace the tag set by name (none detaches all) |
+| `documents tags-add <id> <tags...>` | Attach tags by name |
 | `documents tags-remove <id> <tagId>` | Detach one tag |
 | `documents create-from-template <templateId> --signers <json> [...]` | Create from a template |
 | `documents estimate-template-cost <templateId> --signers <json>` | Estimate template cost |
 | `documents verify <hash>` | Verify by signature hash (public) |
 | `documents statuses` | List every document status and whether it is deletable |
 | `documents public <id>` | Public unauthenticated lookup |
-| `documents send-token <id> --email <email>` | Send a verification token (`--recipient`/`--channel` remains for the live legacy form) |
+| `documents send-token <id> --recipient <email> --channel email` | Send a verification token in production |
 | `documents progress <id>` | Signing progress |
 | `documents wait <id> [--timeout] [--interval]` | Poll until ready, failed, or timed out |
 

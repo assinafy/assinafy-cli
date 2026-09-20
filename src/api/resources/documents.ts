@@ -285,24 +285,24 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/**
-	 * Replace the document's tag set with tag IDs. An empty array detaches all tags.
-	 * Values are forwarded unchanged for compatibility with deployments that also accept names.
+	 * Replace the document's tag set. Production accepts tag names and creates missing tags.
+	 * An empty array detaches all tags. Values are forwarded unchanged.
 	 */
 	async replaceTags(documentId: string, tags: string[], accountId?: string): Promise<ITag[]> {
 		const accId = this.accountId(accountId);
 		const docId = this.requireId(documentId, 'Document ID');
-		if (!Array.isArray(tags)) throw new ValidationError('tags must be an array of tag IDs');
+		if (!Array.isArray(tags)) throw new ValidationError('tags must be an array');
 		return this.call('Failed to replace document tags', () =>
 			this.http.put(`/accounts/${accId}/documents/${docId}/tags`, { tags }),
 		);
 	}
 
-	/** Attach additional tag IDs without removing existing ones. */
+	/** Attach additional tag names without removing existing ones. Production creates missing tags. */
 	async addTags(documentId: string, tags: string[], accountId?: string): Promise<ITag[]> {
 		const accId = this.accountId(accountId);
 		const docId = this.requireId(documentId, 'Document ID');
 		if (!Array.isArray(tags) || tags.length === 0) {
-			throw new ValidationError('tags must be a non-empty array of tag IDs');
+			throw new ValidationError('tags must be a non-empty array');
 		}
 		return this.call('Failed to add document tags', () =>
 			this.http.post(`/accounts/${accId}/documents/${docId}/tags`, { tags }),

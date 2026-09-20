@@ -268,32 +268,32 @@ const tagsCommand = new Command('tags')
 	});
 
 const tagsSetCommand = new Command('tags-set')
-	.description('Replace a document tag set by tag ID')
+	.description('Replace a document tag set by name')
 	.argument('<id>', 'Document ID')
-	.argument('[tagIds...]', 'Tag IDs (pass none to detach all)')
-	.action(async (id, tagIds, _opts, command) => {
+	.argument('[tags...]', 'Tag names (pass none to detach all)')
+	.action(async (id, tags, _opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
-			const tags = await withSpinner('Replacing tags', config, () =>
-				client.documents.replaceTags(id, tagIds ?? [], accountId),
+			const result = await withSpinner('Replacing tags', config, () =>
+				client.documents.replaceTags(id, tags ?? [], accountId),
 			);
-			printSuccess(`Document now has ${tags.length} tag(s)`, config);
-			printData(tags, config);
+			printSuccess(`Document now has ${result.length} tag(s)`, config);
+			printData(result, config);
 		});
 	});
 
 const tagsAddCommand = new Command('tags-add')
-	.description('Attach additional tag IDs without removing existing ones')
+	.description('Attach additional tag names without removing existing ones')
 	.argument('<id>', 'Document ID')
-	.argument('<tagIds...>', 'Tag IDs to attach')
-	.action(async (id, tagIds, _opts, command) => {
+	.argument('<tags...>', 'Tag names to attach')
+	.action(async (id, tags, _opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
-			const tags = await withSpinner('Adding tags', config, () =>
-				client.documents.addTags(id, tagIds, accountId),
+			const result = await withSpinner('Adding tags', config, () =>
+				client.documents.addTags(id, tags, accountId),
 			);
-			printSuccess(`Document now has ${tags.length} tag(s)`, config);
-			printData(tags, config);
+			printSuccess(`Document now has ${result.length} tag(s)`, config);
+			printData(result, config);
 		});
 	});
 

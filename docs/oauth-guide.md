@@ -4,6 +4,8 @@ Assinafy uses OAuth 2.1 authorization code with mandatory S256 PKCE for public a
 
 Use a separate connection for each customer workspace. An OAuth access token carries the consenting user's permissions, the granted scopes, and exactly one workspace. It never grants billing, workspace creation/deletion, API-key management, or other platform administration. An API key remains available for direct owner integrations. Signer access codes remain a separate authentication mechanism.
 
+Use `oauth.userinfo()` for the consenting user's profile. Production rejects OAuth application tokens for `users.self`, user statistics and notification preferences, workspace statistics, API-key lookup, webhook subscription/delivery/event-type reads, and WhatsApp notification history. These operations require the owner or first-party credential supported by their endpoint. Requesting additional OAuth scopes does not grant access to them.
+
 ## Register the application
 
 In Assinafy settings, create an OAuth application with its display name, permitted scopes, and exact HTTPS redirect URIs. Redirects cannot contain fragments. Plain HTTP localhost callbacks are not supported; use an HTTPS development endpoint or tunnel. Public clients omit a secret. Confidential clients keep their secret on the server and use `client_secret_post`, never browser code, a distributed binary, or a repository.

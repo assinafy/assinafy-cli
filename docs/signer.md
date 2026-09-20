@@ -217,7 +217,8 @@ Arguments:
 
 Options:
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
-  --entries <json>      JSON array of { itemId, fieldId, pageId, value } entries
+  --entries <json>      JSON array of { itemId, fieldId, pageId, value }
+                        entries; use [] for virtual assignments
   -h, --help            display help for command
 ```
 

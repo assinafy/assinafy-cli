@@ -22,8 +22,8 @@ Commands:
   activities <id>                                Show the activity log for a document
   delete|rm [options] <id>                       Delete a document
   tags <id>                                      List the tags attached to a document
-  tags-set <id> [tagIds...]                      Replace a document tag set by tag ID
-  tags-add <id> <tagIds...>                      Attach additional tag IDs without removing existing ones
+  tags-set <id> [tags...]                        Replace a document tag set by name
+  tags-add <id> <tags...>                        Attach additional tag names without removing existing ones
   tags-remove <id> <tagId>                       Detach a single tag from a document
   create-from-template [options] <templateId>    Create a document from a template
   estimate-template-cost [options] <templateId>  Estimate the credit cost of creating a document from a template
@@ -216,13 +216,13 @@ Options:
 ### `assinafy documents tags-set`
 
 ```text
-Usage: assinafy documents tags-set [options] <id> [tagIds...]
+Usage: assinafy documents tags-set [options] <id> [tags...]
 
-Replace a document tag set by tag ID
+Replace a document tag set by name
 
 Arguments:
   id          Document ID
-  tagIds      Tag IDs (pass none to detach all)
+  tags        Tag names (pass none to detach all)
 
 Options:
   -h, --help  display help for command
@@ -231,13 +231,13 @@ Options:
 ### `assinafy documents tags-add`
 
 ```text
-Usage: assinafy documents tags-add [options] <id> <tagIds...>
+Usage: assinafy documents tags-add [options] <id> <tags...>
 
-Attach additional tag IDs without removing existing ones
+Attach additional tag names without removing existing ones
 
 Arguments:
   id          Document ID
-  tagIds      Tag IDs to attach
+  tags        Tag names to attach
 
 Options:
   -h, --help  display help for command

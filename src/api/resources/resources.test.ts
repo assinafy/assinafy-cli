@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AxiosInstance } from 'axios';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { ApiError, ValidationError } from '../errors';
 import { AssignmentResource, buildAssignmentPayload } from './assignments';
 import { AuthenticationResource } from './authentication';
@@ -35,6 +35,7 @@ function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 	return {
 		get: async (url: string, config?: CapturedCall['config']) => {
 			calls.push({ method: 'GET', url, config });
+			if (url === '/sign') return ok({ id: 'doc', assignment: { id: 'assignment' } });
 			return ok([]);
 		},
 		post: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
@@ -731,6 +732,57 @@ describe('WebhookResource', () => {
 });
 
 describe('SignerDocumentsResource', () => {
+	it('rejects single-document writes when the access code targets another document or assignment', async () => {
+		const calls: CapturedCall[] = [];
+		const http = {
+			...mockHttp(calls),
+			get: async () => ok({ id: 'doc', assignment: { id: 'assignment' } }),
+		} as unknown as AxiosInstance;
+		const signerDocs = new SignerDocumentsResource(http);
+		for (const [documentId, assignmentId] of [
+			['other-doc', 'assignment'],
+			['doc', 'other-assignment'],
+		] as const) {
+			await expect(signerDocs.sign(documentId, assignmentId, 'code', [])).rejects.toThrow(
+				/does not match/,
+			);
+			await expect(
+				signerDocs.decline(documentId, assignmentId, 'code', 'Test decline'),
+			).rejects.toThrow(/does not match/);
+		}
+		await expect(signerDocs.confirmData('other-doc', 'code', {})).rejects.toThrow(/does not match/);
+		expect(calls).toHaveLength(0);
+	});
+
+	it('submits an empty field array for a matching virtual assignment', async () => {
+		const calls: CapturedCall[] = [];
+		const http = {
+			...mockHttp(calls),
+			get: async () => ok({ id: 'doc', assignment: { id: 'assignment', method: 'virtual' } }),
+		} as unknown as AxiosInstance;
+		await new SignerDocumentsResource(http).sign('doc', 'assignment', 'code', []);
+		expect(calls).toMatchObject([
+			{
+				method: 'POST',
+				url: '/documents/doc/assignments/assignment',
+				body: [],
+				config: { params: { 'signer-access-code': 'code' } },
+			},
+		]);
+	});
+
+	it('requires field entries for a collect assignment', async () => {
+		const calls: CapturedCall[] = [];
+		const http = {
+			...mockHttp(calls),
+			get: async () => ok({ id: 'doc', assignment: { id: 'assignment', method: 'collect' } }),
+		} as unknown as AxiosInstance;
+		await expect(
+			new SignerDocumentsResource(http).sign('doc', 'assignment', 'code', []),
+		).rejects.toThrow(/non-empty for collect/);
+		expect(calls).toHaveLength(0);
+	});
+
 	it('downloads from the public route without forwarding owner credentials', async () => {
 		const calls: CapturedCall[] = [];
 		const bytes = new Uint8Array([1, 2, 3]);
@@ -842,11 +894,37 @@ describe('SignerDocumentsResource', () => {
 		]);
 	});
 
+	it('preserves signer acknowledgement data without assuming a status body', async () => {
+		const accepted = {
+			full_name: 'Test Signer',
+			email: 'signer@example.com',
+			has_accepted_terms: true,
+		};
+		const http = {
+			...mockHttp(),
+			post: async () => ok([]),
+			put: async (url: string) => ok(url === '/signers/accept-terms' ? accepted : []),
+		} as unknown as AxiosInstance;
+		const signerDocs = new SignerDocumentsResource(http);
+		expectTypeOf<typeof accepted>().toExtend<Awaited<ReturnType<typeof signerDocs.acceptTerms>>>();
+		expectTypeOf<[]>().toExtend<Awaited<ReturnType<typeof signerDocs.verifyEmail>>>();
+		expectTypeOf<[]>().toExtend<Awaited<ReturnType<typeof signerDocs.confirmData>>>();
+		expectTypeOf<[]>().toExtend<Awaited<ReturnType<typeof signerDocs.uploadSignature>>>();
+		expect(await signerDocs.acceptTerms('code')).toEqual(accepted);
+		expect(
+			await signerDocs.verifyEmail({ signerAccessCode: 'code', verificationCode: '123456' }),
+		).toEqual([]);
+		expect(await signerDocs.confirmData('doc', 'code', { full_name: 'Test Signer' })).toEqual([]);
+		expect(await signerDocs.uploadSignature('code', Buffer.from('image'))).toEqual([]);
+	});
+
 	it('validates signer-side bulk/sign/decline inputs', async () => {
 		const signerDocs = new SignerDocumentsResource(mockHttp());
 		await expect(signerDocs.getCurrent('', 'code')).rejects.toThrow(ValidationError);
 		await expect(signerDocs.signMultiple([], 'code')).rejects.toThrow(ValidationError);
-		await expect(signerDocs.sign('doc', 'assignment', 'code', [])).rejects.toThrow(ValidationError);
+		await expect(signerDocs.sign('doc', 'assignment', 'code', null as never)).rejects.toThrow(
+			ValidationError,
+		);
 		await expect(signerDocs.decline('doc', 'assignment', 'code', '')).rejects.toThrow(
 			ValidationError,
 		);
@@ -866,7 +944,7 @@ describe('SignerDocumentsResource', () => {
 		expect(calls).toHaveLength(0);
 		await resource.decline('doc', 'assignment', 'code', 'x'.repeat(2000));
 		await resource.declineMultiple(['doc'], 'x'.repeat(2000), 'code');
-		expect(calls).toHaveLength(2);
+		expect(calls.map(({ method }) => method)).toEqual(['GET', 'PUT', 'PUT']);
 	});
 
 	it('sends the access code as a query param for accept-terms (not the body)', async () => {
@@ -884,18 +962,23 @@ describe('SignerDocumentsResource', () => {
 	it('sends documented confirm-data body fields and the reuse signature flag', async () => {
 		const calls: CapturedCall[] = [];
 		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
-		await signerDocs.confirmData('doc1', 'code-1', {
+		await signerDocs.confirmData('doc', 'code-1', {
 			full_name: 'Ana Lima',
 			government_id: '39053344705',
 		});
 		await signerDocs.uploadSignature('code-1', Buffer.from([1]), { reuse: true });
 		expect(calls[0]).toMatchObject({
+			method: 'GET',
+			url: '/sign',
+			config: { params: { 'signer-access-code': 'code-1' } },
+		});
+		expect(calls[1]).toMatchObject({
 			method: 'PUT',
-			url: '/documents/doc1/signers/confirm-data',
+			url: '/documents/doc/signers/confirm-data',
 			body: { full_name: 'Ana Lima', government_id: '39053344705' },
 			config: { params: { 'signer-access-code': 'code-1' } },
 		});
-		expect(calls[1]?.config?.params).toMatchObject({
+		expect(calls[2]?.config?.params).toMatchObject({
 			'signer-access-code': 'code-1',
 			type: 'signature',
 			reuse: true,
@@ -929,6 +1012,19 @@ describe('SignerDocumentsResource', () => {
 });
 
 describe('AssignmentResource', () => {
+	it('preserves the resend-specific credit estimate', async () => {
+		const estimate = {
+			total: 0,
+			breakdown: [{ code: 'NotificationEmailResend', name: 'Email Notification Resend', cost: 0 }],
+			credit_balance: 0,
+			has_sufficient_credits: true,
+		} satisfies Awaited<ReturnType<AssignmentResource['estimateResendCost']>>;
+		const http = { ...mockHttp(), post: async () => ok(estimate) } as unknown as AxiosInstance;
+		expect(
+			await new AssignmentResource(http).estimateResendCost('doc', 'assignment', 'signer'),
+		).toEqual(estimate);
+	});
+
 	it('posts normalised assignment payloads and estimation payloads', async () => {
 		const calls: CapturedCall[] = [];
 		const assignments = new AssignmentResource(mockHttp(calls), 'acc');

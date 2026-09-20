@@ -1,6 +1,6 @@
 # TypeScript SDK reference
 
-The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 24 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; documented delete responses therefore resolve to `IEmptyResult` (`unknown[]`). Operations whose response has no `data` preserve the direct `IStatusResponse` (`{ status, message }`) body. `sendToken` preserves either that published body or the live legacy `{ document, channel, recipient }` body.
+The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 24 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; operations with empty result data resolve to `IEmptyResult` (`unknown[]`). Responses without `data` remain unchanged, including direct `IStatusResponse` (`{ status, message }`) bodies. `sendToken` preserves either that published body or the production `{ document, channel, recipient }` body.
 
 The [API request/response reference](./api-reference.md) is the canonical source for every published HTTP payload and example. Complete TypeScript declarations are exported and packaged with `@assinafy/cli/api`.
 
@@ -149,13 +149,13 @@ interface IDocumentUploadOptions {
 }
 ```
 
-Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. Prefer the published `sendToken(documentId, { email })` form. The current sandbox rejects that form with HTTP 400, so use the string overload there; it sends the live-compatible legacy `{ recipient, channel }` body for email or WhatsApp integrations that still require it.
+Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. For production email delivery, use `sendToken(documentId, 'signer@example.com', 'email')`, which sends `{ recipient, channel }`. The `{ email }` overload preserves the published request form for deployments that support it.
 
 Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id, verification_method?, notification_methods?, step? }`; each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations.
 
 Document list params are `{ page?, per_page?, status?, method?, tags?, search?, sort? }`; search params omit `method`/`tags`. Supported sort values are `name`, `-name`, `updated_at`, and `-updated_at`.
 
-`replaceTags` and `addTags` take tag IDs, as required by the published request bodies. Values are still forwarded unchanged for compatibility with deployments that accept tag names; new integrations should use IDs from `client.tags.list()`.
+In production, `replaceTags` and `addTags` accept tag names, reuse matching tags, and create missing names. Use `replaceTags(documentId, ['Contracts'])` or `addTags(documentId, ['Contracts'])`; an empty replacement removes all associations. Values are sent unchanged. Pass the tag ID from `listTags` to `detachTag`. Document-list tag filters also use IDs.
 
 Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline tags, assignment/signing state, decline state, and creation/update timestamps. `IPublicDocumentInfo` models the complete published public-document payload while retaining the older optional `page_count` and `created_by` fields.
 
@@ -192,7 +192,22 @@ Assignment payload:
 }
 ```
 
+Production defaults `notification_methods: []` to `['Email']` and sends an invitation. An empty array is not a way to disable delivery. Choose the intended supported channel explicitly before creating an assignment.
+
 `buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. It resolves synchronously to the JSON assignment body above; no HTTP call occurs. Options are `{ allowSignersWithoutId?: boolean; allowEmptySigners?: boolean; skipDigitalCertificateStepValidation?: boolean }`, all false by default. The first two support cost estimation; the third bypasses signing-order and certificate-step checks for estimates. `allowEmptySigners` applies only to `collect`. `create` requires at least one signer, enforces complete contiguous signing steps from 1 when supplied, and requires each digital-certificate signer to be alone in its step. The estimate schema has no `step`, so `estimateCost` does not apply that create-only rule and permits zero signers for `collect`. Assignment list params are pagination plus the compatible `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. Assignment `search` is unsupported and rejected locally.
+
+`estimateResendCost(documentId, assignmentId, signerId)` sends a POST without a body. Its production result is:
+
+```json
+{
+  "total": 0,
+  "breakdown": [{ "code": "NotificationEmailResend", "name": "Email Notification Resend", "cost": 0 }],
+  "credit_balance": 0,
+  "has_sufficient_credits": true
+}
+```
+
+`IResendCostEstimate` also accepts the published `IEstimateCostResponse` shape. Check `'total' in estimate` to select the production shape; use its `has_sufficient_credits` before resending. The published shape uses `total_credits` and `has_sufficient_resources`.
 
 ## Signers (`client.signers`)
 
@@ -209,7 +224,7 @@ Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cp
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the one-time `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route.
+These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. For email verification, obtain the access code from the verification link and the OTP from the same email. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
@@ -220,16 +235,29 @@ These methods use the one-time `signer-access-code`, not the workspace API key, 
 | `signMultiple(documentIds, accessCode)` | [`PUT /signers/documents/sign-multiple`](./api-reference.md#sign-multiple-documents) | `unknown[]` |
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |
 | `self(accessCode)` | [`GET /signers/self`](./api-reference.md#get-current-signer) | `ISignerSelf` |
-| `acceptTerms(accessCode)` | [`PUT /signers/accept-terms`](./api-reference.md#accept-terms-signer) | `IStatusResponse` |
-| `verifyEmail({ signerAccessCode, verificationCode })` | [`POST /verify`](./api-reference.md#verify-signer-code-otp) | `IStatusResponse` |
-| `confirmData(documentId, accessCode, payload)` | [`PUT /documents/{documentId}/signers/confirm-data`](./api-reference.md#confirm-signer-data) | `ISigner` |
-| `uploadSignature(accessCode, image, options?)` | [`POST /signature`](./api-reference.md#upload-signature-image) | `IStatusResponse` |
+| `acceptTerms(accessCode)` | [`PUT /signers/accept-terms`](./api-reference.md#accept-terms-signer) | `ISignerTermsAcceptance \| IStatusResponse` |
+| `verifyEmail({ signerAccessCode, verificationCode })` | [`POST /verify`](./api-reference.md#verify-signer-code-otp) | `IEmptyResult \| IStatusResponse` |
+| `confirmData(documentId, accessCode, payload)` | [`PUT /documents/{documentId}/signers/confirm-data`](./api-reference.md#confirm-signer-data) | `ISigner \| IEmptyResult` |
+| `uploadSignature(accessCode, image, options?)` | [`POST /signature`](./api-reference.md#upload-signature-image) | `IEmptyResult \| IStatusResponse` |
 | `downloadSignature(accessCode, imageType?)` | [`GET /signature/{type}`](./api-reference.md#download-signature-image) | `Buffer` |
 | `getAssignment(accessCode, hasAcceptedTerms?)` | [`GET /sign`](./api-reference.md#view-document-to-sign) | `IDocumentDetailsResponse` |
 | `sign(documentId, assignmentId, accessCode, entries)` | [`POST /documents/{documentId}/assignments/{assignmentId}`](./api-reference.md#sign-assignment-items) | `Record<string, unknown>` |
 | `decline(documentId, assignmentId, accessCode, reason)` | [`PUT …/reject`](./api-reference.md#reject-decline-assignment) | `unknown[]` |
 
 `confirmData` accepts `{ full_name?, email?, government_id?, whatsapp_phone_number?, has_accepted_terms? }`. `uploadSignature` accepts a non-empty image `Buffer` plus `{ imageType?: 'signature' | 'initial'; contentType?: string; reuse?: boolean }`. Each signing entry is `{ itemId, fieldId, pageId, value }`.
+
+`confirmData`, `sign`, and `decline` first load `getAssignment(accessCode)` and reject a mismatched document or assignment before writing. These methods make one additional GET request. For virtual assignments, confirm the signer's data and then call `sign(documentId, assignmentId, accessCode, [])`. Collect assignments require a non-empty array with the actual assignment item, field, and page IDs. Signing resolves to the server's assignment result; poll document details until `certificated` before downloading final artifacts.
+
+Each request below includes `?signer-access-code=<private-access-code>`. These are complete example bodies and SDK results for production:
+
+| Operation | Request body | SDK result |
+| --- | --- | --- |
+| `PUT /signers/accept-terms` | No body; submit only after the signer accepts the terms. | `{ "full_name": "Ana Lima", "email": "ana@example.com", "has_accepted_terms": true }` (`email` may be `null`) |
+| `POST /verify` | `{ "verification-code": "123456" }` | `[]` |
+| `PUT /documents/{documentId}/signers/confirm-data` | `{ "full_name": "Ana Lima", "email": "ana@example.com" }` | `[]` |
+| `POST /signature` | Raw PNG bytes with `Content-Type: image/png`; also pass `type=signature&reuse=false` in the query. | `[]` |
+
+An empty result is successful acknowledgement, not a signer profile. Use `self(accessCode)` afterward when you need the updated profile, terms acceptance, or signature flags. The response types retain the published status/profile alternatives without converting or fabricating response fields.
 
 The artifact `download` route is public in the published API. If `accessCode` is supplied, the SDK first verifies it through `/signers/self` and confirms that it belongs to the requested signer before downloading.
 

@@ -4,9 +4,11 @@ import type {
 	IDocumentDetailsResponse,
 	IDocumentListItem,
 	IDocumentListResponse,
+	IEmptyResult,
 	ISigner,
 	ISignerDocumentListParams,
 	ISignerSelf,
+	ISignerTermsAcceptance,
 	ISignFieldEntry,
 	IStatusResponse,
 } from '../types.js';
@@ -144,7 +146,7 @@ export class SignerDocumentsResource extends BaseResource {
 	 * every other signer-side endpoint (the spec under-documents this one, but
 	 * the query-param convention is uniform across the Signing API).
 	 */
-	async acceptTerms(signerAccessCode: string): Promise<IStatusResponse> {
+	async acceptTerms(signerAccessCode: string): Promise<ISignerTermsAcceptance | IStatusResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to accept terms', () =>
 			this.http.put('/signers/accept-terms', undefined, signerAccessConfig(code)),
@@ -155,7 +157,7 @@ export class SignerDocumentsResource extends BaseResource {
 	async verifyEmail(payload: {
 		signerAccessCode: string;
 		verificationCode: string;
-	}): Promise<IStatusResponse> {
+	}): Promise<IEmptyResult | IStatusResponse> {
 		const code = this.requireId(payload.signerAccessCode, 'signer-access-code');
 		const otp = this.requireId(payload.verificationCode, 'verification-code');
 		return this.call('Failed to verify signer email', () =>
@@ -180,7 +182,7 @@ export class SignerDocumentsResource extends BaseResource {
 			whatsapp_phone_number?: string;
 			has_accepted_terms?: boolean;
 		},
-	): Promise<ISigner> {
+	): Promise<ISigner | IEmptyResult> {
 		const did = this.requireId(documentId, 'Document ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		// Build the JSON body explicitly (only defined fields). Don't route it
@@ -190,6 +192,7 @@ export class SignerDocumentsResource extends BaseResource {
 		for (const [key, value] of Object.entries(payload)) {
 			if (value !== undefined) body[key] = value;
 		}
+		await this.requireDocumentAccess(did, code);
 		return this.call('Failed to confirm signer data', () =>
 			this.http.put(`/documents/${did}/signers/confirm-data`, body, signerAccessConfig(code)),
 		);
@@ -203,7 +206,7 @@ export class SignerDocumentsResource extends BaseResource {
 		signerAccessCode: string,
 		image: Buffer,
 		options: { imageType?: 'signature' | 'initial'; contentType?: string; reuse?: boolean } = {},
-	): Promise<IStatusResponse> {
+	): Promise<IEmptyResult | IStatusResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		const imageType = requireSignerImageType(options.imageType ?? 'signature');
 		if (!Buffer.isBuffer(image) || image.byteLength === 0) {
@@ -252,7 +255,10 @@ export class SignerDocumentsResource extends BaseResource {
 		);
 	}
 
-	/** `POST /documents/{documentId}/assignments/{assignmentId}?signer-access-code=…` — sign. */
+	/**
+	 * `POST /documents/{documentId}/assignments/{assignmentId}?signer-access-code=…` — sign.
+	 * Virtual assignments accept `[]` after the signer confirms their data.
+	 */
 	async sign(
 		documentId: string,
 		assignmentId: string,
@@ -262,8 +268,12 @@ export class SignerDocumentsResource extends BaseResource {
 		const did = this.requireId(documentId, 'Document ID');
 		const aid = this.requireId(assignmentId, 'Assignment ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
-		if (!Array.isArray(entries) || entries.length === 0) {
-			throw new ValidationError('entries must be a non-empty array');
+		if (!Array.isArray(entries)) {
+			throw new ValidationError('entries must be an array');
+		}
+		const document = await this.requireDocumentAccess(did, code, aid);
+		if (document.assignment?.method === 'collect' && entries.length === 0) {
+			throw new ValidationError('entries must be non-empty for collect assignments');
 		}
 		return this.call('Failed to sign document', () =>
 			this.http.post(`/documents/${did}/assignments/${aid}`, entries, signerAccessConfig(code)),
@@ -284,6 +294,7 @@ export class SignerDocumentsResource extends BaseResource {
 		const aid = this.requireId(assignmentId, 'Assignment ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		validateDeclineReason(declineReason);
+		await this.requireDocumentAccess(did, code, aid);
 		return this.call('Failed to decline assignment', () =>
 			this.http.put(
 				`/documents/${did}/assignments/${aid}/reject`,
@@ -291,6 +302,21 @@ export class SignerDocumentsResource extends BaseResource {
 				signerAccessConfig(code),
 			),
 		);
+	}
+
+	private async requireDocumentAccess(
+		documentId: string,
+		signerAccessCode: string,
+		assignmentId?: string,
+	): Promise<IDocumentDetailsResponse> {
+		const document = await this.getAssignment(signerAccessCode);
+		if (
+			document.id !== documentId ||
+			(assignmentId !== undefined && document.assignment?.id !== assignmentId)
+		) {
+			throw new ValidationError('Signer access code does not match the document or assignment');
+		}
+		return document;
 	}
 }
 
