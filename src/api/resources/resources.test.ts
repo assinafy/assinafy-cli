@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AxiosInstance } from 'axios';
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { AssinafyClient } from '../client';
 import { ApiError, ValidationError } from '../errors';
 import { AssignmentResource, buildAssignmentPayload } from './assignments';
 import { AuthenticationResource } from './authentication';
@@ -80,6 +81,32 @@ describe('documented delete responses', () => {
 });
 
 describe('buildAssignmentPayload', () => {
+	it.each([
+		['Email', 'Email'],
+		['Whatsapp', 'Whatsapp'],
+		['DigitalCertificate', 'Email'],
+		['DigitalCertificate', 'Whatsapp'],
+	] as const)(
+		'preserves %s verification with %s delivery across assignment and template flows',
+		async (verification, notification) => {
+			const calls: CapturedCall[] = [];
+			const http = mockHttp(calls);
+			const assignments = new AssignmentResource(http, 'acc');
+			const documents = new DocumentResource(http, 'acc');
+			const signer = {
+				id: 'signer1',
+				verification_method: verification,
+				notification_methods: [notification],
+			};
+			await assignments.create('doc1', { signers: [{ ...signer, step: 1 }] });
+			await assignments.estimateCost('doc1', { signers: [signer] });
+			await documents.createFromTemplate('template1', [{ ...signer, role_id: 'role1', step: 1 }]);
+			await documents.estimateCostFromTemplate('template1', [{ ...signer, role_id: 'role1' }]);
+			expect(calls).toHaveLength(4);
+			for (const call of calls) expect(call.body).toMatchObject({ signers: [signer] });
+		},
+	);
+
 	it('normalises all supported signer reference shapes', () => {
 		expect(buildAssignmentPayload({ signer_ids: ['a'] })).toEqual({
 			method: 'virtual',
@@ -996,18 +1023,84 @@ describe('SignerDocumentsResource', () => {
 		});
 	});
 
-	it('sends signer access code in the query when verifying an OTP', async () => {
+	it.each(['verifyCode', 'verifyEmail'] as const)(
+		'uses %s for email or WhatsApp OTPs',
+		async (method) => {
+			const calls: CapturedCall[] = [];
+			const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+			await expect(
+				signerDocs[method]({ signerAccessCode: 'code-1', verificationCode: '012345' }),
+			).resolves.toEqual({ status: 200, message: '' });
+			expect(calls[0]).toMatchObject({
+				method: 'POST',
+				url: '/verify',
+				body: { 'verification-code': '012345' },
+				config: { params: { 'signer-access-code': 'code-1' } },
+			});
+		},
+	);
+
+	it('uses the deployed A1/A3 certificate handshake without sending owner credentials', async () => {
+		const client = new AssinafyClient({ apiKey: 'example-owner-key' });
+		const http = client.getAxiosInstance();
+		http.defaults.headers.common.Authorization = 'Bearer example-owner-token';
+		const token = 'example/opaque+token==';
+		const requests: Array<{ path: string; body: unknown }> = [];
+		http.defaults.adapter = async (config) => {
+			const url = new URL(http.getUri(config));
+			expect(config.method).toBe('post');
+			expect(url.searchParams.get('signer-access-code')).toBe('example-code');
+			expect(config.headers.get('X-Api-Key')).toBeUndefined();
+			expect(config.headers.get('Authorization')).toBeUndefined();
+			requests.push({ path: url.pathname, body: JSON.parse(config.data) });
+			return {
+				config,
+				status: 200,
+				statusText: 'OK',
+				headers: {},
+				data: {
+					status: 200,
+					message: '',
+					data: url.pathname.endsWith('/start') ? { token } : { signerName: 'Example Signer' },
+				},
+			};
+		};
+		const started = await client.signerDocuments.startCertificate('example-code');
+		expect(started).toEqual({ token });
+		expect(await client.signerDocuments.completeCertificate('example-code', started.token)).toEqual(
+			{ signerName: 'Example Signer' },
+		);
+		expect(requests).toEqual([
+			{ path: '/v1/signers/certificate/start', body: { 'signer-access-code': 'example-code' } },
+			{
+				path: '/v1/signers/certificate/complete',
+				body: { 'signer-access-code': 'example-code', token },
+			},
+		]);
+	});
+
+	it('validates certificate credentials before transport and preserves server failures', async () => {
 		const calls: CapturedCall[] = [];
 		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
-		await expect(
-			signerDocs.verifyEmail({ signerAccessCode: 'code-1', verificationCode: '123456' }),
-		).resolves.toEqual({ status: 200, message: '' });
-		expect(calls[0]).toMatchObject({
-			method: 'POST',
-			url: '/verify',
-			body: { 'verification-code': '123456' },
-			config: { params: { 'signer-access-code': 'code-1' } },
+		await expect(signerDocs.startCertificate('')).rejects.toThrow(ValidationError);
+		await expect(signerDocs.completeCertificate('', 'token')).rejects.toThrow(ValidationError);
+		for (const token of ['', ' ', null, 123]) {
+			await expect(signerDocs.completeCertificate('code', token as string)).rejects.toThrow(
+				ValidationError,
+			);
+		}
+		expect(calls).toHaveLength(0);
+		const post = vi
+			.fn()
+			.mockRejectedValue(new ApiError('Certificate does not match the signer', 400));
+		const failing = new SignerDocumentsResource({
+			...mockHttp(),
+			post,
+		} as unknown as AxiosInstance);
+		await expect(failing.completeCertificate('code', 'token')).rejects.toMatchObject({
+			statusCode: 400,
 		});
+		expect(post).toHaveBeenCalledTimes(1);
 	});
 });
 

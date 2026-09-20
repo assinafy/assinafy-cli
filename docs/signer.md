@@ -17,7 +17,9 @@ Commands:
   download [options] <signerId> <documentId> <artifact>  Download a signer document artifact
   self [options]                                         Fetch the signer's own profile
   accept-terms [options]                                 Accept the platform terms as the signer
-  verify-email [options]                                 Verify the email OTP for a signer
+  verify-code|verify-email [options]                     Verify an email or WhatsApp OTP for a signer
+  certificate-start [options]                            Start an ICP-Brasil A1/A3 signature and return the Web PKI token
+  certificate-complete [options]                         Complete an ICP-Brasil A1/A3 signature after Web PKI has signed the token
   confirm-data [options] <documentId>                    Confirm a signer's contact data
   upload-signature [options]                             Upload the signer's signature or initial image
   download-signature [options]                           Download the signer's signature or initial image
@@ -124,17 +126,44 @@ Options:
   -h, --help            display help for command
 ```
 
-### `assinafy signer verify-email`
+### `assinafy signer verify-code`
 
 ```text
-Usage: assinafy signer verify-email [options]
+Usage: assinafy signer verify-code|verify-email [options]
 
-Verify the email OTP for a signer
+Verify an email or WhatsApp OTP for a signer
 
 Options:
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --code <otp>          Verification code (env: ASSINAFY_VERIFICATION_CODE)
   -h, --help            display help for command
+```
+
+### `assinafy signer certificate-start`
+
+```text
+Usage: assinafy signer certificate-start [options]
+
+Start an ICP-Brasil A1/A3 signature and return the Web PKI token
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  -h, --help            display help for command
+```
+
+### `assinafy signer certificate-complete`
+
+```text
+Usage: assinafy signer certificate-complete [options]
+
+Complete an ICP-Brasil A1/A3 signature after Web PKI has signed the token
+
+Options:
+  --access-code <code>         Signer access code (env:
+                               ASSINAFY_SIGNER_ACCESS_CODE)
+  --certificate-token <token>  Operation token returned by certificate-start
+                               (env: ASSINAFY_CERTIFICATE_TOKEN)
+  -h, --help                   display help for command
 ```
 
 ### `assinafy signer confirm-data`

@@ -5,11 +5,13 @@ import { Command } from '@commander-js/extra-typings';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, type IDocumentUploadResponse, OAuthResource } from '../api';
 import { DocumentResource } from '../api/resources/documents';
+import { SignerDocumentsResource } from '../api/resources/signer-documents';
 import { readConfigFile } from '../lib/config';
 import * as browserOAuth from '../lib/oauth-browser';
 import { configCommand } from './config';
 import { documentsCommand } from './documents';
 import { oauthCommand } from './oauth';
+import { signerCommand } from './signer';
 
 let directory: string;
 let stdout: string;
@@ -77,6 +79,45 @@ afterEach(() => {
 	vi.restoreAllMocks();
 	rmSync(directory, { recursive: true, force: true });
 	process.exitCode = 0;
+});
+
+it.each(['verify-code', 'verify-email'])(
+	'verifies signer OTPs through %s without owner credentials',
+	async (name) => {
+		vi.stubEnv('ASSINAFY_API_KEY', undefined);
+		vi.stubEnv('ASSINAFY_SIGNER_ACCESS_CODE', 'example-code');
+		vi.stubEnv('ASSINAFY_VERIFICATION_CODE', '012345');
+		const verify = vi.spyOn(SignerDocumentsResource.prototype, 'verifyCode').mockResolvedValue([]);
+		const program = new Command().option('--json').addCommand(signerCommand);
+		await program.parseAsync(['--json', 'signer', name], { from: 'user' });
+		expect(verify).toHaveBeenCalledWith({
+			signerAccessCode: 'example-code',
+			verificationCode: '012345',
+		});
+		expect(JSON.parse(stdout)).toEqual([]);
+		expect(stderr).toBe('');
+	},
+);
+
+it('passes certificate operation tokens through the CLI without owner credentials', async () => {
+	vi.stubEnv('ASSINAFY_API_KEY', undefined);
+	vi.stubEnv('ASSINAFY_SIGNER_ACCESS_CODE', 'example-code');
+	const start = vi
+		.spyOn(SignerDocumentsResource.prototype, 'startCertificate')
+		.mockResolvedValue({ token: 'example-token' });
+	const complete = vi
+		.spyOn(SignerDocumentsResource.prototype, 'completeCertificate')
+		.mockResolvedValue({ signerName: 'Example Signer' });
+	const program = new Command().option('--json').addCommand(signerCommand);
+	await program.parseAsync(['--json', 'signer', 'certificate-start'], { from: 'user' });
+	expect(start).toHaveBeenCalledWith('example-code');
+	expect(JSON.parse(stdout)).toEqual({ token: 'example-token' });
+	stdout = '';
+	vi.stubEnv('ASSINAFY_CERTIFICATE_TOKEN', 'example-token');
+	await program.parseAsync(['--json', 'signer', 'certificate-complete'], { from: 'user' });
+	expect(complete).toHaveBeenCalledWith('example-code', 'example-token');
+	expect(JSON.parse(stdout)).toEqual({ signerName: 'Example Signer' });
+	expect(stderr).toBe('');
 });
 
 it('prints the processed document after upload --wait', async () => {

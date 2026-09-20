@@ -1,6 +1,8 @@
 import { ValidationError } from '../errors.js';
 import type {
 	DocumentArtifactName,
+	ICertificateCompleteResponse,
+	ICertificateStartResponse,
 	IDocumentDetailsResponse,
 	IDocumentListItem,
 	IDocumentListResponse,
@@ -11,6 +13,7 @@ import type {
 	ISignerTermsAcceptance,
 	ISignFieldEntry,
 	IStatusResponse,
+	IVerifySignerCodePayload,
 } from '../types.js';
 import {
 	publicRequestConfig,
@@ -153,15 +156,56 @@ export class SignerDocumentsResource extends BaseResource {
 		);
 	}
 
-	/** `POST /verify` — verify the email OTP for a signer. */
-	async verifyEmail(payload: {
-		signerAccessCode: string;
-		verificationCode: string;
-	}): Promise<IEmptyResult | IStatusResponse> {
+	/** `POST /verify` — verify an email or WhatsApp OTP for a signer. */
+	async verifyCode(payload: IVerifySignerCodePayload): Promise<IEmptyResult | IStatusResponse> {
 		const code = this.requireId(payload.signerAccessCode, 'signer-access-code');
 		const otp = this.requireId(payload.verificationCode, 'verification-code');
-		return this.call('Failed to verify signer email', () =>
+		return this.call('Failed to verify signer code', () =>
 			this.http.post('/verify', { 'verification-code': otp }, signerAccessConfig(code)),
+		);
+	}
+
+	/** Compatibility alias for {@link verifyCode}; accepts email and WhatsApp OTPs. */
+	async verifyEmail(payload: IVerifySignerCodePayload): Promise<IEmptyResult | IStatusResponse> {
+		return this.verifyCode(payload);
+	}
+
+	/**
+	 * `POST /signers/certificate/start` — start an ICP-Brasil A1/A3 signature.
+	 * Returns `{ token }` for the signer's Web PKI client. This production route
+	 * is used by Assinafy's signing frontend but is absent from OpenAPI paths.
+	 */
+	async startCertificate(signerAccessCode: string): Promise<ICertificateStartResponse> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.call('Failed to start certificate signature', () =>
+			this.http.post(
+				'/signers/certificate/start',
+				{ 'signer-access-code': code },
+				signerAccessConfig(code),
+			),
+		);
+	}
+
+	/**
+	 * `POST /signers/certificate/complete` — finish an ICP-Brasil A1/A3 signature.
+	 * Pass the same token returned by {@link startCertificate}, after Web PKI
+	 * successfully signs it. Returns `{ signerName }`; private keys stay local.
+	 * This production route is absent from OpenAPI paths.
+	 */
+	async completeCertificate(
+		signerAccessCode: string,
+		token: string,
+	): Promise<ICertificateCompleteResponse> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		if (typeof token !== 'string' || !token.trim()) {
+			throw new ValidationError('Certificate token is required');
+		}
+		return this.call('Failed to complete certificate signature', () =>
+			this.http.post(
+				'/signers/certificate/complete',
+				{ 'signer-access-code': code, token },
+				signerAccessConfig(code),
+			),
 		);
 	}
 

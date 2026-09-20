@@ -208,6 +208,8 @@ assinafy assignments create "$DOCUMENT_ID" --signers '[
 
 Steps must form a contiguous sequence starting at `1`, and a `DigitalCertificate` signer must be alone in its step — both are validated locally before the request is sent. `--copy-receivers` takes **signer IDs** (people who only receive a copy of the finished document), not arbitrary email addresses.
 
+Email verification uses `["Email"]` notifications; WhatsApp uses `["Whatsapp"]`. ICP-Brasil A1 and A3 both use `DigitalCertificate`, with either delivery channel, a matching CPF/CNPJ in `government_id`, an eligible workspace, and sufficient credits. Select one notification channel per signer. These same options work for template roles. A1/A3 signing uses `startCertificate`, the signer's local Web PKI operation, and `completeCertificate`; [complete payloads and the signing sequence](docs/sdk-reference.md#icp-brasil-a1a3-certificates) are in the SDK reference.
+
 In production, `notification_methods: []` defaults to `['Email']` and sends an invitation. Select the intended channel explicitly; an empty array does not disable notifications.
 
 To start from a saved template instead of a PDF:
@@ -239,7 +241,9 @@ assinafy signer sign <documentId> <assignmentId> --entries '[
 ]'
 ```
 
-Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code: `documents send-token <documentId> --recipient <email> --channel email` issues it and `signer verify-email --code <otp>` redeems it. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
+Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code. `documents send-token <documentId> --recipient <email> --channel email` sends it by email; use `--recipient <phone> --channel whatsapp` for WhatsApp. Both use `signer verify-code`; `verify-email` remains an alias. Set `ASSINAFY_VERIFICATION_CODE` to keep the OTP out of command arguments and preserve leading zeroes. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
+
+For A1/A3 certificates, use Assinafy's hosted signing page or integrate Web PKI with the SDK. After document review and terms acceptance, `signer certificate-start --json` returns `{ "token": "..." }`. Have the browser sign that operation on the signer's device, then set `ASSINAFY_CERTIFICATE_TOKEN` to the same token and run `signer certificate-complete --json`; it returns `{ "signerName": "..." }`. Private keys and passwords/PINs stay on the device. Wait for `certificated` status and download `--artifact pades` or `bundle`. The ordinary `sign` command does not perform this handshake. These two production routes use the signing application's payloads and are not yet OpenAPI paths.
 
 Verification, data confirmation, and signature upload may return `[]` on success. Fetch `signer self` for the updated profile and check document progress and certified artifacts after signing. Full request and response examples are in the [signer SDK reference](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
 
@@ -331,7 +335,8 @@ Every setting resolves as **CLI flag → environment variable → config-file pr
 | Experimental webhook-verifier secret | _(config only)_ | `ASSINAFY_WEBHOOK_SECRET` |
 | Password / new password | `--password` / `--new-password` | `ASSINAFY_PASSWORD` / `ASSINAFY_NEW_PASSWORD` |
 | Social provider / reset token | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN` |
-| Signer access code / email OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
+| Signer access code / email or WhatsApp OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
+| Web PKI operation token | `--certificate-token` | `ASSINAFY_CERTIFICATE_TOKEN` |
 
 `.env.example` documents every CLI and installer environment variable.
 
@@ -463,7 +468,7 @@ Field definitions are what `--method collect` assignments gather. Run `fields ty
 
 ### `signer` — signer-side flows
 
-`document <signerId>` · `documents <signerId>` · `search <signerId> <query>` · `download <signerId> <documentId> <artifact>` · `self` · `accept-terms` · `verify-email --code` · `confirm-data <documentId>` · `upload-signature --file` · `download-signature` · `assignment` · `sign <documentId> <assignmentId> --entries` · `decline <documentId> <assignmentId> --reason` · `sign-multiple --document-ids` · `decline-multiple --document-ids --reason`
+`document <signerId>` · `documents <signerId>` · `search <signerId> <query>` · `download <signerId> <documentId> <artifact>` · `self` · `accept-terms` · `verify-code --code` (alias `verify-email`) · `certificate-start` · `certificate-complete --certificate-token` · `confirm-data <documentId>` · `upload-signature --file` · `download-signature` · `assignment` · `sign <documentId> <assignmentId> --entries` · `decline <documentId> <assignmentId> --reason` · `sign-multiple --document-ids` · `decline-multiple --document-ids --reason`
 
 Every signer command except the public artifact `download` requires `--access-code <code>`; `download` accepts it optionally for an identity preflight. Use `ASSINAFY_SIGNER_ACCESS_CODE` to keep the code out of process arguments.
 

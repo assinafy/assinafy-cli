@@ -236,7 +236,10 @@ These methods use the private `signer-access-code`, not the workspace API key, e
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |
 | `self(accessCode)` | [`GET /signers/self`](./api-reference.md#get-current-signer) | `ISignerSelf` |
 | `acceptTerms(accessCode)` | [`PUT /signers/accept-terms`](./api-reference.md#accept-terms-signer) | `ISignerTermsAcceptance \| IStatusResponse` |
-| `verifyEmail({ signerAccessCode, verificationCode })` | [`POST /verify`](./api-reference.md#verify-signer-code-otp) | `IEmptyResult \| IStatusResponse` |
+| `verifyCode(payload: IVerifySignerCodePayload)` | [`POST /verify`](./api-reference.md#verify-signer-code-otp); email or WhatsApp OTP | `IEmptyResult \| IStatusResponse` |
+| `verifyEmail(payload: IVerifySignerCodePayload)` | Compatibility alias for `verifyCode` | `IEmptyResult \| IStatusResponse` |
+| `startCertificate(accessCode)` | [`POST /signers/certificate/start`](#icp-brasil-a1a3-certificates) | `ICertificateStartResponse` (`{ token: string }`) |
+| `completeCertificate(accessCode, token)` | [`POST /signers/certificate/complete`](#icp-brasil-a1a3-certificates) | `ICertificateCompleteResponse` (`{ signerName: string }`) |
 | `confirmData(documentId, accessCode, payload)` | [`PUT /documents/{documentId}/signers/confirm-data`](./api-reference.md#confirm-signer-data) | `ISigner \| IEmptyResult` |
 | `uploadSignature(accessCode, image, options?)` | [`POST /signature`](./api-reference.md#upload-signature-image) | `IEmptyResult \| IStatusResponse` |
 | `downloadSignature(accessCode, imageType?)` | [`GET /signature/{type}`](./api-reference.md#download-signature-image) | `Buffer` |
@@ -260,6 +263,90 @@ Each request below includes `?signer-access-code=<private-access-code>`. These a
 An empty result is successful acknowledgement, not a signer profile. Use `self(accessCode)` afterward when you need the updated profile, terms acceptance, or signature flags. The response types retain the published status/profile alternatives without converting or fabricating response fields.
 
 The artifact `download` route is public in the published API. If `accessCode` is supplied, the SDK first verifies it through `/signers/self` and confirms that it belongs to the requested signer before downloading.
+
+### Email and WhatsApp verification
+
+Assignment and template signer descriptors use the same combinations:
+
+| `verification_method` | `notification_methods` | Signer requirement |
+| --- | --- | --- |
+| `Email` | `["Email"]` | Email address |
+| `Whatsapp` | `["Whatsapp"]` | `whatsapp_phone_number` and an eligible paid workspace |
+| `DigitalCertificate` (A1 or A3) | `["Email"]` or `["Whatsapp"]` | CPF/CNPJ in `government_id`, matching certificate, delivery contact, and the Digital Certificate workspace feature |
+
+Choose one notification channel. With neither field specified, the API defaults to Email; with only one specified, it infers the other. Estimate cost before creating assignments, including those created from templates: WhatsApp notifications and certificate signatures consume credits. Each certificate signer must be alone in its signing step.
+
+`IVerifySignerCodePayload` is `{ signerAccessCode: string; verificationCode: string }`. Keep the OTP as a string to preserve leading zeroes. Email and WhatsApp use the same verification endpoint and response; the access code identifies the channel and document.
+
+```ts
+// Choose the channel configured for this signer; these calls send messages.
+await client.documents.sendToken('example_document', 'signer@example.com', 'email');
+await client.documents.sendToken('example_document', '+5500000000000', 'whatsapp');
+
+// Use the private link and OTP from the selected channel's same message.
+await client.signerDocuments.verifyCode({
+  signerAccessCode: 'example_access_code',
+  verificationCode: '012345',
+}); // [] on production success
+```
+
+The delivery request bodies are `{ "recipient": "signer@example.com", "channel": "email" }` and `{ "recipient": "+5500000000000", "channel": "whatsapp" }`. `sendToken` preserves the response forms documented in [Documents](#documents-clientdocuments). Verification sends `{ "verification-code": "012345" }` with `?signer-access-code=example_access_code`; a successful envelope `{ "status": 200, "message": "", "data": [] }` resolves to `[]`. Invalid codes surface as `ApiError` with the server's status and message. `verifyEmail` remains a compatible alias. Continue with data confirmation and virtual/collect signing as described above.
+
+### ICP-Brasil A1/A3 certificates
+
+Both A1 and A3 use `verification_method: "DigitalCertificate"`; they are not separate API method names. Assinafy's [signing documentation](https://api.assinafy.com.br/v1/docs) directs these signers to the certificate handshake. The two routes below follow the deployed [Assinafy signing application](https://app.assinafy.com.br), which supplies their request and response shapes; they are not yet OpenAPI paths and availability on other deployments may differ.
+
+1. Create or select the signer and set their CPF/CNPJ with `signers.update(signerId, { government_id })`. An existing signer returned by `create` is reused without updating their data. Configure an eligible workspace, estimate cost, then create the assignment with `DigitalCertificate` and one delivery channel. Use contiguous steps beginning at `1`, with each certificate signer alone in their step. The same descriptor works for template roles.
+2. Obtain the private signer access code through the delivered link. Load `self` and `getAssignment` to confirm the identity and document. Present the document and terms; call `acceptTerms` only after the signer agrees.
+3. Call `startCertificate(accessCode)` and retain its operation token with that signer session.
+4. On the signer's device, use an initialized Web PKI browser client to select their A1 certificate or A3 device and execute `pki.signWithRestPki({ thumbprint, token })`. Wait for its success callback. The private key, PFX password, and device PIN stay with the local certificate provider.
+5. Call `completeCertificate(accessCode, token)` with the **same operation token**, only after Web PKI succeeds. This returns the certificate signer's name. The API validates the certificate against the required CPF/CNPJ; normal `sign` and `signMultiple` do not perform certificate signing.
+6. Track document status until `certificated`, then download `pades` or `bundle`. The PAdES artifact exists only for documents with certificate signatures.
+
+The SDK exposes the server handshake. Browser certificate selection, the Web PKI extension/native component, and signer approval belong to the signing application. For the hosted experience, use the Assinafy signing page reached through the invitation; no separate CLI certificate driver is required.
+
+`startCertificate` sends this complete request, with no owner API key or bearer token:
+
+```http
+POST /v1/signers/certificate/start?signer-access-code=example_access_code
+Content-Type: application/json
+
+{ "signer-access-code": "example_access_code" }
+```
+
+Example HTTP 200 response:
+
+```json
+{ "status": 200, "message": "", "data": { "token": "example_operation_token" } }
+```
+
+The SDK unwraps it to `ICertificateStartResponse`: `{ token: "example_operation_token" }`.
+
+After the browser signs the operation, `completeCertificate` sends:
+
+```http
+POST /v1/signers/certificate/complete?signer-access-code=example_access_code
+Content-Type: application/json
+
+{ "signer-access-code": "example_access_code", "token": "example_operation_token" }
+```
+
+Example HTTP 200 response:
+
+```json
+{ "status": 200, "message": "", "data": { "signerName": "Example Signer" } }
+```
+
+The SDK unwraps it to `ICertificateCompleteResponse`: `{ signerName: "Example Signer" }`. Both methods reject empty credentials locally and propagate server errors through the shared `ApiError` contract. They do not retry the operation automatically. An expired access code, unsigned token, certificate mismatch, unavailable feature, or failed signing step must be resolved before continuing; inspect the document after an ambiguous network failure.
+
+CLI equivalents use `ASSINAFY_SIGNER_ACCESS_CODE` and `ASSINAFY_CERTIFICATE_TOKEN` to keep credentials out of command arguments:
+
+```bash
+assinafy signer certificate-start --json
+# Let Web PKI sign the returned token, then supply that same token securely.
+assinafy signer certificate-complete --json
+assinafy documents download example_document --artifact pades -o signed-pades.pdf
+```
 
 ## Workspaces (`client.workspaces`)
 
@@ -464,6 +551,6 @@ Assinafy's published API does **not** define a signature header, algorithm, dige
 ## Contract boundaries
 
 - Production OpenAPI currently publishes 93 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
-- The API's digital-certificate description mentions certificate start/complete routes that are not defined as OpenAPI paths. The SDK does not invent undocumented request/response contracts for them.
+- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 93 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above and both published/legacy public `sendToken` payloads for compatible deployments.
 - Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

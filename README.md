@@ -261,7 +261,9 @@ assinafy assignments create "$DOCUMENT_ID" --signers '[
 ]' --json
 ```
 
-Passos explícitos devem ser contíguos a partir de `1`. Um signatário `DigitalCertificate` deve estar sozinho no seu passo e ter os dados exigidos pela plataforma. O fluxo normal de `sign` não executa o handshake Web PKI. As rotas de certificado citadas na descrição da API não têm contratos OpenAPI publicados; o SDK não fornece chamadas especulativas para elas.
+Passos explícitos devem ser contíguos a partir de `1`. Um signatário `DigitalCertificate` deve estar sozinho no seu passo, ter CPF/CNPJ em `government_id` e usar um certificado correspondente. A conta precisa do recurso Digital Certificate e dos créditos indicados pela estimativa. A1 e A3 usam o mesmo fluxo: `startCertificate`, assinatura local pelo Web PKI e `completeCertificate`. As chamadas seguem os payloads da aplicação Assinafy em produção; essas duas rotas ainda não constam como paths no OpenAPI. Veja [requisições, respostas e sequência completa](docs/sdk-reference.md#icp-brasil-a1a3-certificates).
+
+Verificação `Email` usa notificação `["Email"]`; `Whatsapp` usa `["Whatsapp"]`. `DigitalCertificate` permite um desses dois canais. Escolha apenas um canal por signatário; os mesmos campos são aceitos em documentos gerados de templates.
 
 Em produção, `notification_methods: []` assume `['Email']` e envia o convite. Para escolher o canal, informe-o explicitamente; o array vazio não desativa notificações.
 
@@ -299,7 +301,9 @@ assinafy signer sign "$DOCUMENT_ID" example_assignment --entries '[
 ]' --json
 ```
 
-Os IDs e valores de campos vêm do assignment apresentado ao signatário. Quando for exigida verificação de e-mail, `documents send-token <id> --recipient <email> --channel email` envia o código e `signer verify-email --code <otp>` confirma; a variável `ASSINAFY_VERIFICATION_CODE` evita colocar o código nos argumentos. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
+Os IDs e valores de campos vêm do assignment apresentado ao signatário. Para verificação por e-mail, `documents send-token <id> --recipient <email> --channel email` envia o código; para WhatsApp, use `--recipient <telefone> --channel whatsapp`. Ambos usam `signer verify-code`; `verify-email` continua disponível como alias. Configure `ASSINAFY_VERIFICATION_CODE` para manter o OTP fora dos argumentos e preservar zeros iniciais. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
+
+Para certificados A1/A3, use a página de assinatura Assinafy ou integre o Web PKI com o SDK. Após apresentar o documento e aceitar os termos, `signer certificate-start --json` retorna `{ "token": "..." }`. O navegador assina essa operação no dispositivo do signatário. Defina `ASSINAFY_CERTIFICATE_TOKEN` com o mesmo token e execute `signer certificate-complete --json`, que retorna `{ "signerName": "..." }`. A chave privada e a senha/PIN permanecem no dispositivo. Aguarde o documento ficar `certificated` e baixe `--artifact pades` ou `bundle`; o comando comum `sign` não substitui esse fluxo.
 
 O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. Em produção, `send-token` usa `--recipient` e `--channel`; `--email` mantém o formato publicado para deployments que o aceitam.
 

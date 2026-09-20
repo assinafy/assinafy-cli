@@ -295,7 +295,7 @@ const cases: Case[] = [
 	],
 	[
 		'POST /v1/verify',
-		(c) => c.signerDocuments.verifyEmail({ signerAccessCode: code, verificationCode: '000000' }),
+		(c) => c.signerDocuments.verifyCode({ signerAccessCode: code, verificationCode: '000000' }),
 		{ 'verification-code': '000000' },
 		'status',
 		'signer',

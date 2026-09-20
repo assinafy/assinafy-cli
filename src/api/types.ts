@@ -140,6 +140,22 @@ export interface ISignerTermsAcceptance {
 	has_accepted_terms: boolean;
 }
 
+/** Email or WhatsApp OTP and the access code from the same verification message. */
+export interface IVerifySignerCodePayload {
+	signerAccessCode: string;
+	verificationCode: string;
+}
+
+/** Web PKI operation token returned when starting an ICP-Brasil A1/A3 signature. */
+export interface ICertificateStartResponse {
+	token: string;
+}
+
+/** Certificate identity returned after the Web PKI operation completes. */
+export interface ICertificateCompleteResponse {
+	signerName: string;
+}
+
 export type ICreateSignerResponse = ISigner;
 
 /** Pagination metadata extracted from `X-Pagination-*` response headers. */

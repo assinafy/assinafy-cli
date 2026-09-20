@@ -124,8 +124,9 @@ const acceptTermsCommand = new Command('accept-terms')
 		});
 	});
 
-const verifyEmailCommand = new Command('verify-email')
-	.description('Verify the email OTP for a signer')
+const verifyCodeCommand = new Command('verify-code')
+	.alias('verify-email')
+	.description('Verify an email or WhatsApp OTP for a signer')
 	.addOption(accessCodeOption())
 	.addOption(
 		new Option('--code <otp>', 'Verification code')
@@ -135,12 +136,42 @@ const verifyEmailCommand = new Command('verify-email')
 	.action(async (opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Verifying', config, () =>
-				client.signerDocuments.verifyEmail({
+				client.signerDocuments.verifyCode({
 					signerAccessCode: opts.accessCode,
 					verificationCode: opts.code,
 				}),
 			);
-			printSuccess('Email verified', config);
+			printSuccess('Verification code accepted', config);
+			printData(result, config);
+		});
+	});
+
+const certificateStartCommand = new Command('certificate-start')
+	.description('Start an ICP-Brasil A1/A3 signature and return the Web PKI token')
+	.addOption(accessCodeOption())
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Starting certificate signature', config, () =>
+				client.signerDocuments.startCertificate(opts.accessCode),
+			);
+			printData(result, config);
+		});
+	});
+
+const certificateCompleteCommand = new Command('certificate-complete')
+	.description('Complete an ICP-Brasil A1/A3 signature after Web PKI has signed the token')
+	.addOption(accessCodeOption())
+	.addOption(
+		new Option('--certificate-token <token>', 'Operation token returned by certificate-start')
+			.env('ASSINAFY_CERTIFICATE_TOKEN')
+			.makeOptionMandatory(),
+	)
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Completing certificate signature', config, () =>
+				client.signerDocuments.completeCertificate(opts.accessCode, opts.certificateToken),
+			);
+			printSuccess('Certificate signature completed', config);
 			printData(result, config);
 		});
 	});
@@ -310,7 +341,9 @@ export const signerCommand = new Command('signer')
 	.addCommand(downloadCommand)
 	.addCommand(selfCommand)
 	.addCommand(acceptTermsCommand)
-	.addCommand(verifyEmailCommand)
+	.addCommand(verifyCodeCommand)
+	.addCommand(certificateStartCommand)
+	.addCommand(certificateCompleteCommand)
 	.addCommand(confirmDataCommand)
 	.addCommand(uploadSignatureCommand)
 	.addCommand(downloadSignatureCommand)

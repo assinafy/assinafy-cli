@@ -115,12 +115,15 @@ try {
 	}
 	writeFileSync(
 		path.join(consumer, 'index.ts'),
-		`import { type AssinafyClient, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest } from '@assinafy/cli/api';
+		`import { type AssinafyClient, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload } from '@assinafy/cli/api';
 declare const client: AssinafyClient;
 const response: Promise<ISendTokenResponse> = client.documents.sendToken('document1', { email: 'signer@example.com' });
 const request: Promise<IOAuthAuthorizationRequest> = client.oauth.authorize({ clientId: 'example-app', redirectUri: 'https://example.com/callback', scopes: ['documents:read'] });
 const tokens: Promise<IOAuthTokenResponse> = client.oauth.token({ grant_type: 'refresh_token', client_id: 'example-app', refresh_token: 'example-refresh' });
-void [response, request, tokens];
+const certificate: Promise<ICertificateStartResponse> = client.signerDocuments.startCertificate('example-code');
+const completed: Promise<ICertificateCompleteResponse> = client.signerDocuments.completeCertificate('example-code', 'example-token');
+const verification: IVerifySignerCodePayload = { signerAccessCode: 'example-code', verificationCode: '012345' };
+void [response, request, tokens, certificate, completed, client.signerDocuments.verifyCode(verification)];
 `,
 	);
 	writeFileSync(
