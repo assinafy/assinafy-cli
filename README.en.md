@@ -124,6 +124,8 @@ assinafy workspaces list --json
 
 The command opens the system browser and waits for consent. The HTTPS return page forwards the authorization response to a temporary listener on `127.0.0.1`. The CLI validates state and issuer, closes the listener, and exchanges the code using its local PKCE verifier. Use a browser on the same computer as the CLI. Tokens travel directly between the CLI and Assinafy.
 
+Return pages use the visual identity hosted at `integrations.assinafy.com.br` and distinguish a received response, failed authorization, and an invalid return. Check the final result in your terminal. If it reports `invalid_scope`, verify the application's registered permissions, including `offline_access`.
+
 Use `--no-browser` to open the URL printed to stderr manually while keeping automatic callback reception. `--timeout` sets the browser wait from 1 to 600 seconds (default 180), `--scope` selects permissions, and `--redirect-uri` selects another registered HTTPS page implementing the relay protocol. Ctrl+C cancels the wait. Token JSON goes to stdout; protect it from logs. `connect` does not modify a profile or automatically refresh tokens.
 
 Select the single workspace returned and set `ASSINAFY_ACCOUNT_ID`. Keep refreshes serialized per connection and store each rotated result atomically. The existing `oauth authorize` and `oauth exchange` commands also support applications with their own callbacks and confidential server credentials. The [OAuth guide](./docs/oauth-guide.md#cli-flow) documents both flows, complete payloads, token rotation, identity validation, and disconnect behavior.

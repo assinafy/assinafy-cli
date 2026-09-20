@@ -124,6 +124,8 @@ const tokens = await oauthClient.oauth.exchangeCode(
 
 `exchangeCode(callbackUrl, request, clientSecret?)` checks the callback origin/path and registered query parameters, rejects duplicate protocol parameters, compares `state` in constant time, and requires the exact stored issuer. It rejects denied authorization before calling the token endpoint. Authorization codes expire after 60 seconds and can be used once. Exchange immediately and never retry a code blindly after a timeout.
 
+An authorization error raises `ValidationError` with a bounded OAuth error code in `errors.oauthError` and the message, without retaining the callback URL. Unrecognized formats become `unknown_error`. For `invalid_scope`, check that the application registration permits every requested scope, including `offline_access`; do not treat the browser return as successful authorization.
+
 For applications that already perform callback validation, `token(payload)` accepts the same complete code grant directly:
 
 ```json
@@ -289,6 +291,8 @@ The callback protocol is:
 4. The standalone page clears its query from browser history, checks the exact state syntax (including rejection of trailing line breaks), port range, issuer allowlist, parameter uniqueness, and exactly one nonblank code or error, then navigates to `http://127.0.0.1:<port>/callback` with only `code`, `state`, `iss`, or `error`.
 5. The CLI accepts only GET on `/callback` with the exact loopback Host, the original state, and the discovered issuer. Malformed or unrelated requests do not consume the pending connection. A valid authorization response is accepted once; the browser receives a page clearing its query and directing the user to the terminal.
 6. Close the listener and remove its timeout/signal handlers. Reconstruct the response against the saved HTTPS redirect URI and call `oauth.exchangeCode`; the token request still uses that exact HTTPS URI. Tokens and the PKCE verifier are never sent to the callback site.
+
+The local return page uses the logo, colors, Mona Sans fonts, and responsive layout hosted at `https://integrations.assinafy.com.br`. It distinguishes a received response, authorization failure, and invalid return. A received response does not confirm token exchange; check the CLI exit status and output. Browser history is cleared before loading assets, every response sends `Referrer-Policy: no-referrer`, and CSP permits only the fixed history script plus that origin's styles, images, and fonts. No callback parameters are included in the HTML or asset URLs. Public font responses must allow cross-origin loading from the temporary loopback origin.
 
 The shared callback page accepts the production and staging issuers configured by the integration site. A custom issuer needs a compatible relay allowlist as well as `--base-url` and `--redirect-uri`. Do not add access logging, analytics, third-party scripts, or caching to callback routes. Deploy the site and register the application before using the default URL; installing the CLI does not deploy that site.
 

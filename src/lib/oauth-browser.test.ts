@@ -87,12 +87,21 @@ describe('browser OAuth connection', () => {
 		const response = await browser!;
 		expect(response.status).toBe(200);
 		expect(response.body).toContain('history.replaceState');
+		expect(response.body).toContain('Volte ao terminal.');
+		expect(response.body).toContain('https://integrations.assinafy.com.br/brand/site.css');
+		expect(response.body).toContain(
+			'https://integrations.assinafy.com.br/brand/assinafy-logotype.svg',
+		);
 		expect(response.body).not.toMatch(/example-code|example-access/);
 		expect(response.headers).toMatchObject({
 			'cache-control': 'no-store',
 			'referrer-policy': 'no-referrer',
 		});
 		expect(response.headers['content-security-policy']).toContain("script-src 'sha256-");
+		expect(response.headers['content-security-policy']).toContain(
+			'style-src https://integrations.assinafy.com.br',
+		);
+		expect(response.body.match(/<script\b/g)).toHaveLength(1);
 		expect(result).toEqual(tokens);
 		const body = JSON.parse(requests.at(-1)!.data);
 		expect(body).toEqual({
@@ -145,7 +154,11 @@ describe('browser OAuth connection', () => {
 				]) {
 					const malformed = new URL(valid);
 					mutate(malformed);
-					results.push((await send(malformed)).status);
+					const response = await send(malformed);
+					results.push(response.status);
+					expect(response.headers['content-type']).toBe('text/html; charset=utf-8');
+					expect(response.body).toContain('Retorno inválido.');
+					expect(response.body).not.toContain('example-code');
 				}
 				for (const opts of [
 					{ method: 'POST' },
@@ -177,7 +190,10 @@ describe('browser OAuth connection', () => {
 				await browser;
 			}),
 		).rejects.toThrow(/declined or failed/);
-		expect((await browser!).status).toBe(200);
+		const response = await browser!;
+		expect(response.status).toBe(200);
+		expect(response.body).toContain('Conexão não autorizada.');
+		expect(response.body).not.toContain('access_denied');
 		expect(requests.filter((sent) => sent.method === 'post')).toHaveLength(0);
 		await expect(send(local!)).rejects.toMatchObject({ code: 'ECONNREFUSED' });
 	});

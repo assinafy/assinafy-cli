@@ -209,6 +209,24 @@ describe('OAuth flow', () => {
 		expect(requests).toHaveLength(2);
 	});
 
+	it.each([
+		['invalid_scope', 'invalid_scope'],
+		['https://example.com/?code=private-code\n', 'unknown_error'],
+	])('reports the authorization error safely for %j', async (returned, expected) => {
+		const { client, requests } = setup();
+		const request = await authorize(client);
+		const url = callback(request);
+		url.searchParams.delete('code');
+		url.searchParams.set('error', returned);
+		const error = await client.oauth.exchangeCode(url.toString(), request).catch((error) => error);
+		expect(error).toMatchObject({
+			message: `OAuth authorization was declined or failed: ${expected}`,
+			errors: { oauthError: expected },
+		});
+		expect(inspect(error)).not.toMatch(/private-code|code_verifier|owner-secret/);
+		expect(requests).toHaveLength(2);
+	});
+
 	it('rejects invalid grants, PKCE, and insecure URLs before network access', async () => {
 		const { client, requests } = setup();
 		const base = {

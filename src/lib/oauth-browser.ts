@@ -9,12 +9,86 @@ export const CLI_OAUTH_REDIRECT_URI =
 	'https://integrations.assinafy.com.br/assinafy-cli/oauth-callback';
 
 const clearHistory = "history.replaceState(null, '', '/');";
-const callbackPage = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assinafy CLI</title><script>${clearHistory}</script><h1>Return to your terminal</h1><p>The authorization response was received. Check the terminal for the connection result.</p></html>`;
+const brandOrigin = 'https://integrations.assinafy.com.br';
+const callbackCopy = {
+	received: {
+		heading: 'Volte ao terminal.',
+		status:
+			'A resposta de autorização foi recebida. Confira no terminal se a conexão foi concluída.',
+	},
+	denied: {
+		heading: 'Conexão não autorizada.',
+		status:
+			'A autorização não foi concluída. Confira o erro no terminal e inicie uma nova conexão.',
+	},
+	invalid: {
+		heading: 'Retorno inválido.',
+		status:
+			'Continue na janela original de autorização. Se ela expirou, inicie uma nova conexão no terminal.',
+	},
+};
+
+function callbackPage(status: keyof typeof callbackCopy): string {
+	const copy = callbackCopy[status];
+	return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>${copy.heading} | Assinafy CLI</title>
+  <script>${clearHistory}</script>
+  <link rel="icon" href="${brandOrigin}/brand/assinafy-icon.png">
+  <link rel="stylesheet" href="${brandOrigin}/brand/colors.css">
+  <link rel="stylesheet" href="${brandOrigin}/brand/site.css">
+  <link rel="stylesheet" href="${brandOrigin}/oauth-callback.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="site-header wrap">
+    <a class="brand" href="${brandOrigin}" aria-label="Assinafy Integrações, início">
+      <img src="${brandOrigin}/brand/assinafy-logotype.svg" width="148" height="32" alt="Assinafy">
+      <span class="brand-section">integrações</span>
+    </a>
+  </header>
+  <main id="conteudo" class="hero wrap">
+    <div>
+      <p class="eyebrow"><img src="${brandOrigin}/assinafy-cli/cli-icon.svg" width="24" height="24" alt="">Conexão com a Assinafy CLI</p>
+      <h1>${copy.heading}</h1>
+      <p class="hero-description" role="status">${copy.status}</p>
+      <a class="button button-primary" href="${brandOrigin}/assinafy-cli">Ajuda para conectar<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16m-7-7 7 7-7 7"/></svg></a>
+    </div>
+    <figure class="connection-art">
+      <div class="connection-map" role="img" aria-label="Retorno de autorização: Assinafy para Assinafy CLI.">
+        <svg class="connection-lines" viewBox="0 0 480 240" preserveAspectRatio="none" fill="none" aria-hidden="true">
+          <path class="connection-route" d="M120 106H240"/>
+          <path class="connection-complete" d="M240 106H374m-64-5 5 5-5 5"/>
+        </svg>
+        <div class="connection-node connection-assinafy" aria-hidden="true">
+          <span class="connection-tile"><img src="${brandOrigin}/brand/assinafy-icon.png" width="60" height="60" alt=""></span>
+          <span class="connection-label">Assinafy</span>
+        </div>
+        <div class="connection-node connection-application" aria-hidden="true">
+          <span class="connection-tile"><img src="${brandOrigin}/assinafy-cli/cli-icon.svg" width="36" height="36" alt=""></span>
+          <span class="connection-label">Assinafy CLI</span>
+        </div>
+      </div>
+      <figcaption class="connection-caption">Continue no terminal que iniciou a conexão.</figcaption>
+    </figure>
+  </main>
+  <footer class="site-footer wrap"><span>Assinafy. Assinaturas que conectam.</span></footer>
+</body>
+</html>`;
+}
+
 const callbackHeaders = {
+	'Content-Type': 'text/html; charset=utf-8',
 	'Cache-Control': 'no-store',
 	'Referrer-Policy': 'no-referrer',
 	'X-Content-Type-Options': 'nosniff',
-	'Content-Security-Policy': `default-src 'none'; script-src 'sha256-${createHash('sha256').update(clearHistory).digest('base64')}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+	'X-Robots-Tag': 'noindex, nofollow, noarchive',
+	'Content-Security-Policy': `default-src 'none'; script-src 'sha256-${createHash('sha256').update(clearHistory).digest('base64')}'; style-src ${brandOrigin}; img-src ${brandOrigin}; font-src ${brandOrigin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
 	Connection: 'close',
 };
 
@@ -105,11 +179,8 @@ export async function connectOAuth(
 					query.has('code') !== query.has('error') &&
 					Boolean((query.get('code') ?? query.get('error'))?.trim());
 				if (!valid) {
-					response.writeHead(400, {
-						...callbackHeaders,
-						'Content-Type': 'text/plain; charset=utf-8',
-					});
-					response.end('Invalid authorization response. Continue in the original browser session.');
+					response.writeHead(400, callbackHeaders);
+					response.end(callbackPage('invalid'));
 					return;
 				}
 				consumed = true;
@@ -117,8 +188,10 @@ export async function connectOAuth(
 				for (const key of ['code', 'state', 'iss', 'error']) {
 					if (query.has(key)) callback.searchParams.set(key, query.get(key)!);
 				}
-				response.writeHead(200, { ...callbackHeaders, 'Content-Type': 'text/html; charset=utf-8' });
-				response.end(callbackPage, () => resolve(callback.toString()));
+				response.writeHead(200, callbackHeaders);
+				response.end(callbackPage(query.has('error') ? 'denied' : 'received'), () =>
+					resolve(callback.toString()),
+				);
 			});
 			void Promise.resolve()
 				.then(() => onAuthorize(request.authorization_url))

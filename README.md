@@ -108,6 +108,8 @@ assinafy workspaces list --json
 
 A CLI abre o navegador e aguarda o consentimento. A página HTTPS encaminha a resposta para uma porta temporária em `127.0.0.1`; a CLI valida `state` e o emissor, fecha a porta e troca o código usando o verificador PKCE mantido localmente. Não é necessário copiar um código. Use o navegador no mesmo computador da CLI. O site recebe a resposta de autorização; a troca de tokens ocorre diretamente entre a CLI e a Assinafy.
 
+As telas de retorno usam a identidade visual de `integrations.assinafy.com.br` e distinguem resposta recebida, autorização não concluída e retorno inválido. Confira o resultado final no terminal. Se aparecer `invalid_scope`, verifique as permissões cadastradas para a aplicação, incluindo `offline_access`.
+
 `--no-browser` permite abrir manualmente a URL exibida no stderr e mantém o retorno automático. `--timeout` controla a espera pelo navegador (180 segundos por padrão, de 1 a 600); `--scope` seleciona as permissões e `--redirect-uri` permite uma página HTTPS com o mesmo protocolo. Ctrl+C cancela a espera. A saída JSON contém tokens sensíveis; não a envie para logs. O comando não altera o perfil nem renova tokens automaticamente.
 
 Selecione o único workspace retornado e configure `ASSINAFY_ACCOUNT_ID`. Tokens OAuth não autorizam cobrança, criação/exclusão de workspaces nem administração de credenciais. Cada refresh consome o token anterior: serialize a operação por conexão e salve o novo par de tokens atomicamente.

@@ -129,7 +129,12 @@ export class OAuthResource extends BaseResource {
 			throw new ValidationError('OAuth issuer mismatch');
 		}
 		if (callback.searchParams.has('error')) {
-			throw new ValidationError('OAuth authorization was declined or failed');
+			const error = callback.searchParams.get('error')!;
+			const oauthError =
+				error.length > 0 && error.length <= 64 && !/[^a-z_]/.test(error) ? error : 'unknown_error';
+			throw new ValidationError(`OAuth authorization was declined or failed: ${oauthError}`, {
+				oauthError,
+			});
 		}
 		return this.token({
 			grant_type: 'authorization_code',
