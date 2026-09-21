@@ -172,9 +172,13 @@ describe('buildAssignmentPayload', () => {
 				signers: [{ id: 'a', verification_method: 'DigitalCertificate' }, { id: 'b' }],
 			}),
 		).toThrow(/alone/);
-		expect(() =>
-			buildAssignmentPayload({ method: 'virtual', signers: [] }, { allowEmptySigners: true }),
-		).toThrow(/At least one signer/);
+		// The API refuses a signer-less body in either mode, so neither can opt out.
+		expect(() => buildAssignmentPayload({ method: 'virtual', signers: [] })).toThrow(
+			/At least one signer/,
+		);
+		expect(() => buildAssignmentPayload({ method: 'collect', signers: [], entries: [] })).toThrow(
+			/At least one signer/,
+		);
 		expect(() => buildAssignmentPayload({ method: 'collect', signers: ['a'] })).toThrow(
 			/entries are required/,
 		);
@@ -1205,15 +1209,31 @@ describe('AssignmentResource', () => {
 		expect(calls).toHaveLength(0);
 	});
 
-	it('estimates cost for a collect assignment with no signers', async () => {
+	it('sends signers alongside entries for a collect estimate', async () => {
 		const calls: CapturedCall[] = [];
 		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
-		await assignments.estimateCost('doc1', { method: 'collect', entries: [] });
+		await assignments.estimateCost('doc1', {
+			method: 'collect',
+			signers: [{ verification_method: 'DigitalCertificate' }],
+			entries: [],
+		});
+		// collect is priced per signer too, so the channels must reach the API.
 		expect(calls[0]).toMatchObject({
 			method: 'POST',
 			url: '/documents/doc1/assignments/estimate-cost',
-			body: { method: 'collect', signers: [], entries: [] },
+			body: {
+				method: 'collect',
+				signers: [{ verification_method: 'DigitalCertificate' }],
+				entries: [],
+			},
 		});
+	});
+
+	it('refuses a collect estimate with no signers', async () => {
+		const assignments = new AssignmentResource(mockHttp([]), 'acc');
+		await expect(
+			assignments.estimateCost('doc1', { method: 'collect', entries: [] }),
+		).rejects.toThrow(/At least one signer/);
 	});
 });
 

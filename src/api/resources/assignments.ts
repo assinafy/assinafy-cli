@@ -28,7 +28,6 @@ export function buildAssignmentPayload(
 	payload: ICreateAssignmentPayload,
 	options: {
 		allowSignersWithoutId?: boolean;
-		allowEmptySigners?: boolean;
 		skipDigitalCertificateStepValidation?: boolean;
 	} = {},
 ): Record<string, unknown> {
@@ -40,13 +39,10 @@ export function buildAssignmentPayload(
 		throw new ValidationError('method must be virtual or collect');
 	}
 	const signers = extractSignerRefs(payload);
-	// Cost estimation for `collect` assignments may legitimately carry zero
-	// signers (the docs mark `signers` "Required for virtual" only), so callers
-	// can opt out of the non-empty guard.
-	if (
-		signers.length === 0 &&
-		(!options.allowEmptySigners || (payload.method ?? 'virtual') !== 'collect')
-	) {
+	// The docs mark `signers` "Required for virtual" only, but the API prices per signer in both
+	// modes and answers a signer-less body with
+	// 400 "Pelo menos um signatários precisa ser informado." A collect estimate needs them too.
+	if (signers.length === 0) {
 		throw new ValidationError('At least one signer is required', {
 			signers: payload.signers ?? payload.signer_ids ?? payload.signerIds,
 		});
@@ -181,7 +177,6 @@ export class AssignmentResource extends BaseResource {
 				`/documents/${docId}/assignments/estimate-cost`,
 				buildAssignmentPayload(payload, {
 					allowSignersWithoutId: true,
-					allowEmptySigners: true,
 					skipDigitalCertificateStepValidation: true,
 				}),
 			),
