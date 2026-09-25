@@ -1,5 +1,6 @@
 import { stripVTControlCharacters } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../api';
 import { CliError } from './errors';
 import { printData, printError, printPaginatedData, printSuccess } from './output';
 
@@ -137,5 +138,23 @@ describe('printError', () => {
 		const out = captureStderr(() => printError(new CliError(unsafe), { json: true, quiet: false }));
 		expect(out).not.toContain('\u009d');
 		expect(JSON.parse(out).error.message).toBe(unsafe);
+	});
+
+	it('names the scope from an insufficient_scope challenge instead of suggesting a retry', () => {
+		const challenge = (wwwAuthenticate: string) =>
+			stripVTControlCharacters(
+				captureStderr(() =>
+					printError(new ApiError('Forbidden', 403, null, { wwwAuthenticate }), {
+						json: false,
+						quiet: false,
+					}),
+				),
+			);
+		expect(
+			challenge(
+				'Bearer error="insufficient_scope", scope="documents:write", resource_metadata="https://api.example.com/.well-known/oauth-protected-resource"',
+			),
+		).toContain('missing OAuth scope: documents:write; reconnect granting it');
+		expect(challenge('Bearer error="invalid_token"')).not.toContain('missing OAuth scope');
 	});
 });

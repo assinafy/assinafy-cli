@@ -13,6 +13,11 @@ import type {
 import { publicRequestConfig } from '../utils.js';
 import { BaseResource } from './base.js';
 
+/** Token and revocation bodies are form-encoded (RFC 6749/7009); Axios omits undefined fields. */
+const formRequestConfig = publicRequestConfig({
+	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+});
+
 /** OAuth 2.1 with S256 PKCE. Tokens are returned to the caller, never saved or retried. */
 export class OAuthResource extends BaseResource {
 	/** `GET /.well-known/oauth-protected-resource` at the API origin, outside `/v1`. */
@@ -147,7 +152,10 @@ export class OAuthResource extends BaseResource {
 		});
 	}
 
-	/** `POST /oauth/token` — code exchange or refresh; returns the flat OAuth JSON body. */
+	/**
+	 * `POST /oauth/token` — code exchange or refresh; returns the flat OAuth JSON body.
+	 * A refresh must return a new `refresh_token`; otherwise this throws `ValidationError`.
+	 */
 	async token(payload: IOAuthTokenPayload): Promise<IOAuthTokenResponse> {
 		required(payload.client_id, 'client_id');
 		if (payload.client_secret !== undefined) required(payload.client_secret, 'client_secret');
@@ -168,9 +176,22 @@ export class OAuthResource extends BaseResource {
 		} else {
 			throw new ValidationError('grant_type must be authorization_code or refresh_token');
 		}
-		return this.call('OAuth token request failed', () =>
-			this.http.post('/oauth/token', payload, publicRequestConfig()),
+		const tokens = await this.call<IOAuthTokenResponse>('OAuth token request failed', () =>
+			this.http.post('/oauth/token', payload, formRequestConfig),
 		);
+		// Refresh tokens rotate: a successful refresh has already retired the submitted token.
+		const next = tokens?.refresh_token;
+		if (
+			payload.grant_type === 'refresh_token' &&
+			(typeof next !== 'string' || !next.trim() || next === payload.refresh_token)
+		) {
+			throw new ValidationError(
+				'OAuth refresh response has no new refresh_token; the submitted refresh token may ' +
+					'already be retired, so do not reuse it: reconnect instead',
+				{ field: 'refresh_token' },
+			);
+		}
+		return tokens;
 	}
 
 	/** `POST /oauth/revoke` — revoke an access/refresh token; success has no required body. */
@@ -185,7 +206,7 @@ export class OAuthResource extends BaseResource {
 			throw new ValidationError('token_type_hint must be access_token or refresh_token');
 		}
 		await this.call('OAuth revocation failed', () =>
-			this.http.post('/oauth/revoke', payload, publicRequestConfig()),
+			this.http.post('/oauth/revoke', payload, formRequestConfig),
 		);
 	}
 

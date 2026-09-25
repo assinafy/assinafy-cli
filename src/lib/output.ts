@@ -90,6 +90,14 @@ export function printError(err: unknown, config: OutputConfig): void {
 		if (normalized.statusCode) {
 			writeErr(pc.dim(`  (HTTP ${normalized.statusCode})`));
 		}
+		const challenge = normalized.wwwAuthenticate ?? '';
+		const scope =
+			challenge.includes('insufficient_scope') && /\bscope="([^"]+)"/.exec(challenge)?.[1];
+		if (scope) {
+			writeErr(
+				pc.dim(`  (missing OAuth scope: ${sanitizeTerminalText(scope)}; reconnect granting it)`),
+			);
+		}
 	}
 	process.exitCode = normalized.exitCode ?? 1;
 }

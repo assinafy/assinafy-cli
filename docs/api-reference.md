@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.0.0
 - API document version: 1.0.0
 - Operations: 93
-- Contract SHA-256: `6b55ce24462cd0f9393061a075f2c296fbe742fae493c9ba81c7def402618456`
+- Contract SHA-256: `f6e6b3062de0fce91640b99e78df5f42174a9a5a90750945096d7db91e055ab7`
 
 ## Accounts
 
@@ -1701,6 +1701,7 @@ Verify a document by its signature hash (found on a signed document) and return 
     "data": {
         "hash": "example_id_9",
         "id": "example_id_10",
+        "agreement_code": "550E8400-E29B-41D4-A716-446655440000",
         "status": "certificated",
         "page_count": "1",
         "signer_count": "1",
@@ -2095,7 +2096,7 @@ Fields (`application/json`):
 - `editor_fields` (array) — Editor field values to bake into the generated document.
 - `name` (string) — Title for the document. Defaults to the template name.
 - `message` (string) — Optional message sent to signers.
-- `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default.
+- `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default. Must be at least one hour in the future.
 - `tags` (array) — Tag names to attach to the new document. Names that don't exist are auto-created. The template's default-document-tags are always applied; values here are merged on top (duplicates removed).
 
 Example:
@@ -2490,7 +2491,7 @@ Fields (`application/json`):
 - `signers` (array, required)
 - `entries` (array) — Required for `collect`: field placements per page.
 - `message` (string) — Text included in the invitation email.
-- `expires_at` (string) — ISO 8601; default is no expiration.
+- `expires_at` (string) — ISO 8601; default is no expiration. Must be at least one hour in the future.
 - `copy_receivers` (array) — Signer IDs that only receive a copy.
 
 Example — Create without input (method: virtual, with verification & notification methods):
@@ -3167,7 +3168,7 @@ Set a new expiration date for an assignment.
 
 Fields (`application/json`):
 
-- `expires_at` (string) — New expiration date (ISO 8601).
+- `expires_at` (string) — New expiration date (ISO 8601). Must be at least one hour in the future.
 
 Example:
 
@@ -3294,7 +3295,7 @@ Example:
 
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
 
-List all WhatsApp notification messages sent for an assignment. The response includes the rendered template text split into `header`, `body` and `buttons` — exactly what the signer would see. In sandbox/stage, WhatsApp messages are simulated (no real delivery) and button URLs include access/verification codes you can use to simulate the signing flow.
+List all WhatsApp notification messages sent for an assignment. The response includes the rendered template text split into `header`, `body` and `buttons` — exactly what the signer would see. In sandbox/stage, WhatsApp messages are simulated (no real delivery) and button URLs include access/verification codes you can use to simulate the signing flow; in production the button URLs are stripped. Requires the `documents:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4704,7 +4705,7 @@ Returns the profile of the user owning the access token.
 
 ## OAuth
 
-### Exchange a code or refresh token for an access token
+### Exchange a code, refresh token, or subject token for an access token
 
 `POST /v1/oauth/token`
 
@@ -4714,21 +4715,36 @@ Implements the RFC 6749 §5.1/§5.2 token-endpoint body contract in
      *         `{error, error_description}` object — neither is wrapped in this API's
      *         usual response envelope, since no standard OAuth client library (or MCP
      *         connector) would find `access_token` or `error` inside a `data` key.
+     *
+     *         The third grant, `urn:ietf:params:oauth:grant-type:token-exchange` (RFC 8693),
+     *         is restricted to a confidential internal-service client (see `/oauth/introspect`)
+     *         and trades a front-end resource's access token (the `subject_token`) for one
+     *         minted for THIS API — the crossing an MCP server makes after a user consents,
+     *         since its own token can never be forwarded here directly. The issued token is
+     *         never wider than the subject: `scope`, when sent, must be a subset of the
+     *         subject's own scopes, and `resource` must equal this API's own resource
+     *         identifier exactly. No refresh token is issued; the caller re-exchanges from
+     *         the user's own token instead of holding unattended API access.
 
 **Authentication:** none (public endpoint).
 
 #### Request Body (required)
 
-Fields (`application/json`):
+The [OAuth Integration Guide](https://api.assinafy.com.br/v1/docs) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.
 
-- `grant_type` (string, required)
+Fields (`application/x-www-form-urlencoded`):
+
+- `grant_type` (string, required) — `urn:ietf:params:oauth:grant-type:token-exchange` is for internal service clients only (Assinafy's own MCP server) — an ordinary confidential or public client authenticates with it and always gets `invalid_client`, exactly as an unrecognized client would. Everyday integrators use `authorization_code` and `refresh_token`.
 - `code` (string)
 - `redirect_uri` (string)
 - `code_verifier` (string) — RFC 7636: 43-128 characters from [A-Za-z0-9-._~]. Shorter values are rejected with `invalid_grant`.
 - `refresh_token` (string)
 - `client_id` (string, required)
-- `client_secret` (string) — Confidential clients only. Public clients authenticate with PKCE and are never issued a secret.
-- `resource` (string) — RFC 8707 resource indicator. Optional; when present it must be the `resource` value published by /.well-known/oauth-protected-resource and must match the one sent to /authorize, otherwise `invalid_target`.
+- `client_secret` (string) — Confidential clients only. Public clients authenticate with PKCE and are never issued a secret; the token-exchange grant requires a confidential, internal-service client and therefore always requires this.
+- `resource` (string) — RFC 8707 resource indicator. For `authorization_code`/`refresh_token`, optional; when present it must be the `resource` value published by /.well-known/oauth-protected-resource and must match the one sent to /authorize, otherwise `invalid_target`. For the token-exchange grant it is REQUIRED and must equal this API's own resource identifier exactly (never a front-end resource such as the MCP server), otherwise `invalid_target`.
+- `subject_token` (string) — Token-exchange grant only. The front-end resource's access token being traded in. Must be a live, original (never itself exchanged) token minted for a resource this server issues tokens for, other than this API's own audience.
+- `subject_token_type` (string) — Token-exchange grant only. Required; only `urn:ietf:params:oauth:token-type:access_token` is supported.
+- `requested_token_type` (string) — Token-exchange grant only. Optional; when present it must agree with the only type this server issues.
 
 Example:
 
@@ -4741,7 +4757,10 @@ Example:
     "refresh_token": "example_secret",
     "client_id": "example_id_5",
     "client_secret": "example_secret",
-    "resource": "string"
+    "resource": "string",
+    "subject_token": "example_secret",
+    "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+    "requested_token_type": "urn:ietf:params:oauth:token-type:access_token"
 }
 ```
 
@@ -4752,6 +4771,7 @@ Example:
 ```json
 {
     "access_token": "example_credential",
+    "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
     "token_type": "Bearer",
     "expires_in": 3600,
     "refresh_token": "example_secret",
@@ -4760,7 +4780,7 @@ Example:
 }
 ```
 
-##### 400 — `invalid_grant` (bad, expired, replayed, or wrong-client authorization code; a `code_verifier` outside the RFC 7636 grammar of 43-128 unreserved characters; redirect_uri mismatch; a refresh token whose authorization no longer includes `offline_access`), `invalid_target` (a `resource` this server does not issue tokens for, or one disagreeing with the authorized value), or `unsupported_grant_type`
+##### 400 — `invalid_grant` (bad, expired, replayed, or wrong-client authorization code; a `code_verifier` outside the RFC 7636 grammar of 43-128 unreserved characters; redirect_uri mismatch; a refresh token whose authorization no longer includes `offline_access`; for token-exchange, a `subject_token` that is unusable, itself an exchanged token, not visible to service clients, or expired), `invalid_target` (a `resource` this server does not issue tokens for, one disagreeing with the authorized value, or — for token-exchange — one other than this API's own resource identifier), `invalid_scope` (token-exchange only: the requested `scope` is not a subset of the subject token's own scopes), `invalid_request` (token-exchange only: an unsupported `subject_token_type`/`requested_token_type`), or `unsupported_grant_type`
 
 ```json
 {
@@ -4798,7 +4818,9 @@ Revokes an access or refresh token. Every token outcome always returns 200 — i
 
 #### Request Body (required)
 
-Fields (`application/json`):
+The [OAuth Integration Guide](https://api.assinafy.com.br/v1/docs) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.
+
+Fields (`application/x-www-form-urlencoded`):
 
 - `token` (string, required)
 - `token_type_hint` (string)
@@ -7085,7 +7107,7 @@ The `status` field of a template is one of:
 
 `GET /v1/accounts/{accountId}/webhooks/subscriptions`
 
-Retrieve the current webhook subscription for the account — which events it is subscribed to and the delivery configuration.
+Retrieve the current webhook subscription for the account — which events it is subscribed to and the delivery configuration. Requires the `account:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7140,7 +7162,7 @@ Retrieve the current webhook subscription for the account — which events it is
 
 `PUT /v1/accounts/{accountId}/webhooks/subscriptions`
 
-Update the webhook subscription settings for the account — which events are monitored, whether delivery is enabled, and the delivery/contact details.
+Update the webhook subscription settings for the account — which events are monitored, whether delivery is enabled, and the delivery/contact details. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7228,7 +7250,7 @@ Example:
 
 `PUT /v1/accounts/{accountId}/webhooks/inactivate`
 
-Deactivate the webhook integration for the account. While inactive, no events are sent to the configured endpoint.
+Deactivate the webhook integration for the account. While inactive, no events are sent to the configured endpoint. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7283,7 +7305,7 @@ Deactivate the webhook integration for the account. While inactive, no events ar
 
 `GET /v1/webhooks/event-types`
 
-List all available event types that can be subscribed to via webhooks.
+List all available event types that can be subscribed to via webhooks. Requires the `documents:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7328,7 +7350,7 @@ List all available event types that can be subscribed to via webhooks.
 
 `GET /v1/accounts/{accountId}/webhooks`
 
-Retrieve the delivery history for webhooks sent to the account's configured endpoint — use it to monitor status, debug failures, and verify payloads. Pagination is returned in the `X-Pagination-*` response headers.
+Retrieve the delivery history for webhooks sent to the account's configured endpoint — use it to monitor status, debug failures, and verify payloads. Pagination is returned in the `X-Pagination-*` response headers. Requires the `documents:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 

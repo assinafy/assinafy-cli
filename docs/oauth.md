@@ -41,10 +41,10 @@ Options:
                         ASSINAFY_OAUTH_CLIENT_ID)
   --redirect-uri <uri>  Exactly registered HTTPS relay URI (default:
                         "https://integrations.assinafy.com.br/assinafy-cli/oauth-callback")
-  --scope <scopes>      Space-separated scopes; defaults to all supported OAuth
-                        scopes (default: "account:read documents:read
-                        documents:write templates:read templates:write openid
-                        profile email offline_access")
+  --scope <scopes>      Space-separated scopes; the default requests every
+                        published scope (default: "account:read documents:read
+                        documents:write templates:read templates:write
+                        webhooks:write openid profile email offline_access")
   --timeout <seconds>   Wait for browser consent (1–600 seconds) (default:
                         "180")
   --no-browser          Print the authorization URL without opening the system

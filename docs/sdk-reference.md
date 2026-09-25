@@ -423,13 +423,13 @@ Login/social/reset bootstrap calls can use an unauthenticated client. The publis
 | `discovery(issuer)` | `GET {issuer}/.well-known/oauth-authorization-server`; requires HTTPS and matching issuer | `IOAuthAuthorizationServer` |
 | `authorize({ clientId, redirectUri, scopes })` | Discover resource/server and generate a fresh S256 verifier, state, and optional OIDC nonce | `IOAuthAuthorizationRequest` |
 | `exchangeCode(callbackUrl, request, clientSecret?)` | Validate callback URI/state/issuer and submit the authorization code | `IOAuthTokenResponse` |
-| `token(payload)` | [`POST /oauth/token`](./api-reference.md#exchange-a-code-or-refresh-token-for-an-access-token), with code or refresh grant | `IOAuthTokenResponse` |
+| `token(payload)` | [`POST /oauth/token`](./api-reference.md#exchange-a-code-refresh-token-or-subject-token-for-an-access-token), with code or refresh grant | `IOAuthTokenResponse` |
 | `revoke(payload)` | [`POST /oauth/revoke`](./api-reference.md#revoke-a-token) | `void` |
 | `userinfo()` | `GET /oauth/userinfo`, using the current OAuth bearer token with `openid` | `IOAuthUserInfo` |
 
 All request types, full payload examples and response shapes are in the [OAuth guide](./oauth-guide.md). `IOAuthTokenPayload` is a discriminated union: code exchange requires `code`, `redirect_uri`, and `code_verifier`; refresh requires `refresh_token`; both require `client_id` and optionally accept `client_secret` and `resource`. `IOAuthRevokePayload` requires `token` and `client_id`, with optional `client_secret` and `token_type_hint`.
 
-Metadata, discovery, token, and revoke calls remove owner headers. UserInfo uses the configured credential; construct the client with `token` for OAuth. OAuth bodies have no Assinafy envelope. The SDK returns credentials to the caller and does not persist, retry, or automatically refresh them. Store authorization requests in a single-use session; serialize refreshes across workers and atomically save the rotated result. Use an OIDC library to validate ID tokens before relying on identity claims.
+Metadata, discovery, token, and revoke calls remove owner headers. UserInfo uses the configured credential; construct the client with `token` for OAuth. OAuth bodies have no Assinafy envelope. The SDK returns credentials to the caller and does not persist, retry, or automatically refresh them. A refresh response without a new `refresh_token`, or with the submitted one, throws `ValidationError` with `errors.field` set to `'refresh_token'`; do not reuse the submitted token, reconnect instead. Store authorization requests in a single-use session; serialize refreshes across workers and atomically save the rotated result. Use an OIDC library to validate ID tokens before relying on identity claims.
 
 ## Fields (`client.fields`)
 

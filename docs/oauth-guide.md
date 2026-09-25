@@ -4,7 +4,7 @@ Assinafy uses OAuth 2.1 authorization code with mandatory S256 PKCE for public a
 
 Use a separate connection for each customer workspace. An OAuth access token carries the consenting user's permissions, the granted scopes, and exactly one workspace. It never grants billing, workspace creation/deletion, API-key management, or other platform administration. An API key remains available for direct owner integrations. Signer access codes remain a separate authentication mechanism.
 
-Use `oauth.userinfo()` for the consenting user's profile. Production rejects OAuth application tokens for `users.self`, user statistics and notification preferences, workspace statistics, API-key lookup, webhook subscription/delivery/event-type reads, and WhatsApp notification history. These operations require the owner or first-party credential supported by their endpoint. Requesting additional OAuth scopes does not grant access to them.
+Use `oauth.userinfo()` for the consenting user's profile. Production rejects OAuth application tokens for `users.self`, user statistics and notification preferences, workspace statistics, and API-key lookup. These operations require the owner or first-party credential supported by their endpoint. Per the live OAuth guide, `documents:read` covers webhook event types, webhook delivery history and the WhatsApp notifications sent for an assignment, and `account:read` covers reading the workspace's webhook subscription. Requesting additional OAuth scopes does not grant access to them.
 
 ## Register the application
 
@@ -34,12 +34,13 @@ The resource indicator is an origin, distinct from the SDK `baseUrl`, which incl
 | `templates:read` | Read templates. |
 | `templates:write` | Permitted template operations. |
 | `account:read` | Read the selected workspace. |
+| `webhooks:write` | Change webhook delivery and deactivate the subscription. Requested by `oauth connect` by default. |
 | `openid` | Request OpenID Connect identity and UserInfo. |
 | `profile` | Include permitted profile claims. |
 | `email` | Include permitted email claims. |
 | `offline_access` | Request rotating refresh tokens for background work. |
 
-`oauth connect` requests all nine published scopes by default so the CLI can access documents, templates, the selected workspace, and UserInfo, and obtain refresh tokens. The public application registration must permit all nine. Existing connections need a new authorization with the larger scope set; refreshing an old token does not add permissions. Use `--scope` to explicitly select fewer scopes when needed. For other applications, request only scopes they use. Resource metadata lists API scopes; authorization-server metadata also describes authentication features such as `offline_access`. The returned `scope` string is authoritative for the access token; do not infer granted scopes from what the browser requested. A scope never bypasses a user's role or the token's workspace boundary. Billing, subscriptions, workspace membership, credential management, and administration remain unavailable to OAuth tokens; those CLI operations require the non-OAuth credential documented for each endpoint.
+`oauth connect` requests all ten published scopes by default, so the CLI can access documents, templates, the selected workspace, webhook settings and UserInfo, and obtain refresh tokens. The public application registration must permit all ten. Existing connections need a new authorization with the larger scope set; refreshing an old token does not add permissions. Use `--scope` to explicitly select fewer scopes when needed. For other applications, request only scopes they use. Resource metadata lists API scopes; authorization-server metadata also describes authentication features such as `offline_access`. The returned `scope` string is authoritative for the access token; do not infer granted scopes from what the browser requested. It never lists `offline_access`, even when granted: a `refresh_token` in the response is the only signal that refresh is available. A scope never bypasses a user's role or the token's workspace boundary. Billing, subscriptions, workspace membership, credential management, and administration remain unavailable to OAuth tokens; those CLI operations require the non-OAuth credential documented for each endpoint.
 
 ## Discover and start authorization
 
@@ -62,7 +63,7 @@ const request = await oauthClient.oauth.authorize({
 {
   "resource": "https://api.assinafy.com.br",
   "authorization_servers": ["https://auth.assinafy.com.br"],
-  "scopes_supported": ["documents:read", "documents:write", "templates:read", "templates:write", "account:read", "openid", "profile", "email"],
+  "scopes_supported": ["documents:read", "documents:write", "templates:read", "templates:write", "account:read", "webhooks:write", "openid", "profile", "email"],
   "bearer_methods_supported": ["header"]
 }
 ```
@@ -77,7 +78,7 @@ const request = await oauthClient.oauth.authorize({
   "revocation_endpoint": "https://api.assinafy.com.br/v1/oauth/revoke",
   "userinfo_endpoint": "https://api.assinafy.com.br/v1/oauth/userinfo",
   "jwks_uri": "https://auth.assinafy.com.br/.well-known/jwks.json",
-  "scopes_supported": ["documents:read", "documents:write", "templates:read", "templates:write", "account:read", "openid", "profile", "email", "offline_access"],
+  "scopes_supported": ["documents:read", "documents:write", "templates:read", "templates:write", "account:read", "webhooks:write", "openid", "profile", "email", "offline_access"],
   "response_types_supported": ["code"],
   "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
@@ -142,7 +143,7 @@ For applications that already perform callback validation, `token(payload)` acce
 }
 ```
 
-The SDK posts JSON. Omit `client_secret` for public clients. `resource` is optional in the token request; if provided, use the authorization resource. A direct `token()` call does not validate a browser callback, state, issuer, or session. The verifier must contain 43–128 RFC 7636 unreserved characters.
+The SDK sends these fields form-encoded (`application/x-www-form-urlencoded`). Omit `client_secret` for public clients. `resource` is optional in the token request; if provided, use the authorization resource. A direct `token()` call does not validate a browser callback, state, issuer, or session. The verifier must contain 43–128 RFC 7636 unreserved characters.
 
 Both methods return the direct `IOAuthTokenResponse`, without an Assinafy `{ data }` envelope:
 
@@ -180,9 +181,10 @@ Persist the workspace ID with the application's tenant/customer ID, issuer, reso
 
 ## Refresh without losing the connection
 
-`token(payload)` accepts the refresh grant:
+`token(payload)` accepts the refresh grant. In these examples, `tokenStore` stands for the application's encrypted per-connection storage. Hold the connection's refresh lock from reading the stored token until the new response is saved:
 
 ```ts
+const storedRefreshToken = await tokenStore.getRefreshToken(connectionId);
 const next = await oauthClient.oauth.token({
   grant_type: 'refresh_token',
   client_id: process.env.ASSINAFY_OAUTH_CLIENT_ID!,
@@ -190,9 +192,11 @@ const next = await oauthClient.oauth.token({
   refresh_token: storedRefreshToken,
   resource: 'https://api.assinafy.com.br',
 });
+// storedRefreshToken is now retired. Save the whole response, with its new refresh token, before using it.
+await tokenStore.save(connectionId, next);
 ```
 
-The complete wire body is:
+The complete payload, sent form-encoded, is:
 
 ```json
 {
@@ -206,7 +210,9 @@ The complete wire body is:
 
 Its response has the same token shape above, with new access and refresh values. Each successful refresh consumes the previous refresh token. Reusing it revokes the entire connection. Serialize refreshes per connection across every worker and process; atomically store the complete new response before releasing the lock or using it. A lock local to one process is insufficient for a distributed application.
 
-The documented authorization lifetime is 30 days and is not extended by refresh. A transport timeout can leave rotation outcome unknown; do not replay the old token automatically. Mark that connection for recovery/reconnection. On `invalid_grant`, require new consent. The SDK has no automatic refresh or request retry and never persists tokens. Construct a new authenticated `AssinafyClient` with the current access token after rotation.
+If a successful refresh response has no new `refresh_token`, or returns the submitted one, `token()` throws `ValidationError` with `errors.field` set to `'refresh_token'` instead of returning the response. The submitted token may already be retired: do not reuse it; mark the connection for reconnection.
+
+Access tokens last one hour. A refresh token is valid for 30 days, and every refresh returns a new one with a fresh 30 days, so a connection expires only after 30 days without a refresh; after that, the user must connect again. Approving the application again with different permissions immediately invalidates the previous tokens; treat that as a reconnect. A timeout means the refresh may have succeeded: re-read the stored token before retrying and never replay the old one blindly; if nothing new was stored, mark that connection for recovery/reconnection. On `invalid_grant`, require new consent. The SDK has no automatic refresh or request retry and never persists tokens. Construct a new authenticated `AssinafyClient` with the current access token after rotation.
 
 ## UserInfo and disconnect
 
@@ -227,7 +233,7 @@ const identity = await new AssinafyClient({ token: tokens.access_token }).oauth.
 
 Only `sub` is mandatory; other claims can be missing or null. Prefer the stable subject over an email address as an identity key, and include the issuer in that key.
 
-To disconnect, `revoke(payload)` posts:
+To disconnect, `revoke(payload)` sends these form fields:
 
 ```json
 {
@@ -239,21 +245,23 @@ To disconnect, `revoke(payload)` posts:
 ```
 
 ```ts
+// Under the same lock, read back the latest saved token: each refresh retires the previous one.
+const latestRefreshToken = await tokenStore.getRefreshToken(connectionId);
 await oauthClient.oauth.revoke({
-  token: storedRefreshToken,
+  token: latestRefreshToken,
   client_id: process.env.ASSINAFY_OAUTH_CLIENT_ID!,
   client_secret: process.env.ASSINAFY_OAUTH_CLIENT_SECRET,
   token_type_hint: 'refresh_token',
 });
 ```
 
-`token_type_hint` is optional and accepts `access_token` or `refresh_token`. Successful revocation returns HTTP 200 with no required response body; the SDK resolves to `undefined`. Unknown/already revoked tokens also succeed for an authenticated client. Invalid client authentication returns 401. Revoke the connection before removing local credentials when possible, then mark it disconnected and stop its background work. CLI success prints `{ "revoked": true }`, a local confirmation rather than an API response payload.
+`token_type_hint` is optional and accepts `access_token` or `refresh_token`. Successful revocation returns HTTP 200 with no required response body; the SDK resolves to `undefined`. Unknown/already revoked tokens also succeed for an authenticated client, so revoking a retired refresh token reports success while its replacement stays active. Invalid client authentication returns 401. Revoke the connection before removing local credentials when possible, then mark it disconnected and stop its background work. CLI success prints `{ "revoked": true }`, a local confirmation rather than an API response payload.
 
 ## CLI flow
 
 ### Automatic browser return
 
-The distributed CLI includes the official **Public** application's client ID, `96BZZ0sZTb2NkEXt1GCaIRCTprI2YKHZr8JDHawuXUyCLC88`. This public identifier is not a secret. The CLI uses PKCE S256 and the scopes `account:read documents:read documents:write templates:read templates:write openid profile email offline_access`; keep the registered permissions consistent with the requested scopes. No client secret is used by `oauth connect`, including when `ASSINAFY_OAUTH_CLIENT_SECRET` is set for another application.
+The distributed CLI includes the official **Public** application's client ID, `96BZZ0sZTb2NkEXt1GCaIRCTprI2YKHZr8JDHawuXUyCLC88`. This public identifier is not a secret. The CLI uses PKCE S256 and the scopes `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`; keep the registered permissions consistent with the requested scopes. No client secret is used by `oauth connect`, including when `ASSINAFY_OAUTH_CLIENT_SECRET` is set for another application.
 
 Application maintainers must deploy the callback from `integrations-generic-callback` and register this exact HTTPS URI, without an extension or trailing slash:
 
@@ -279,7 +287,7 @@ assinafy documents list --json
 | --- | --- |
 | `--client-id <id>` | Override the bundled public application ID; takes precedence over `ASSINAFY_OAUTH_CLIENT_ID`. |
 | `--redirect-uri <uri>` | Registered HTTPS relay URI; defaults to the extensionless URL above. Query parameters and fragments are unsupported for this browser relay. |
-| `--scope '<scopes>'` | Space-separated scopes; defaults to `account:read documents:read documents:write templates:read templates:write openid profile email offline_access`. |
+| `--scope '<scopes>'` | Space-separated scopes; defaults to `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`. |
 | `--timeout <seconds>` | Browser response deadline, 1–600 seconds; default 180. API calls use the SDK's network timeout. |
 | `--no-browser` | Print the authorization URL for manual opening; the local listener still receives the return automatically. |
 
@@ -328,7 +336,7 @@ Select the single returned workspace as `ASSINAFY_ACCOUNT_ID`. Remove the consum
 
 An API key wins when both credential types are supplied at the same precedence level. A higher-precedence `--token` overrides environment or profile credentials as a group. Avoid leaving a stale `ASSINAFY_API_KEY` in an OAuth session.
 
-Provision the current refresh token as `ASSINAFY_OAUTH_REFRESH_TOKEN`; `assinafy oauth refresh --resource https://api.assinafy.com.br --json` emits the rotated token response. Save to a private new file and atomically replace the previous file only on success. Never launch concurrent refresh commands. Use `ASSINAFY_OAUTH_REVOKE_TOKEN` for `assinafy oauth revoke --token-type-hint refresh_token --json`. For UserInfo, request `openid` during consent and run `assinafy oauth userinfo --json` with the access token.
+Provision the current refresh token as `ASSINAFY_OAUTH_REFRESH_TOKEN`; `assinafy oauth refresh --resource https://api.assinafy.com.br --json` emits the rotated token response. Save to a private new file and atomically replace the previous file only on success. Never launch concurrent refresh commands. If the command reports that the response has no new refresh token, do not run it again with the same token; run `assinafy oauth connect`. Use `ASSINAFY_OAUTH_REVOKE_TOKEN` with the latest saved refresh token for `assinafy oauth revoke --token-type-hint refresh_token --json`. For UserInfo, request `openid` during consent and run `assinafy oauth userinfo --json` with the access token.
 
 Request files, callback URLs, token output, and environment variables are sensitive. Protect them using the OS's user-only permissions, keep them out of logs and version control, and remove consumed requests. The CLI's temporary listener serves only a browser handoff; token storage and connection lifecycle remain the caller's responsibility.
 
@@ -337,6 +345,7 @@ Request files, callback URLs, token output, and environment variables are sensit
 | Result | Application behavior |
 | --- | --- |
 | `400 invalid_grant` | Code expired/used or refresh no longer usable; reconnect rather than retrying the old grant. |
+| `ValidationError`, `errors.field` `refresh_token` | Refresh returned no new refresh token; the submitted one may be retired. Do not reuse it; reconnect. |
 | `401 invalid_client` | Check application type, client ID, client secret, and environment. |
 | API `401` | Access token invalid/expired; perform one serialized refresh if the connection is recoverable. |
 | `403` with `insufficient_scope` | Read `ApiError.wwwAuthenticate`; obtain consent for the missing scope. |

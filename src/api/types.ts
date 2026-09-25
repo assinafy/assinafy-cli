@@ -871,6 +871,8 @@ export interface IDocumentStatusInfo {
 export interface IDocumentVerifyResponse {
 	hash: string;
 	id: string | null;
+	/** Agreement code printed on the document certificate. */
+	agreement_code?: string | null;
 	status: DocumentStatus | string | null;
 	page_count: string | null;
 	signer_count: string | null;
@@ -1149,7 +1151,7 @@ export interface IOAuthAuthorizationRequest {
 	nonce?: string;
 }
 
-/** JSON request body for `POST /oauth/token`. PKCE is mandatory for all code exchanges. */
+/** Form fields for `POST /oauth/token`. PKCE is mandatory for all code exchanges. */
 export type IOAuthTokenPayload = {
 	client_id: string;
 	/** Confidential applications only; public applications omit this field. */
@@ -1165,14 +1167,18 @@ export interface IOAuthTokenResponse {
 	access_token: string;
 	token_type: string;
 	expires_in: number;
+	/** Granted access-token scopes. Never lists `offline_access`; check `refresh_token` instead. */
 	scope: string;
-	/** Present only with offline_access consent. Reusing the old token revokes the connection. */
+	/**
+	 * Present only with offline_access consent; always a new value after a refresh-grant `token()`.
+	 * Reusing the old token revokes the connection.
+	 */
 	refresh_token?: string | null;
 	/** Present only with openid. Must be verified by an OIDC library before use as identity. */
 	id_token?: string | null;
 }
 
-/** JSON body for `POST /oauth/revoke`; failed client authentication still returns 401. */
+/** Form fields for `POST /oauth/revoke`; failed client authentication still returns 401. */
 export interface IOAuthRevokePayload {
 	token: string;
 	client_id: string;

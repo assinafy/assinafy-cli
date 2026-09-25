@@ -23,7 +23,7 @@ Este guia segue o fluxo de uma integração: instalação, autenticação, envio
 
 ## Requisitos e instalação
 
-Use [Node.js 24 LTS](https://nodejs.org/en/about/previous-releases) atualizado. O mínimo suportado é `22.12.0`; a CI também verifica as linhas 22 e 26. A CLI funciona em Linux, macOS e Windows, em x64 e ARM64. Os arquivos de release incluem o executável JavaScript e exigem Node.js instalado.
+Use [Node.js 24 LTS](https://nodejs.org/en/about/previous-releases) atualizado. O mínimo suportado é `22.12.0`; a CI também verifica as linhas 22 e 26. A CLI funciona em Linux, macOS e Windows, em x64 e ARM64. Os arquivos de release incluem o executável JavaScript e exigem Node.js instalado. A API Assinafy exige HTTPS com TLS 1.2 ou superior, o mínimo padrão das versões suportadas do Node.js.
 
 Instale uma versão publicada e fixe essa versão nas automações:
 
@@ -94,7 +94,7 @@ A CLI já inclui o ID público da aplicação oficial e usa PKCE S256, sem segre
 https://integrations.assinafy.com.br/assinafy-cli/oauth-callback
 ```
 
-A CLI solicita os nove escopos `account:read documents:read documents:write templates:read templates:write openid profile email offline_access` por padrão, incluindo leitura e alteração de templates. O cadastro da aplicação deve permitir os nove; uma conexão existente precisa de novo consentimento para obter permissões adicionais. `--scope` permite solicitar um conjunto menor explicitamente.
+A CLI solicita por padrão os dez escopos publicados: `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`, incluindo leitura e alteração de templates e `webhooks:write` para os comandos que alteram webhooks. O cadastro da aplicação deve permitir os dez; uma conexão existente precisa de novo consentimento para obter permissões adicionais. `--scope` permite solicitar um conjunto menor explicitamente.
 
 Não é necessário configurar `ASSINAFY_OAUTH_CLIENT_ID` para usar a aplicação oficial. Para uma aplicação própria ou outro ambiente, use `--client-id` ou essa variável; a flag tem precedência. A aplicação escolhida precisa ter a URI de retorno e os escopos cadastrados. Em um diretório privado fora do repositório:
 

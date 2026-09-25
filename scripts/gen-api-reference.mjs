@@ -16,6 +16,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsUrl = 'https://api.assinafy.com.br/v1/docs';
 const specUrl = `${docsUrl}/openapi.json`;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete']);
+// The OpenAPI document lists JSON bodies here; the SDK and CLI send what the OAuth guide specifies.
+const formEncoded = new Set(['POST /v1/oauth/token', 'POST /v1/oauth/revoke']);
 const exampleIds = new Map();
 const exampleEmails = new Map();
 const exampleUrls = new Map();
@@ -55,7 +57,7 @@ for (let offset = 0; offset < operations.length; offset += 10) {
 					);
 				}
 				const markdown = normalizeResponseStatuses((await rendered.text()).trim());
-				return { ...operation, markdown: lowerHeadings(markdown) };
+				return { ...operation, markdown: lowerHeadings(formMediaType(operation, markdown)) };
 			}),
 		)),
 	);
@@ -86,6 +88,17 @@ writeFileSync(
 	`${JSON.stringify({ specUrl, hash, operations }, null, 2)}\n`,
 );
 console.log(`Generated ${operations.length} API operations (${hash.slice(0, 12)})`);
+
+function formMediaType(operation, markdown) {
+	const name = `${operation.method} ${operation.path}`;
+	if (!formEncoded.has(name)) return markdown;
+	const json = 'Fields (`application/json`):';
+	if (!markdown.includes(json)) throw new Error(`${name} no longer documents a JSON body`);
+	return markdown.replace(
+		json,
+		`The [OAuth Integration Guide](${docsUrl}) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.\n\nFields (\`application/x-www-form-urlencoded\`):`,
+	);
+}
 
 function lowerHeadings(markdown) {
 	return markdown.replace(/^(#{1,3}) /gm, (_line, hashes) => `${'#'.repeat(hashes.length + 2)} `);

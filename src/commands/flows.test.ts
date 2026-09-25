@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, type IDocumentUploadResponse, OAuthResource } from '../api';
 import { DocumentResource } from '../api/resources/documents';
 import { SignerDocumentsResource } from '../api/resources/signer-documents';
+import * as cliClient from '../lib/client';
 import { readConfigFile } from '../lib/config';
 import * as browserOAuth from '../lib/oauth-browser';
 import { configCommand } from './config';
@@ -174,6 +175,32 @@ it('uses OAuth environment variables and prints the complete rotated token respo
 	expect(stderr).toBe('');
 });
 
+it('stops oauth refresh without a replacement token and asks for a new connection', async () => {
+	vi.stubEnv('ASSINAFY_OAUTH_REFRESH_TOKEN', 'example-current-refresh');
+	const create = cliClient.createClient;
+	vi.spyOn(cliClient, 'createClient').mockImplementation((config, options) => {
+		const client = create(config, options);
+		client.getAxiosInstance().defaults.adapter = async (request) => ({
+			data: { ...tokens, refresh_token: 'example-current-refresh' },
+			status: 200,
+			statusText: 'OK',
+			headers: {},
+			config: request,
+		});
+		return client;
+	});
+	const program = new Command().option('--json').addCommand(oauthCommand);
+	await program.parseAsync(['--json', 'oauth', 'refresh'], { from: 'user' });
+	expect(stdout).toBe('');
+	expect(stderr).not.toMatch(/example-current-refresh|example-access/);
+	expect(JSON.parse(stderr).error).toMatchObject({
+		code: 'validation_error',
+		message: expect.stringMatching(/do not reuse it.*assinafy oauth connect/),
+		details: { field: 'refresh_token' },
+	});
+	expect(process.exitCode).toBe(1);
+});
+
 it('loads the saved authorization request and passes the complete callback to validation', async () => {
 	const request = {
 		authorization_url: 'https://auth.example.com/oauth/authorize',
@@ -225,6 +252,7 @@ it.each([true, false])(
 					'documents:write',
 					'templates:read',
 					'templates:write',
+					'webhooks:write',
 					'openid',
 					'profile',
 					'email',
@@ -284,3 +312,23 @@ it.each(['refresh', 'revoke'] as const)(
 		expect(stderr).toBe('');
 	},
 );
+
+it('explains an invalid_scope refusal and leaves other errors untouched', async () => {
+	const { withScopeHint } = await import('./oauth');
+	const { ValidationError } = await import('../api');
+	const refused = new ValidationError('OAuth authorization was declined or failed: invalid_scope', {
+		oauthError: 'invalid_scope',
+	});
+	const hinted = withScopeHint(refused) as InstanceType<typeof ValidationError>;
+	expect(hinted).toBeInstanceOf(ValidationError);
+	expect(hinted.message).toContain('webhooks:write');
+	expect(hinted.message).toContain('--scope');
+	expect(hinted.errors).toEqual({ oauthError: 'invalid_scope' });
+
+	const denied = new ValidationError('OAuth authorization was declined or failed: access_denied', {
+		oauthError: 'access_denied',
+	});
+	expect(withScopeHint(denied)).toBe(denied);
+	const other = new Error('boom');
+	expect(withScopeHint(other)).toBe(other);
+});

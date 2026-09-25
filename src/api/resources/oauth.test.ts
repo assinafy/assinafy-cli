@@ -3,7 +3,7 @@ import { inspect } from 'node:util';
 import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { describe, expect, it } from 'vitest';
 import { AssinafyClient } from '../client';
-import { ApiError } from '../errors';
+import { ApiError, ValidationError } from '../errors';
 import type { IOAuthAuthorizationRequest, IOAuthTokenPayload } from '../types';
 
 const issuer = 'https://auth.example.com';
@@ -103,7 +103,7 @@ describe('OAuth flow', () => {
 			'client-secret',
 		);
 		expect(result).toEqual(tokens);
-		expect(JSON.parse(requests.at(-1)!.data)).toEqual({
+		expect(Object.fromEntries(new URLSearchParams(requests.at(-1)!.data))).toEqual({
 			grant_type: 'authorization_code',
 			code: 'example-code',
 			client_id: 'example-app',
@@ -137,7 +137,13 @@ describe('OAuth flow', () => {
 				token_type_hint: 'refresh_token',
 			}),
 		).resolves.toBeUndefined();
-		expect(requests.map((sent) => [sent.method, sent.url, JSON.parse(sent.data)])).toEqual([
+		expect(
+			requests.map((sent) => [
+				sent.method,
+				sent.url,
+				Object.fromEntries(new URLSearchParams(sent.data)),
+			]),
+		).toEqual([
 			[
 				'post',
 				'/oauth/token',
@@ -152,8 +158,40 @@ describe('OAuth flow', () => {
 		for (const sent of requests) {
 			expect(sent.headers.get('Authorization')).toBeUndefined();
 			expect(sent.headers.get('X-Api-Key')).toBeUndefined();
-			expect(sent.headers.getContentType()).toBe('application/json');
+			expect(sent.headers.getContentType()).toBe('application/x-www-form-urlencoded');
 		}
+	});
+
+	it.each([
+		['missing', undefined],
+		['null', null],
+		['empty', ''],
+		['blank', ' '],
+		['unchanged', 'old-refresh'],
+	])('rejects a 2xx refresh whose replacement refresh_token is %s', async (_case, refreshToken) => {
+		const { client, requests } = setup();
+		client.getAxiosInstance().defaults.adapter = async (config) => {
+			requests.push(config);
+			// Serialized like the wire: an undefined field is absent from the body.
+			const data = JSON.stringify({ ...tokens, refresh_token: refreshToken });
+			return { data, status: 200, statusText: 'OK', headers: {}, config };
+		};
+		const error = await client.oauth
+			.token({
+				grant_type: 'refresh_token',
+				client_id: 'example-app',
+				refresh_token: 'old-refresh',
+			})
+			.catch((error: unknown) => error);
+		expect(error).toBeInstanceOf(ValidationError);
+		expect(error).toMatchObject({
+			message: expect.stringContaining('do not reuse it'),
+			errors: { field: 'refresh_token' },
+		});
+		expect(inspect(error, { depth: 10, showHidden: true })).not.toMatch(
+			/old-refresh|example-access|example-id-token/,
+		);
+		expect(requests).toHaveLength(1);
 	});
 
 	it('preserves repeated registered query values and rejects injected duplicates', async () => {

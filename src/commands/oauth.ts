@@ -1,5 +1,5 @@
 import { Command, Option } from '@commander-js/extra-typings';
-import type { IOAuthAuthorizationRequest } from '../api';
+import { type IOAuthAuthorizationRequest, ValidationError } from '../api';
 import { readBinary } from '../lib/files';
 import { parseInteger, parseJsonObject } from '../lib/json';
 import { CLI_OAUTH_REDIRECT_URI, connectOAuth, openBrowser } from '../lib/oauth-browser';
@@ -25,8 +25,8 @@ const connectCommand = new Command('connect')
 	.option('--redirect-uri <uri>', 'Exactly registered HTTPS relay URI', CLI_OAUTH_REDIRECT_URI)
 	.option(
 		'--scope <scopes>',
-		'Space-separated scopes; defaults to all supported OAuth scopes',
-		'account:read documents:read documents:write templates:read templates:write openid profile email offline_access',
+		'Space-separated scopes; the default requests every published scope',
+		'account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access',
 	)
 	.option('--timeout <seconds>', 'Wait for browser consent (1–600 seconds)', '180')
 	.option('--no-browser', 'Print the authorization URL without opening the system browser')
@@ -51,10 +51,24 @@ const connectCommand = new Command('connect')
 					}
 				},
 				timeout * 1000,
-			);
+			).catch((error: unknown) => {
+				throw withScopeHint(error);
+			});
 			printData(tokens, config);
 		});
 	});
+
+/** Explain the likely fix when the authorization server rejects a requested scope. */
+export function withScopeHint(error: unknown): unknown {
+	if (!(error instanceof ValidationError) || error.errors.oauthError !== 'invalid_scope')
+		return error;
+	return new ValidationError(
+		`${error.message}. The application is not registered for one of the requested scopes: ` +
+			'the default requests all ten published scopes, including webhooks:write. Ask the ' +
+			'application owner to register them, or pass --scope with the scopes it permits.',
+		error.errors,
+	);
+}
 
 const metadataCommand = new Command('metadata')
 	.description('Read protected-resource metadata from the API origin')
@@ -130,16 +144,24 @@ const refreshCommand = new Command('refresh')
 	.option('--resource <uri>', 'Resource indicator used during authorization')
 	.action(async (opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
-			printData(
-				await client.oauth.token({
+			const tokens = await client.oauth
+				.token({
 					grant_type: 'refresh_token',
 					client_id: opts.clientId,
 					client_secret: opts.clientSecret,
 					refresh_token: opts.refreshToken,
 					resource: opts.resource,
-				}),
-				config,
-			);
+				})
+				.catch((error: unknown) => {
+					// No replacement token: the submitted one may be retired, and replaying it ends the connection.
+					if (!(error instanceof ValidationError) || error.errors.field !== 'refresh_token')
+						throw error;
+					throw new ValidationError(
+						`${error.message}. Run \`assinafy oauth connect\` to authorize again.`,
+						error.errors,
+					);
+				});
+			printData(tokens, config);
 		});
 	});
 

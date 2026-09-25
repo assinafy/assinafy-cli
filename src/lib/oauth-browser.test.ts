@@ -103,7 +103,7 @@ describe('browser OAuth connection', () => {
 		);
 		expect(response.body.match(/<script\b/g)).toHaveLength(1);
 		expect(result).toEqual(tokens);
-		const body = JSON.parse(requests.at(-1)!.data);
+		const body = Object.fromEntries(new URLSearchParams(requests.at(-1)!.data));
 		expect(body).toEqual({
 			grant_type: 'authorization_code',
 			code: 'example-code',
@@ -114,7 +114,7 @@ describe('browser OAuth connection', () => {
 		});
 		expect(authorization!.searchParams.get('redirect_uri')).toBe(CLI_OAUTH_REDIRECT_URI);
 		expect(authorization!.searchParams.get('code_challenge')).toBe(
-			createHash('sha256').update(body.code_verifier).digest('base64url'),
+			createHash('sha256').update(body.code_verifier!).digest('base64url'),
 		);
 		for (const request of requests) {
 			expect(request.headers.get('X-Api-Key')).toBeUndefined();

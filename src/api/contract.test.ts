@@ -454,7 +454,9 @@ describe('published HTTP contracts', () => {
 						? Buffer.from('example-bytes')
 						: kind === 'status'
 							? { status: 200, message: '' }
-							: { id };
+							: operation === 'POST /v1/oauth/token'
+								? { id, refresh_token: 'example-next-refresh' } // refresh must rotate
+								: { id };
 			let requests = 0;
 			client.getAxiosInstance().defaults.adapter = async (config) => {
 				requests++;
@@ -483,9 +485,13 @@ describe('published HTTP contracts', () => {
 					expect(config.data).toBeInstanceOf(FormData);
 					expect([...config.data.values()].some((value) => value instanceof Blob)).toBe(true);
 				} else {
-					expect(typeof config.data === 'string' ? JSON.parse(config.data) : config.data).toEqual(
-						body,
-					);
+					const sent =
+						typeof config.data !== 'string'
+							? config.data
+							: config.headers.get('Content-Type') === 'application/x-www-form-urlencoded'
+								? Object.fromEntries(new URLSearchParams(config.data))
+								: JSON.parse(config.data);
+					expect(sent).toEqual(body);
 				}
 				if (kind === 'binary') expect(config.responseType).toBe('arraybuffer');
 				const raw = ['binary', 'status', 'flat', 'void'].includes(kind ?? '')

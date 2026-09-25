@@ -31,6 +31,7 @@ This document reads top to bottom: install, authenticate, send your first signat
 ## Requirements
 
 - Node.js `>=22.12.0`. Node.js 24 LTS is recommended and is what CI publishes with; CI also tests 22 and 26.
+- HTTPS with TLS 1.2 or higher to reach the Assinafy API; supported Node.js versions use that minimum by default.
 - An Assinafy account and an API key (see [Authentication](#authentication)).
 - Linux, macOS, or Windows. Release archives ship for `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`, and `windows-arm64`.
 
@@ -110,7 +111,7 @@ The CLI includes the official application's public client ID and uses PKCE S256 
 https://integrations.assinafy.com.br/assinafy-cli/oauth-callback
 ```
 
-The CLI requests all nine scopes by default: `account:read documents:read documents:write templates:read templates:write openid profile email offline_access`, including template read/write access. The application registration must permit all nine; existing connections need fresh consent to gain additional permissions. An explicit `--scope` requests a smaller set.
+The CLI requests all ten published scopes by default: `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`, including template read/write access and `webhooks:write` for the webhook write commands. The application registration must permit all ten; existing connections need fresh consent to gain additional permissions. An explicit `--scope` requests a smaller set.
 
 No `ASSINAFY_OAUTH_CLIENT_ID` configuration is needed for the official application. For your own application or another environment, use `--client-id` or that variable; the flag takes precedence. Register the callback URI and scopes for the selected application. In a private directory outside the repository:
 

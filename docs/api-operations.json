@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "6b55ce24462cd0f9393061a075f2c296fbe742fae493c9ba81c7def402618456",
+  "hash": "f6e6b3062de0fce91640b99e78df5f42174a9a5a90750945096d7db91e055ab7",
   "operations": [
     {
       "method": "GET",
@@ -350,7 +350,7 @@
       "method": "POST",
       "path": "/v1/oauth/token",
       "tag": "OAuth",
-      "summary": "Exchange a code or refresh token for an access token",
+      "summary": "Exchange a code, refresh token, or subject token for an access token",
       "operationId": "b214b71efe5b11ac52d79597108ab2ba",
       "hasRequestBody": true
     },
