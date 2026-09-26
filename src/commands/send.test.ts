@@ -24,6 +24,29 @@ describe('parseSignerSpec', () => {
 		});
 	});
 
+	it('parses a bare phone number as WhatsApp, defaulting the name to the number', () => {
+		expect(parseSignerSpec('+5548999990000')).toEqual({
+			name: '+5548999990000',
+			whatsapp_phone_number: '+5548999990000',
+		});
+	});
+
+	it('accepts common phone punctuation in a bare contact', () => {
+		expect(parseSignerSpec('+55 (48) 99999-0000')).toEqual({
+			name: '+55 (48) 99999-0000',
+			whatsapp_phone_number: '+55 (48) 99999-0000',
+		});
+	});
+
+	it('rejects a bare name instead of treating it as a phone number', () => {
+		expect(() => parseSignerSpec('Ana Lima')).toThrow(/Name <email-or-phone>/);
+		expect(() => parseSignerSpec('sales team')).toThrow(CliError);
+	});
+
+	it('rejects a bare contact mixing letters and digits', () => {
+		expect(() => parseSignerSpec('ana123')).toThrow(/Name <email-or-phone>/);
+	});
+
 	it('throws on an empty contact', () => {
 		expect(() => parseSignerSpec('Name <>')).toThrow(CliError);
 	});

@@ -26,6 +26,7 @@ import type {
 	SendTokenChannel,
 } from '../types.js';
 import {
+	appendFilePart,
 	cleanParams,
 	publicRequestConfig,
 	requireDocumentArtifactName,
@@ -38,6 +39,8 @@ import {
 import { BaseResource } from './base.js';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+const DOCUMENT_SORTS = ['name', '-name', 'updated_at', '-updated_at'] as const;
 
 const READY_STATUSES: ReadonlySet<DocumentStatus | string> = new Set([
 	'metadata_ready',
@@ -109,7 +112,7 @@ export class DocumentResource extends BaseResource {
 	 */
 	async list(params: IDocumentListParams = {}, accountId?: string): Promise<IDocumentListResponse> {
 		const id = this.accountId(accountId);
-		requireSort(params.sort, ['name', '-name', 'updated_at', '-updated_at']);
+		requireSort(params.sort, DOCUMENT_SORTS);
 		return this.callList<IDocumentListItem>('Failed to list documents', () =>
 			this.http.get(`/accounts/${id}/documents`, {
 				params: cleanParams(params as unknown as Record<string, unknown>),
@@ -130,7 +133,7 @@ export class DocumentResource extends BaseResource {
 		accountId?: string,
 	): Promise<IDocumentListResponse> {
 		const id = this.accountId(accountId);
-		requireSort(params.sort, ['name', '-name', 'updated_at', '-updated_at']);
+		requireSort(params.sort, DOCUMENT_SORTS);
 		return this.callList<IDocumentListItem>('Failed to search documents', () =>
 			this.http.get(`/accounts/${id}/documents/search`, {
 				params: cleanParams(params as unknown as Record<string, unknown>),
@@ -555,9 +558,7 @@ function buildUploadForm(
 	metadata: Record<string, unknown> | undefined,
 ): FormData {
 	const form = new FormData();
-	// Blob copy-free view over the Buffer's underlying ArrayBuffer slice.
-	const view = new Uint8Array(buffer.buffer as ArrayBuffer, buffer.byteOffset, buffer.byteLength);
-	form.append('file', new Blob([view], { type: 'application/pdf' }), fileName);
+	appendFilePart(form, buffer, 'application/pdf', fileName);
 	form.append('name', name);
 	if (metadata) {
 		form.append('metadata', JSON.stringify(metadata));

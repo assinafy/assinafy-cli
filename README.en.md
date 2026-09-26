@@ -571,7 +571,7 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 
 - The production OpenAPI publishes 93 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
 - The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
-- The API's digital-certificate prose mentions certificate start/complete routes that are not defined as OpenAPI paths. The SDK does not invent contracts for them.
+- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 93 OpenAPI operations.
 - Both the published and legacy `send-token` payloads are supported for compatible deployments.
 - `WebhookVerifier` is **experimental**. Assinafy does not publish the signature header, algorithm, encoding, timestamp, or replay-protection scheme, so it is not a production trust boundary until the exact scheme is published or independently verified against real deliveries.
 

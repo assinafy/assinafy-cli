@@ -1,18 +1,23 @@
 import path from 'node:path';
-import { Command } from '@commander-js/extra-typings';
-import type { IDocumentStatsParams, IUpdateWorkspacePayload, NotificationSenderType } from '../api';
-import { readBinary, writeBinary } from '../lib/files';
+import { Command, Option } from '@commander-js/extra-typings';
+import type { IDocumentStatsParams, IUpdateWorkspacePayload } from '../api';
+import { readBinary, saveDownload } from '../lib/files';
+import { addDownloadOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderDocumentStats, renderKeyValue, renderTable } from '../lib/table';
-import { sanitizeTerminalText } from '../lib/terminal';
 
 const createCommand = new Command('create')
 	.description('Create a workspace (account)')
 	.requiredOption('--name <name>', 'Workspace name')
-	.option('--notification-sender <type>', 'Notification sender: User or Account')
+	.addOption(
+		new Option('--notification-sender <type>', 'Notification sender: User or Account').choices([
+			'User',
+			'Account',
+		] as const),
+	)
 	.option('--primary-color <hex>', 'Primary brand color')
 	.option('--secondary-color <hex>', 'Secondary brand color')
 	.action(async (opts, command) => {
@@ -20,7 +25,7 @@ const createCommand = new Command('create')
 			const workspace = await withSpinner('Creating workspace', config, () =>
 				client.workspaces.create({
 					name: opts.name,
-					notification_sender_type: opts.notificationSender as NotificationSenderType | undefined,
+					notification_sender_type: opts.notificationSender,
 					primary_color: opts.primaryColor,
 					secondary_color: opts.secondaryColor,
 				}),
@@ -64,15 +69,19 @@ const updateCommand = new Command('update')
 	.description('Update a workspace')
 	.argument('<id>', 'Account/workspace ID')
 	.option('--name <name>', 'New name')
-	.option('--notification-sender <type>', 'Notification sender: User or Account')
+	.addOption(
+		new Option('--notification-sender <type>', 'Notification sender: User or Account').choices([
+			'User',
+			'Account',
+		] as const),
+	)
 	.option('--primary-color <hex>', 'Primary brand color (pass empty to clear)')
 	.option('--secondary-color <hex>', 'Secondary brand color (pass empty to clear)')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const payload: IUpdateWorkspacePayload = {};
 			if (opts.name) payload.name = opts.name;
-			if (opts.notificationSender)
-				payload.notification_sender_type = opts.notificationSender as NotificationSenderType;
+			if (opts.notificationSender) payload.notification_sender_type = opts.notificationSender;
 			if (opts.primaryColor !== undefined) payload.primary_color = opts.primaryColor || null;
 			if (opts.secondaryColor !== undefined) payload.secondary_color = opts.secondaryColor || null;
 			const workspace = await withSpinner('Updating workspace', config, () =>
@@ -100,12 +109,16 @@ const themeCommand = new Command('theme')
 const statsCommand = new Command('stats')
 	.description('Show document KPIs for a workspace')
 	.argument('<id>', 'Account/workspace ID')
-	.option('--granularity <value>', 'monthly or daily', 'monthly')
+	.addOption(
+		new Option('--granularity <value>', 'monthly or daily')
+			.choices(['monthly', 'daily'] as const)
+			.default('monthly'),
+	)
 	.option('--month <yyyy-mm>', 'Month required for daily granularity')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const params: IDocumentStatsParams = {
-				granularity: opts.granularity as IDocumentStatsParams['granularity'],
+				granularity: opts.granularity,
 				month: opts.month,
 			};
 			const rows = await withSpinner('Fetching workspace statistics', config, () =>
@@ -115,23 +128,21 @@ const statsCommand = new Command('stats')
 		});
 	});
 
-const logoDownloadCommand = new Command('download')
-	.description('Download the workspace logo')
-	.argument('<id>', 'Account/workspace ID')
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (id, opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const logo = await withSpinner('Downloading workspace logo', config, () =>
-				client.workspaces.downloadLogo(id),
-			);
-			const output = writeBinary(opts.output ?? `${id}-logo.png`, logo, { force: opts.force });
-			printSuccess(`Saved ${logo.byteLength} bytes to ${output}`, config);
-			printData({ path: output, bytes: logo.byteLength }, config, (value) =>
-				sanitizeTerminalText(value.path),
-			);
+const logoDownloadCommand = addDownloadOptions(
+	new Command('download')
+		.description('Download the workspace logo')
+		.argument('<id>', 'Account/workspace ID'),
+).action(async (id, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		await saveDownload(config, {
+			message: 'Downloading workspace logo',
+			download: () => client.workspaces.downloadLogo(id),
+			output: opts.output,
+			defaultName: `${id}-logo.png`,
+			force: opts.force,
 		});
 	});
+});
 
 const logoUploadCommand = new Command('upload')
 	.description('Upload or replace the workspace logo')

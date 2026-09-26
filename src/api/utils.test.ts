@@ -3,10 +3,12 @@ import { AxiosError } from 'axios';
 import { describe, expect, it } from 'vitest';
 import { ApiError, NetworkError } from './errors';
 import {
+	appendFilePart,
 	cleanParams,
 	handleAssinafyResponse,
 	requireIso8601,
 	signerAccessConfig,
+	stripEmpty,
 	toSdkError,
 } from './utils';
 
@@ -38,6 +40,35 @@ describe('cleanParams', () => {
 
 	it('keeps an explicitly documented per-page key unchanged', () => {
 		expect(cleanParams({ 'per-page': 25 })).toEqual({ 'per-page': 25 });
+	});
+});
+
+describe('stripEmpty', () => {
+	it('drops nullish body fields without renaming keys', () => {
+		expect(stripEmpty({ name: 'Ana', email: undefined, color: null, per_page: 50 })).toEqual({
+			name: 'Ana',
+			per_page: 50,
+		});
+	});
+
+	it('keeps falsy values that are meaningful in a body', () => {
+		expect(stripEmpty({ step: 0, force: false, message: '' })).toEqual({
+			step: 0,
+			force: false,
+			message: '',
+		});
+	});
+});
+
+describe('appendFilePart', () => {
+	it('appends a typed, named file part over the exact buffer bytes', async () => {
+		const form = new FormData();
+		const bytes = Buffer.from([0, 1, 2, 3, 255]);
+		appendFilePart(form, bytes.subarray(1, 4), 'image/webp', 'brand.webp');
+		const file = form.get('file') as Blob & { name: string };
+		expect(file.name).toBe('brand.webp');
+		expect(file.type).toBe('image/webp');
+		expect(Buffer.from(await file.arrayBuffer())).toEqual(Buffer.from([1, 2, 3]));
 	});
 });
 

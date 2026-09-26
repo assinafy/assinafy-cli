@@ -15,6 +15,7 @@ import {
 	cleanParams,
 	requireIso8601,
 	requireSort,
+	stripEmpty,
 	validateSignerOptions,
 	validateSigningSteps,
 } from '../utils.js';
@@ -56,7 +57,7 @@ export function buildAssignmentPayload(
 		validateSigningSteps(normalisedSigners);
 	}
 
-	return cleanParams({
+	return stripEmpty({
 		method: payload.method ?? 'virtual',
 		signers: normalisedSigners,
 		message: payload.message,
@@ -102,7 +103,7 @@ function normaliseSignerRef(
 		};
 		const id = input.id ?? input.signer_id;
 		validateSignerOptions(input);
-		const normalised = cleanParams({
+		const normalised = stripEmpty({
 			id,
 			verification_method: input.verification_method,
 			notification_methods: input.notification_methods,

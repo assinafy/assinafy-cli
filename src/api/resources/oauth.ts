@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import type { AxiosRequestConfig } from 'axios';
 import { ValidationError } from '../errors.js';
 import type {
 	IOAuthAuthorizationOptions,
@@ -14,22 +15,28 @@ import { publicRequestConfig } from '../utils.js';
 import { BaseResource } from './base.js';
 
 /** Token and revocation bodies are form-encoded (RFC 6749/7009); Axios omits undefined fields. */
-const formRequestConfig = publicRequestConfig({
-	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-});
+function formRequestConfig(): AxiosRequestConfig {
+	return publicRequestConfig({
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+	});
+}
 
 /** OAuth 2.1 with S256 PKCE. Tokens are returned to the caller, never saved or retried. */
 export class OAuthResource extends BaseResource {
 	/** `GET /.well-known/oauth-protected-resource` at the API origin, outside `/v1`. */
 	async metadata(): Promise<IOAuthProtectedResource> {
-		return this.call('Failed to discover OAuth resource', () =>
-			this.http.get(
+		return this.call('Failed to discover OAuth resource', () => {
+			const baseURL = this.http.defaults.baseURL;
+			if (!baseURL) {
+				throw new ValidationError('A base URL is required to discover OAuth metadata');
+			}
+			return this.http.get(
 				'/.well-known/oauth-protected-resource',
 				publicRequestConfig({
-					baseURL: new URL(this.http.defaults.baseURL!).origin,
+					baseURL: new URL(baseURL).origin,
 				}),
-			),
-		);
+			);
+		});
 	}
 
 	/** Read RFC 8414 metadata from an HTTPS issuer and verify its issuer identity. */
@@ -177,7 +184,7 @@ export class OAuthResource extends BaseResource {
 			throw new ValidationError('grant_type must be authorization_code or refresh_token');
 		}
 		const tokens = await this.call<IOAuthTokenResponse>('OAuth token request failed', () =>
-			this.http.post('/oauth/token', payload, formRequestConfig),
+			this.http.post('/oauth/token', payload, formRequestConfig()),
 		);
 		// Refresh tokens rotate: a successful refresh has already retired the submitted token.
 		const next = tokens?.refresh_token;
@@ -206,7 +213,7 @@ export class OAuthResource extends BaseResource {
 			throw new ValidationError('token_type_hint must be access_token or refresh_token');
 		}
 		await this.call('OAuth revocation failed', () =>
-			this.http.post('/oauth/revoke', payload, formRequestConfig),
+			this.http.post('/oauth/revoke', payload, formRequestConfig()),
 		);
 	}
 

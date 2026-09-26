@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
 import { inspect } from 'node:util';
-import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { describe, expect, it } from 'vitest';
 import { AssinafyClient } from '../client';
 import { ApiError, ValidationError } from '../errors';
 import type { IOAuthAuthorizationRequest, IOAuthTokenPayload } from '../types';
+import { OAuthResource } from './oauth';
 
 const issuer = 'https://auth.example.com';
 const resource = 'https://api.example.com';
@@ -324,6 +325,42 @@ describe('OAuth flow', () => {
 			config,
 		});
 		await expect(client.oauth.discovery(issuer)).rejects.toThrow('OAuth issuer mismatch');
+	});
+
+	it('requires a configured base URL to discover the OAuth protected resource', async () => {
+		const http = {
+			defaults: {},
+			get: async () => ({ status: 200, data: {}, headers: {} }),
+		} as unknown as AxiosInstance;
+		await expect(new OAuthResource(http).metadata()).rejects.toThrow(
+			'A base URL is required to discover OAuth metadata',
+		);
+	});
+
+	it('builds an isolated form config for each token or revoke request', async () => {
+		const configs: { headers: Record<string, unknown> }[] = [];
+		const http = {
+			post: async (_url: string, _body: unknown, config: { headers: Record<string, unknown> }) => {
+				configs.push(config);
+				return { status: 200, data: tokens, headers: {} };
+			},
+		} as unknown as AxiosInstance;
+		const oauth = new OAuthResource(http);
+		await oauth.token({
+			grant_type: 'refresh_token',
+			client_id: 'example-app',
+			refresh_token: 'old-refresh',
+		});
+		await oauth.revoke({ client_id: 'example-app', token: 'old-refresh' });
+		expect(configs).toHaveLength(2);
+		expect(configs[0]).not.toBe(configs[1]);
+		for (const config of configs) {
+			expect(config?.headers).toEqual({
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Authorization: undefined,
+				'X-Api-Key': undefined,
+			});
+		}
 	});
 
 	it('preserves OAuth errors and challenges without retaining credentials or retrying', async () => {

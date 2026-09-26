@@ -39,7 +39,8 @@ Usage: assinafy users stats [options]
 Show document KPIs across the user's accounts
 
 Options:
-  --granularity <value>  monthly or daily (default: "monthly")
+  --granularity <value>  monthly or daily (choices: "monthly", "daily", default:
+                         "monthly")
   --month <yyyy-mm>      Month required for daily granularity
   -h, --help             display help for command
 ```

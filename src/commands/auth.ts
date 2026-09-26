@@ -36,7 +36,11 @@ const loginCommand = new Command('login')
 
 const socialLoginCommand = new Command('social-login')
 	.description('Exchange a provider token for an Assinafy JWT (no existing credentials required)')
-	.requiredOption('--provider <provider>', 'OAuth provider (e.g. google)')
+	.addOption(
+		new Option('--provider <provider>', 'OAuth provider')
+			.choices(['google'] as const)
+			.makeOptionMandatory(),
+	)
 	.addOption(
 		new Option('--provider-token <token>', 'Provider token')
 			.env('ASSINAFY_PROVIDER_TOKEN')

@@ -1,15 +1,15 @@
 import { cancel, confirm, isCancel, password, text } from '@clack/prompts';
 import { CliError } from './errors';
 
-/** Prompt for a single line of text. Aborts the process if the user cancels. */
+/** Prompt for a single line of text. Throws a 130-exit CliError if the user cancels. */
 export async function promptText(message: string, placeholder?: string): Promise<string> {
-	const value = await text({ message, placeholder });
+	const value = await text({ message, placeholder, output: process.stderr });
 	return unwrap(value);
 }
 
-/** Prompt for a masked secret (API key, password). Aborts the process if cancelled. */
+/** Prompt for a masked secret (API key, password). Throws a 130-exit CliError if cancelled. */
 export async function promptSecret(message: string): Promise<string> {
-	const value = await password({ message });
+	const value = await password({ message, output: process.stderr });
 	return unwrap(value);
 }
 
@@ -23,14 +23,14 @@ export async function confirmDestructive(message: string, force: boolean): Promi
 	if (!process.stdin.isTTY) {
 		throw new CliError('Refusing to proceed without confirmation. Re-run with --yes to confirm.');
 	}
-	const value = await confirm({ message });
+	const value = await confirm({ message, output: process.stderr });
 	return unwrap(value);
 }
 
 function unwrap<T>(value: T | symbol): T {
 	if (isCancel(value)) {
-		cancel('Cancelled.');
-		process.exit(130);
+		cancel('Cancelled.', { output: process.stderr });
+		throw new CliError('Cancelled.', { exitCode: 130 });
 	}
 	return value as T;
 }

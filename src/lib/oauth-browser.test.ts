@@ -198,29 +198,21 @@ describe('browser OAuth connection', () => {
 		await expect(send(local!)).rejects.toMatchObject({ code: 'ECONNREFUSED' });
 	});
 
-	it.each(['timeout', 'SIGINT', 'SIGTERM', 'launch failure'] as const)(
-		'closes the listener after %s and restores signal handlers',
+	it.each(['timeout', 'launch failure'] as const)(
+		'closes the listener after %s',
 		async (reason) => {
 			const { oauth, requests } = setup();
-			const before = { SIGINT: process.listeners('SIGINT'), SIGTERM: process.listeners('SIGTERM') };
 			let local: URL;
 			const connection = connectOAuth(
 				oauth,
 				options,
 				async (url) => {
 					local = callback(url);
-					if (reason === 'SIGINT' || reason === 'SIGTERM') {
-						const handler = process
-							.listeners(reason)
-							.find((handler) => !before[reason].includes(handler))!;
-						handler(reason);
-					} else if (reason === 'launch failure') throw new Error('Launch failed');
+					if (reason === 'launch failure') throw new Error('Launch failed');
 				},
 				50,
 			);
 			await expect(connection).rejects.toThrow();
-			expect(process.listeners('SIGINT')).toEqual(before.SIGINT);
-			expect(process.listeners('SIGTERM')).toEqual(before.SIGTERM);
 			expect(requests.filter((sent) => sent.method === 'post')).toHaveLength(0);
 			await expect(send(local!)).rejects.toMatchObject({ code: 'ECONNREFUSED' });
 		},

@@ -46,10 +46,11 @@ Arguments:
   documentId              Document ID
 
 Options:
-  --signer-ids <csv>      Comma-separated signer IDs
-  --signers <json>        JSON array of signer refs (with verification_method,
-                          step, …)
-  --method <method>       virtual or collect (default: "virtual")
+  --signer-ids <csv>      Comma-separated signer IDs (required)
+  --signers <json>        JSON array of signer refs, with verification_method,
+                          step, … (required)
+  --method <method>       virtual or collect (choices: "virtual", "collect",
+                          default: "virtual")
   --message <message>     Message shown to signers
   --expires-at <iso8601>  Expiration timestamp
   --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
@@ -71,9 +72,11 @@ Arguments:
   documentId          Document ID
 
 Options:
-  --signer-ids <csv>  Comma-separated signer IDs
-  --signers <json>    JSON array of signer refs
-  --method <method>   virtual or collect (default: "virtual")
+  --signer-ids <csv>  Comma-separated signer IDs (required)
+  --signers <json>    JSON array of signer refs, with verification_method, step,
+                      … (required)
+  --method <method>   virtual or collect (choices: "virtual", "collect",
+                      default: "virtual")
   --entries <json>    JSON array of field placement entries, required for
                       --method collect
   -h, --help          display help for command

@@ -1,13 +1,12 @@
 import { Command } from '@commander-js/extra-typings';
 import { requireAccountId } from '../lib/client';
-import { writeBinary } from '../lib/files';
-import { addListOptions } from '../lib/options';
-import { printData, printPaginatedData, printSuccess } from '../lib/output';
-import { listParams, paginationFooter } from '../lib/pagination';
+import { saveDownload } from '../lib/files';
+import { addDownloadOptions, addListOptions } from '../lib/options';
+import { printData, printPaginatedData } from '../lib/output';
+import { listParams, tableWithFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
-import { sanitizeTerminalText } from '../lib/terminal';
 
 const listCommand = addListOptions(
 	new Command('list').description('List templates in the workspace'),
@@ -25,8 +24,7 @@ const listCommand = addListOptions(
 				{ header: 'STATUS', value: (r) => r.status },
 				{ header: 'CREATED', value: (r) => r.created_at },
 			]);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
+			return tableWithFooter(table, result);
 		});
 	});
 });
@@ -51,27 +49,23 @@ const getCommand = new Command('get')
 		});
 	});
 
-const downloadPageCommand = new Command('download-page')
-	.description('Download a template page as a JPEG')
-	.argument('<templateId>', 'Template ID')
-	.argument('<pageId>', 'Page ID')
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (templateId, pageId, opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const accountId = requireAccountId(config);
-			const buffer = await withSpinner('Downloading page', config, () =>
-				client.templates.downloadPage(templateId, pageId, accountId),
-			);
-			const out = writeBinary(opts.output ?? `${templateId}-page-${pageId}.jpg`, buffer, {
-				force: opts.force,
-			});
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+const downloadPageCommand = addDownloadOptions(
+	new Command('download-page')
+		.description('Download a template page as a JPEG')
+		.argument('<templateId>', 'Template ID')
+		.argument('<pageId>', 'Page ID'),
+).action(async (templateId, pageId, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		const accountId = requireAccountId(config);
+		await saveDownload(config, {
+			message: 'Downloading page',
+			download: () => client.templates.downloadPage(templateId, pageId, accountId),
+			output: opts.output,
+			defaultName: `${templateId}-page-${pageId}.jpg`,
+			force: opts.force,
 		});
 	});
+});
 
 export const templatesCommand = new Command('templates')
 	.description('List and inspect document templates')

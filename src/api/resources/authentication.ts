@@ -30,7 +30,7 @@ export class AuthenticationResource extends BaseResource {
 
 	/** `POST /authentication/social-login` — exchange a provider token for an Assinafy JWT. */
 	async socialLogin(payload: {
-		provider: string;
+		provider: SocialLoginProvider;
 		token: string;
 		has_accepted_terms: boolean;
 	}): Promise<ILoginResponse> {

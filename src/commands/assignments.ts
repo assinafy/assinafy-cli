@@ -3,15 +3,15 @@ import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { parseJsonArray, splitList } from '../lib/json';
-import { addSortableListOptions } from '../lib/options';
+import { addSignerRefOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
-import { listParams, paginationFooter } from '../lib/pagination';
+import { listParams, tableWithFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
 
 /** Resolve the `signers` array from either --signers JSON or --signer-ids CSV. */
-export function resolveSigners(
+export function resolveAssignmentSignerRefs(
 	signersJson?: string,
 	signerIdsCsv?: string,
 	required = true,
@@ -44,23 +44,21 @@ const listCommand = addSortableListOptions(
 				{ header: 'SIGNERS', value: (r) => r.signers?.length },
 				{ header: 'EXPIRES', value: (r) => r.expires_at },
 			]);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
+			return tableWithFooter(table, result);
 		});
 	});
 });
 
-const createCommand = new Command('create')
-	.description('Create a signing assignment for a document')
-	.argument('<documentId>', 'Document ID')
-	.addOption(new Option('--signer-ids <csv>', 'Comma-separated signer IDs').conflicts('signers'))
+const createCommand = addSignerRefOptions(
+	new Command('create')
+		.description('Create a signing assignment for a document')
+		.argument('<documentId>', 'Document ID'),
+)
 	.addOption(
-		new Option(
-			'--signers <json>',
-			'JSON array of signer refs (with verification_method, step, …)',
-		).conflicts('signerIds'),
+		new Option('--method <method>', 'virtual or collect')
+			.choices(['virtual', 'collect'] as const)
+			.default('virtual'),
 	)
-	.option('--method <method>', 'virtual or collect', 'virtual')
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
 	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
@@ -71,8 +69,8 @@ const createCommand = new Command('create')
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const payload: ICreateAssignmentPayload = {
-				method: opts.method as ICreateAssignmentPayload['method'],
-				signers: resolveSigners(opts.signers, opts.signerIds),
+				method: opts.method,
+				signers: resolveAssignmentSignerRefs(opts.signers, opts.signerIds),
 			};
 			if (opts.message) payload.message = opts.message;
 			if (opts.expiresAt) payload.expires_at = opts.expiresAt;
@@ -96,22 +94,26 @@ const createCommand = new Command('create')
 		});
 	});
 
-const estimateCostCommand = new Command('estimate-cost')
-	.description('Estimate the credit cost of an assignment')
-	.argument('<documentId>', 'Document ID')
-	.addOption(new Option('--signer-ids <csv>', 'Comma-separated signer IDs').conflicts('signers'))
-	.addOption(new Option('--signers <json>', 'JSON array of signer refs').conflicts('signerIds'))
-	.option('--method <method>', 'virtual or collect', 'virtual')
+const estimateCostCommand = addSignerRefOptions(
+	new Command('estimate-cost')
+		.description('Estimate the credit cost of an assignment')
+		.argument('<documentId>', 'Document ID'),
+)
+	.addOption(
+		new Option('--method <method>', 'virtual or collect')
+			.choices(['virtual', 'collect'] as const)
+			.default('virtual'),
+	)
 	.option(
 		'--entries <json>',
 		'JSON array of field placement entries, required for --method collect',
 	)
 	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
-			const method = opts.method as ICreateAssignmentPayload['method'];
+			const method = opts.method;
 			const payload: ICreateAssignmentPayload = {
 				method,
-				signers: resolveSigners(opts.signers, opts.signerIds, method !== 'collect'),
+				signers: resolveAssignmentSignerRefs(opts.signers, opts.signerIds, true),
 			};
 			if (opts.entries) {
 				payload.entries = parseJsonArray(opts.entries, '--entries') as ICollectAssignmentEntry[];

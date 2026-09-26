@@ -8,11 +8,14 @@ import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue } from '../lib/table';
 
+const phonePattern = /^\+?[\d\s().-]*\d[\d\s().-]*$/;
+
 /**
  * Parse a `--signer` spec into a signer object. Accepted forms:
  *   "Ana Lima <ana@example.com>"      → name + email
  *   "Ana Lima <+5548999990000>"       → name + WhatsApp number
  *   "ana@example.com"                 → email only (name defaults to the email)
+ *   "+5548999990000"                  → WhatsApp only (name defaults to the number)
  */
 export function parseSignerSpec(spec: string): IUploadAndRequestSignaturesSigner {
 	const match = spec.match(/^\s*(.*?)\s*<\s*([^>]*)\s*>\s*$/);
@@ -22,6 +25,11 @@ export function parseSignerSpec(spec: string): IUploadAndRequestSignaturesSigner
 		throw new CliError(`Invalid --signer "${spec}". Use "Name <email-or-phone>".`);
 	}
 	const isEmail = contact.includes('@');
+	if (!match && !isEmail && !phonePattern.test(contact)) {
+		throw new CliError(
+			`Invalid --signer "${spec}". A bare contact must be an email or a phone number. Use "Name <email-or-phone>".`,
+		);
+	}
 	const signer: IUploadAndRequestSignaturesSigner = { name: name || contact };
 	if (isEmail) signer.email = contact;
 	else signer.whatsapp_phone_number = contact;

@@ -1,6 +1,6 @@
 import { ValidationError } from '../errors.js';
 import type { ICreateTagPayload, IDeleteTagResponse, ITag, IUpdateTagPayload } from '../types.js';
-import { cleanParams } from '../utils.js';
+import { cleanParams, stripEmpty } from '../utils.js';
 import { BaseResource } from './base.js';
 
 /**
@@ -31,7 +31,7 @@ export class TagResource extends BaseResource {
 		if (!payload.name) throw new ValidationError('Tag name is required');
 		const id = this.accountId(accountId);
 		return this.call('Failed to create tag', () =>
-			this.http.post(`/accounts/${id}/tags`, cleanParams({ ...payload })),
+			this.http.post(`/accounts/${id}/tags`, stripEmpty({ ...payload })),
 		);
 	}
 

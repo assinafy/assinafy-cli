@@ -1,4 +1,4 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { IDocumentStatsParams, IUpdateNotificationPreferencesPayload } from '../api';
 import { parseJsonObject } from '../lib/json';
 import { printData, printSuccess } from '../lib/output';
@@ -17,12 +17,16 @@ const selfCommand = new Command('self')
 
 const statsCommand = new Command('stats')
 	.description("Show document KPIs across the user's accounts")
-	.option('--granularity <value>', 'monthly or daily', 'monthly')
+	.addOption(
+		new Option('--granularity <value>', 'monthly or daily')
+			.choices(['monthly', 'daily'] as const)
+			.default('monthly'),
+	)
 	.option('--month <yyyy-mm>', 'Month required for daily granularity')
 	.action(async (opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const params: IDocumentStatsParams = {
-				granularity: opts.granularity as IDocumentStatsParams['granularity'],
+				granularity: opts.granularity,
 				month: opts.month,
 			};
 			const rows = await withSpinner('Fetching user statistics', config, () =>

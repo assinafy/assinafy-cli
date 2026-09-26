@@ -12,7 +12,7 @@ import type {
 	IWorkspaceListResponse,
 	IWorkspaceResponse,
 } from '../types.js';
-import { documentStatsParams } from '../utils.js';
+import { appendFilePart, documentStatsParams } from '../utils.js';
 import { BaseResource } from './base.js';
 
 export class WorkspaceResource extends BaseResource {
@@ -66,9 +66,8 @@ export class WorkspaceResource extends BaseResource {
 		}
 
 		const contentType = options.contentType ?? 'image/png';
-		const view = new Uint8Array(logo.buffer as ArrayBuffer, logo.byteOffset, logo.byteLength);
 		const form = new FormData();
-		form.append('file', new Blob([view], { type: contentType }), options.fileName ?? 'logo.png');
+		appendFilePart(form, logo, contentType, options.fileName ?? 'logo.png');
 
 		return this.call('Failed to upload workspace logo', () =>
 			this.http.post(`/accounts/${id}/logo`, form, {

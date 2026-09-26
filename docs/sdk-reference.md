@@ -194,7 +194,7 @@ Assignment payload:
 
 Production defaults `notification_methods: []` to `['Email']` and sends an invitation. An empty array is not a way to disable delivery. Choose the intended supported channel explicitly before creating an assignment.
 
-`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. It resolves synchronously to the JSON assignment body above; no HTTP call occurs. Options are `{ allowSignersWithoutId?: boolean; allowEmptySigners?: boolean; skipDigitalCertificateStepValidation?: boolean }`, all false by default. The first two support cost estimation; the third bypasses signing-order and certificate-step checks for estimates. `allowEmptySigners` applies only to `collect`. `create` requires at least one signer, enforces complete contiguous signing steps from 1 when supplied, and requires each digital-certificate signer to be alone in its step. The estimate schema has no `step`, so `estimateCost` does not apply that create-only rule and permits zero signers for `collect`. Assignment list params are pagination plus the compatible `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. Assignment `search` is unsupported and rejected locally.
+`buildAssignmentPayload(payload, options?)` is exported for callers that need the same normalization. It resolves synchronously to the JSON assignment body above; no HTTP call occurs. Options are `{ allowSignersWithoutId?: boolean; skipDigitalCertificateStepValidation?: boolean }`, both false by default. Both support cost estimation: the first accepts signer descriptors without an `id`, and the second bypasses signing-order and certificate-step checks for estimates. An empty signer list always throws `ValidationError('At least one signer is required')`, in `virtual` and `collect` modes and in cost estimates alike. `create` enforces complete contiguous signing steps from 1 when supplied and requires each digital-certificate signer to be alone in its step. The estimate schema has no `step`, so `estimateCost` passes `skipDigitalCertificateStepValidation` to skip that create-only rule. Assignment list params are pagination plus the compatible `sort?: 'created_at' | '-created_at'`; the runtime endpoint requires the SDK's `accountId` query even though the published parameter table omits it. Assignment `search` is unsupported and rejected locally.
 
 `estimateResendCost(documentId, assignmentId, signerId)` sends a POST without a body. Its production result is:
 
@@ -410,7 +410,7 @@ Notification counters can overlap when a request uses multiple delivery channels
 | `requestPasswordReset(email)` | [`PUT /authentication/request-password-reset`](./api-reference.md#request-password-reset) | `{ email }` |
 | `resetPassword({ email, token?, new_password })` | [`PUT /authentication/reset-password`](./api-reference.md#reset-password) | `{ email }` |
 | `createApiKey(password)` | [`POST /users/api-keys`](./api-reference.md#create-api-key) | `IApiKeyResponse` |
-| `getApiKey()` | [`GET /users/api-keys`](./api-reference.md#get-api-key) | `IApiKeyResponse | null`; 404 means no key |
+| `getApiKey()` | [`GET /users/api-keys`](./api-reference.md#get-api-key) | `IMaskedApiKeyResponse`; 404 means no key |
 | `deleteApiKey()` | [`DELETE /users/api-keys`](./api-reference.md#delete-api-key) | `IEmptyResult` (`unknown[]`) |
 
 Login/social/reset bootstrap calls can use an unauthenticated client. The published authenticated user endpoints permit either a bearer JWT or `X-Api-Key`; use the credential type appropriate to the account and endpoint policy.
@@ -515,14 +515,14 @@ Template list params support pagination, published `search`, and compatible `sor
 
 Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch `search` is unsupported and rejected locally. The API does not expose a delete-subscription operation; use `inactivate`.
 
-Decline operations require a non-empty reason of at most 2,000 Unicode characters. `signers.findByEmail` follows pagination metadata until an exact case-insensitive email match is found or the search is exhausted.
+Decline operations require a non-empty reason of at most 2,000 Unicode characters. `signers.findByEmail` follows pagination metadata until an exact case-insensitive email match is found or the search is exhausted; when a response carries no pagination metadata a partial page ends the search, and the scan is bounded at 100 pages.
 
 ## Responses, pagination, errors, and binary data
 
 - JSON responses with `data` are unwrapped from the API envelope; direct status bodies remain `IStatusResponse`. Paginated calls resolve to `{ data: T[]; meta?: { current_page?, last_page?, per_page?, total? } }`; metadata comes from `X-Pagination-*` headers.
 - Binary methods resolve to Node.js `Buffer`; the SDK is not a browser package. It never writes downloaded data to disk.
 - `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode`, `responseData`, `wwwAuthenticate` and `retryAfter`; binary JSON error bodies are decoded before normalization. OAuth responses are flat JSON, and OAuth revocation resolves to `undefined`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports `documents upload --wait` or a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
-- `normalizeBaseUrl(url)` is exported and removes one trailing slash.
+- `normalizeBaseUrl(url)` is exported and removes one trailing slash. The CLI-facing guards `requireDocumentArtifactName(name)` and `requireSignerImageType(type)` are also exported.
 
 Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause?, wwwAuthenticate?, retryAfter? }?)`, `ApiError.fromResponse(statusCode, responseData, headers?)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
 

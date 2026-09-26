@@ -18,7 +18,7 @@ export async function withSpinner<T>(
 		return task();
 	}
 
-	const s = clackSpinner();
+	const s = clackSpinner({ output: process.stderr });
 	s.start(message);
 	try {
 		const result = await task();

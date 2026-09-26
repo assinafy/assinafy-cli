@@ -132,8 +132,6 @@ export async function connectOAuth(
 	server.maxConnections = 8;
 	server.setTimeout(5000, (socket) => socket.destroy());
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	let cancel: (() => void) | undefined;
-	let terminate: (() => void) | undefined;
 	let callbackUrl: string;
 	try {
 		server.listen(0, '127.0.0.1');
@@ -153,10 +151,6 @@ export async function connectOAuth(
 				() => reject(new CliError('OAuth connection timed out. Start again.')),
 				timeoutMs,
 			);
-			cancel = () => reject(new CliError('OAuth connection cancelled.', { exitCode: 130 }));
-			terminate = () => reject(new CliError('OAuth connection terminated.', { exitCode: 143 }));
-			process.once('SIGINT', cancel);
-			process.once('SIGTERM', terminate);
 			server.once('error', reject);
 			server.on('request', (incoming, response) => {
 				const raw = incoming.url ?? '';
@@ -199,8 +193,6 @@ export async function connectOAuth(
 		});
 	} finally {
 		clearTimeout(timer);
-		if (cancel) process.off('SIGINT', cancel);
-		if (terminate) process.off('SIGTERM', terminate);
 		await new Promise<void>((resolve) => {
 			server.close(() => resolve());
 			server.closeAllConnections();

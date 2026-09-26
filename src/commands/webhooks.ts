@@ -5,7 +5,7 @@ import { CliError } from '../lib/errors';
 import { parseInteger, splitList } from '../lib/json';
 import { addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
-import { listParams, paginationFooter } from '../lib/pagination';
+import { listParams, tableWithFooter } from '../lib/pagination';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
@@ -115,8 +115,7 @@ const dispatchesCommand = addSortableListOptions(
 				{ header: 'STATUS', value: (r) => r.http_status },
 				{ header: 'ENDPOINT', value: (r) => r.endpoint },
 			]);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
+			return tableWithFooter(table, result);
 		});
 	});
 });

@@ -11,16 +11,15 @@ import { PartialWorkflowError } from '../api';
 import { requireDocumentArtifactName } from '../api/utils';
 import { requireAccountId } from '../lib/client';
 import { CliError, errorMessage } from '../lib/errors';
-import { defaultArtifactFilename, writeBinary } from '../lib/files';
+import { defaultArtifactFilename, saveDownload } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
-import { addListOptions } from '../lib/options';
+import { addDownloadOptions, addListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
-import { listParams, paginationFooter } from '../lib/pagination';
+import { listParams, tableWithFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
 import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
-import { sanitizeTerminalText } from '../lib/terminal';
 
 const uploadCommand = new Command('upload')
 	.description('Upload a PDF to the workspace')
@@ -70,22 +69,26 @@ function renderDocumentListTable(result: IDocumentListResponse): string {
 		{ header: 'STATUS', value: (r) => r.status },
 		{ header: 'CREATED', value: (r) => r.created_at },
 	]);
-	const footer = paginationFooter(result);
-	return footer ? `${table}\n${footer}` : table;
+	return tableWithFooter(table, result);
 }
 
 const listCommand = addListOptions(
 	new Command('list')
 		.description('List workspace documents')
 		.option('--status <status>', 'Filter by document status')
-		.option('--method <method>', 'Filter by signature method (virtual or collect)')
+		.addOption(
+			new Option('--method <method>', 'Filter by signature method (virtual or collect)').choices([
+				'virtual',
+				'collect',
+			] as const),
+		)
 		.option('--tags <ids>', 'Comma-separated tag IDs (AND semantics)'),
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
 		const params: IDocumentListParams = { ...listParams(opts) };
 		if (opts.status) params.status = opts.status;
-		if (opts.method) params.method = opts.method as IDocumentListParams['method'];
+		if (opts.method) params.method = opts.method;
 		if (opts.tags) params.tags = opts.tags;
 		const result = await withSpinner('Fetching documents', config, () =>
 			client.documents.list(params, accountId),
@@ -148,72 +151,61 @@ const renameCommand = new Command('rename')
 		});
 	});
 
-const downloadCommand = new Command('download')
-	.description('Download a document artifact')
-	.argument('<id>', 'Document ID')
-	.option(
-		'--artifact <name>',
-		'original | certificated | certificate-page | pades | bundle',
-		'certificated',
-	)
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (id, opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const artifact = requireDocumentArtifactName(opts.artifact);
-			const buffer = await withSpinner('Downloading document', config, () =>
-				client.documents.download(id, artifact),
-			);
-			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, artifact), buffer, {
-				force: opts.force,
-			});
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength, artifact }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+const downloadCommand = addDownloadOptions(
+	new Command('download')
+		.description('Download a document artifact')
+		.argument('<id>', 'Document ID')
+		.option(
+			'--artifact <name>',
+			'original | certificated | certificate-page | pades | bundle',
+			'certificated',
+		),
+).action(async (id, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		const artifact = requireDocumentArtifactName(opts.artifact);
+		await saveDownload(config, {
+			message: 'Downloading document',
+			download: () => client.documents.download(id, artifact),
+			output: opts.output,
+			defaultName: defaultArtifactFilename(id, artifact),
+			force: opts.force,
+			data: { artifact },
 		});
 	});
+});
 
-const thumbnailCommand = new Command('thumbnail')
-	.description('Download the document thumbnail (JPEG)')
-	.argument('<id>', 'Document ID')
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (id, opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const buffer = await withSpinner('Downloading thumbnail', config, () =>
-				client.documents.thumbnail(id),
-			);
-			const out = writeBinary(opts.output ?? defaultArtifactFilename(id, 'thumbnail'), buffer, {
-				force: opts.force,
-			});
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+const thumbnailCommand = addDownloadOptions(
+	new Command('thumbnail')
+		.description('Download the document thumbnail (JPEG)')
+		.argument('<id>', 'Document ID'),
+).action(async (id, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		await saveDownload(config, {
+			message: 'Downloading thumbnail',
+			download: () => client.documents.thumbnail(id),
+			output: opts.output,
+			defaultName: defaultArtifactFilename(id, 'thumbnail'),
+			force: opts.force,
 		});
 	});
+});
 
-const downloadPageCommand = new Command('download-page')
-	.description('Download a single document page (JPEG)')
-	.argument('<id>', 'Document ID')
-	.argument('<pageId>', 'Page ID')
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (id, pageId, opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const buffer = await withSpinner('Downloading page', config, () =>
-				client.documents.downloadPage(id, pageId),
-			);
-			const out = writeBinary(opts.output ?? `${id}-page-${pageId}.jpg`, buffer, {
-				force: opts.force,
-			});
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+const downloadPageCommand = addDownloadOptions(
+	new Command('download-page')
+		.description('Download a single document page (JPEG)')
+		.argument('<id>', 'Document ID')
+		.argument('<pageId>', 'Page ID'),
+).action(async (id, pageId, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		await saveDownload(config, {
+			message: 'Downloading page',
+			download: () => client.documents.downloadPage(id, pageId),
+			output: opts.output,
+			defaultName: `${id}-page-${pageId}.jpg`,
+			force: opts.force,
 		});
 	});
+});
 
 const activitiesCommand = new Command('activities')
 	.description('Show the activity log for a document')
@@ -407,15 +399,15 @@ const sendTokenCommand = new Command('send-token')
 	.description('Send a 6-digit verification token to a signer')
 	.argument('<id>', 'Document ID')
 	.addOption(
-		new Option('--email <email>', 'Email using the current published API payload').conflicts([
-			'recipient',
-			'channel',
-		]),
+		new Option(
+			'--email <email>',
+			'Email address (compatibility overload for older deployments)',
+		).conflicts(['recipient', 'channel']),
 	)
 	.addOption(
 		new Option(
 			'--recipient <value>',
-			'Email address or phone number (live legacy payload)',
+			'Email address or phone number (production payload)',
 		).conflicts('email'),
 	)
 	.addOption(

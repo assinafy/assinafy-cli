@@ -8,7 +8,7 @@ import type {
 	ISignerListResponse,
 	IUpdateSignerPayload,
 } from '../types.js';
-import { cleanParams, requireEmail, requireSort } from '../utils.js';
+import { cleanParams, requireEmail, requireSort, stripEmpty } from '../utils.js';
 import { BaseResource } from './base.js';
 
 /** Validate the locally knowable fields before creating a signer. */
@@ -107,12 +107,18 @@ export class SignerResource extends BaseResource {
 		requireEmail(email);
 		try {
 			const lower = email.toLowerCase();
-			for (let page = 1; ; page++) {
+			for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
 				const { data, meta } = await this.list({ search: email, per_page: 100, page }, accountId);
 				const match = data.find((s) => (s.email ?? '').toLowerCase() === lower);
 				if (match) return match;
-				if (!data.length || !meta?.last_page || page >= meta.last_page) return null;
+				if (!data.length) return null;
+				if (meta?.last_page !== undefined) {
+					if (page >= meta.last_page) return null;
+				} else if (data.length < 100) {
+					return null;
+				}
 			}
+			throw new ValidationError('Signer email search exceeded the maximum page count');
 		} catch (err) {
 			if (err instanceof ApiError && err.statusCode === 404) {
 				return null;
@@ -121,6 +127,8 @@ export class SignerResource extends BaseResource {
 		}
 	}
 }
+
+const MAX_SEARCH_PAGES = 100;
 
 function normaliseSignerPayload(
 	payload: ICreateSignerPayload | IUpdateSignerPayload,
@@ -145,5 +153,5 @@ function normaliseSignerPayload(
 		normalised.metadata = payload.metadata;
 	}
 
-	return cleanParams(normalised);
+	return stripEmpty(normalised);
 }

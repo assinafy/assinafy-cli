@@ -285,6 +285,14 @@ describe('DocumentResource', () => {
 		});
 	});
 
+	it('accepts the shared sort whitelist on list and search and rejects anything else', async () => {
+		const docs = new DocumentResource(mockHttp(), 'acc');
+		await docs.list({ sort: '-updated_at' });
+		await docs.search({ sort: 'name' });
+		await expect(docs.list({ sort: 'created_at' as never })).rejects.toThrow(ValidationError);
+		await expect(docs.search({ sort: 'created_at' as never })).rejects.toThrow(ValidationError);
+	});
+
 	it('covers document tag attach and detach endpoints', async () => {
 		const calls: CapturedCall[] = [];
 		const docs = new DocumentResource(mockHttp(calls), 'acc');
@@ -510,6 +518,33 @@ describe('SignerResource', () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	it('stops the email search after a partial page without pagination headers', async () => {
+		const fullPage = Array.from({ length: 100 }, (_, index) => ({
+			id: `signer-${index}`,
+			email: `signer-${index}@example.com`,
+		}));
+		const get = vi
+			.fn()
+			.mockResolvedValueOnce(ok(fullPage))
+			.mockResolvedValueOnce(ok([{ id: 'other', email: 'other@example.com' }]));
+		const http = { ...mockHttp(), get } as unknown as AxiosInstance;
+		const resource = new SignerResource(http, 'acc');
+		await expect(resource.findByEmail('ana@example.com')).resolves.toBeNull();
+		expect(get).toHaveBeenCalledTimes(2);
+	});
+
+	it('caps the email search when full pages arrive without pagination headers', async () => {
+		const fullPage = Array.from({ length: 100 }, (_, index) => ({
+			id: `signer-${index}`,
+			email: `signer-${index}@example.com`,
+		}));
+		const get = vi.fn().mockResolvedValue(ok(fullPage));
+		const http = { ...mockHttp(), get } as unknown as AxiosInstance;
+		const resource = new SignerResource(http, 'acc');
+		await expect(resource.findByEmail('ana@example.com')).rejects.toThrow('maximum page count');
+		expect(get).toHaveBeenCalledTimes(100);
+	});
+
 	it('creates WhatsApp-only signers without an email lookup', async () => {
 		await signers.create({ full_name: 'Ana', whatsapp_phone_number: '+5548999990000' });
 		expect(calls).toHaveLength(1);
@@ -585,6 +620,17 @@ describe('TagResource', () => {
 		const tags = new TagResource(mockHttp(), 'acc');
 		await expect(tags.create({ name: '' })).rejects.toThrow(ValidationError);
 		await expect(tags.delete('')).rejects.toThrow(ValidationError);
+	});
+
+	it('drops nullish create fields without renaming body keys', async () => {
+		const calls: CapturedCall[] = [];
+		const tags = new TagResource(mockHttp(calls), 'acc');
+		await tags.create({ name: 'Contracts', color: undefined });
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/accounts/acc/tags',
+			body: { name: 'Contracts' },
+		});
 	});
 });
 
@@ -1328,6 +1374,29 @@ describe('WorkspaceResource', () => {
 });
 
 describe('AuthenticationResource', () => {
+	it('exchanges a Google token via social login and rejects other providers', async () => {
+		const calls: CapturedCall[] = [];
+		const auth = new AuthenticationResource(mockHttp(calls));
+		await auth.socialLogin({
+			provider: 'google',
+			token: 'provider-token',
+			has_accepted_terms: true,
+		});
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/authentication/social-login',
+			body: { provider: 'google', token: 'provider-token', has_accepted_terms: true },
+		});
+		await expect(
+			auth.socialLogin({
+				provider: 'github' as 'google',
+				token: 'provider-token',
+				has_accepted_terms: true,
+			}),
+		).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(1);
+	});
+
 	it('links a Google identity to the authenticated user', async () => {
 		const calls: CapturedCall[] = [];
 		const auth = new AuthenticationResource(mockHttp(calls));

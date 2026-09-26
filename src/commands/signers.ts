@@ -4,7 +4,7 @@ import { requireAccountId } from '../lib/client';
 import { parseJsonObject } from '../lib/json';
 import { addListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
-import { listParams, paginationFooter } from '../lib/pagination';
+import { listParams, tableWithFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
@@ -62,8 +62,7 @@ const listCommand = addListOptions(
 		);
 		printPaginatedData(result, config, (rows) => {
 			const table = renderTable(rows, signerColumns);
-			const footer = paginationFooter(result);
-			return footer ? `${table}\n${footer}` : table;
+			return tableWithFooter(table, result);
 		});
 	});
 });

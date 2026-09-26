@@ -31,7 +31,8 @@ Create a workspace (account)
 
 Options:
   --name <name>                 Workspace name
-  --notification-sender <type>  Notification sender: User or Account
+  --notification-sender <type>  Notification sender: User or Account (choices:
+                                "User", "Account")
   --primary-color <hex>         Primary brand color
   --secondary-color <hex>       Secondary brand color
   -h, --help                    display help for command
@@ -87,7 +88,8 @@ Arguments:
   id                     Account/workspace ID
 
 Options:
-  --granularity <value>  monthly or daily (default: "monthly")
+  --granularity <value>  monthly or daily (choices: "monthly", "daily", default:
+                         "monthly")
   --month <yyyy-mm>      Month required for daily granularity
   -h, --help             display help for command
 ```
@@ -168,7 +170,8 @@ Arguments:
 
 Options:
   --name <name>                 New name
-  --notification-sender <type>  Notification sender: User or Account
+  --notification-sender <type>  Notification sender: User or Account (choices:
+                                "User", "Account")
   --primary-color <hex>         Primary brand color (pass empty to clear)
   --secondary-color <hex>       Secondary brand color (pass empty to clear)
   -h, --help                    display help for command

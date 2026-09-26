@@ -38,7 +38,7 @@ const connectCommand = new Command('connect')
 				{
 					clientId: opts.clientId,
 					redirectUri: opts.redirectUri,
-					scopes: opts.scope.trim().split(/\s+/),
+					scopes: opts.scope.trim().split(/\s+/).filter(Boolean),
 				},
 				async (url) => {
 					process.stderr.write(
@@ -103,7 +103,7 @@ const authorizeCommand = new Command('authorize')
 				await client.oauth.authorize({
 					clientId: opts.clientId,
 					redirectUri: opts.redirectUri,
-					scopes: opts.scope.trim().split(/\s+/),
+					scopes: opts.scope.trim().split(/\s+/).filter(Boolean),
 				}),
 				config,
 			);

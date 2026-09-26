@@ -1,15 +1,14 @@
 import { Command, Option } from '@commander-js/extra-typings';
 import type { ISignFieldEntry } from '../api';
 import { requireDocumentArtifactName, requireSignerImageType } from '../api/utils';
-import { defaultArtifactFilename, readBinary, writeBinary } from '../lib/files';
+import { defaultArtifactFilename, readBinary, saveDownload } from '../lib/files';
 import { parseJsonArray, splitList } from '../lib/json';
-import { addListOptions } from '../lib/options';
+import { addDownloadOptions, addListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams } from '../lib/pagination';
 import { runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
-import { sanitizeTerminalText } from '../lib/terminal';
 
 const accessCodeOption = () =>
 	new Option('--access-code <code>', 'Signer access code')
@@ -69,35 +68,30 @@ const searchCommand = new Command('search')
 		});
 	});
 
-const downloadCommand = new Command('download')
-	.description('Download a signer document artifact')
-	.argument('<signerId>', 'Signer ID')
-	.argument('<documentId>', 'Document ID')
-	.argument('<artifact>', 'original | certificated | certificate-page | pades | bundle')
-	.addOption(
-		new Option('--access-code <code>', 'Optional signer identity preflight code').env(
-			'ASSINAFY_SIGNER_ACCESS_CODE',
+const downloadCommand = addDownloadOptions(
+	new Command('download')
+		.description('Download a signer document artifact')
+		.argument('<signerId>', 'Signer ID')
+		.argument('<documentId>', 'Document ID')
+		.argument('<artifact>', 'original | certificated | certificate-page | pades | bundle')
+		.addOption(
+			new Option('--access-code <code>', 'Optional signer identity preflight code').env(
+				'ASSINAFY_SIGNER_ACCESS_CODE',
+			),
 		),
-	)
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (signerId, documentId, artifact, opts, command) => {
-		await runWithPublicClient(command, async ({ client, config }) => {
-			const artifactName = requireDocumentArtifactName(artifact);
-			const buffer = await withSpinner('Downloading', config, () =>
+).action(async (signerId, documentId, artifact, opts, command) => {
+	await runWithPublicClient(command, async ({ client, config }) => {
+		const artifactName = requireDocumentArtifactName(artifact);
+		await saveDownload(config, {
+			message: 'Downloading',
+			download: () =>
 				client.signerDocuments.download(signerId, documentId, artifactName, opts.accessCode),
-			);
-			const out = writeBinary(
-				opts.output ?? defaultArtifactFilename(documentId, artifactName),
-				buffer,
-				{ force: opts.force },
-			);
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+			output: opts.output,
+			defaultName: defaultArtifactFilename(documentId, artifactName),
+			force: opts.force,
 		});
 	});
+});
 
 const selfCommand = new Command('self')
 	.description("Fetch the signer's own profile")
@@ -231,27 +225,23 @@ const uploadSignatureCommand = new Command('upload-signature')
 		});
 	});
 
-const downloadSignatureCommand = new Command('download-signature')
-	.description("Download the signer's signature or initial image")
-	.addOption(accessCodeOption())
-	.option('--type <type>', 'signature or initial', 'signature')
-	.option('-o, --output <path>', 'Output file path')
-	.option('--force', 'Overwrite the output file if it already exists')
-	.action(async (opts, command) => {
-		await runWithPublicClient(command, async ({ client, config }) => {
-			const imageType = requireSignerImageType(opts.type);
-			const buffer = await withSpinner('Downloading signature', config, () =>
-				client.signerDocuments.downloadSignature(opts.accessCode, imageType),
-			);
-			const out = writeBinary(opts.output ?? `signer-${imageType}.png`, buffer, {
-				force: opts.force,
-			});
-			printSuccess(`Saved ${buffer.byteLength} bytes to ${out}`, config);
-			printData({ path: out, bytes: buffer.byteLength }, config, (d) =>
-				sanitizeTerminalText(d.path),
-			);
+const downloadSignatureCommand = addDownloadOptions(
+	new Command('download-signature')
+		.description("Download the signer's signature or initial image")
+		.addOption(accessCodeOption())
+		.option('--type <type>', 'signature or initial', 'signature'),
+).action(async (opts, command) => {
+	await runWithPublicClient(command, async ({ client, config }) => {
+		const imageType = requireSignerImageType(opts.type);
+		await saveDownload(config, {
+			message: 'Downloading signature',
+			download: () => client.signerDocuments.downloadSignature(opts.accessCode, imageType),
+			output: opts.output,
+			defaultName: `signer-${imageType}.png`,
+			force: opts.force,
 		});
 	});
+});
 
 const assignmentCommand = new Command('assignment')
 	.description('Fetch the assignment as the signer sees it')

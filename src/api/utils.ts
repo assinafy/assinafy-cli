@@ -88,6 +88,28 @@ export function cleanParams(params: Record<string, unknown>): Record<string, unk
 	return out;
 }
 
+/** Strip nullish values from a JSON request body without renaming any keys. */
+export function stripEmpty(body: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(body)) {
+		if (value !== undefined && value !== null) {
+			out[key] = value;
+		}
+	}
+	return out;
+}
+
+/** Append a multipart file part over a copy-free view of the binary data. */
+export function appendFilePart(
+	form: FormData,
+	data: Uint8Array,
+	contentType: string,
+	fileName: string,
+): void {
+	const view = new Uint8Array(data.buffer as ArrayBuffer, data.byteOffset, data.byteLength);
+	form.append('file', new Blob([view], { type: contentType }), fileName);
+}
+
 /** Remove owner credentials from a request that is public or signer-authenticated. */
 export function publicRequestConfig(config: AxiosRequestConfig = {}): AxiosRequestConfig {
 	return {

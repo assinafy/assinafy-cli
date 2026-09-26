@@ -38,3 +38,9 @@ export function paginationFooter(result: PaginatedResult<unknown>): string {
 	}
 	return parts.length > 0 ? pc.dim(parts.join('  ·  ')) : '';
 }
+
+/** Join a rendered table with its pagination footer line, when one exists. */
+export function tableWithFooter(table: string, result: PaginatedResult<unknown>): string {
+	const footer = paginationFooter(result);
+	return footer ? `${table}\n${footer}` : table;
+}

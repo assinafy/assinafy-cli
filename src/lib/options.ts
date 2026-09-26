@@ -1,4 +1,4 @@
-import type { Command, OptionValues } from '@commander-js/extra-typings';
+import { type Command, Option, type OptionValues } from '@commander-js/extra-typings';
 
 /**
  * Attach pagination flags shared by list commands.
@@ -40,4 +40,39 @@ export function addListOptions<
 	Globals extends OptionValues,
 >(command: Command<Args, Opts, Globals>, sortDescription = 'Sort by field') {
 	return addSearchListOptions(command).option('--sort <field>', sortDescription);
+}
+
+/** Attach the shared download flags: an explicit output path and an overwrite opt-in. */
+export function addDownloadOptions<
+	Args extends unknown[],
+	Opts extends OptionValues,
+	Globals extends OptionValues,
+>(command: Command<Args, Opts, Globals>) {
+	return command
+		.option('-o, --output <path>', 'Output file path')
+		.option('--force', 'Overwrite the output file if it already exists');
+}
+
+/**
+ * Attach the mutually-exclusive signer reference flags shared by assignment
+ * create/estimate commands. Signers are required: the API rejects signer-less
+ * assignments and cost estimates.
+ */
+export function addSignerRefOptions<
+	Args extends unknown[],
+	Opts extends OptionValues,
+	Globals extends OptionValues,
+>(command: Command<Args, Opts, Globals>) {
+	return command
+		.addOption(
+			new Option('--signer-ids <csv>', 'Comma-separated signer IDs (required)').conflicts(
+				'signers',
+			),
+		)
+		.addOption(
+			new Option(
+				'--signers <json>',
+				'JSON array of signer refs, with verification_method, step, … (required)',
+			).conflicts('signerIds'),
+		);
 }

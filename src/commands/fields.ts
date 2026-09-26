@@ -16,6 +16,11 @@ const fieldColumns = [
 	{ header: 'ACTIVE', value: (r: { is_active: boolean }) => r.is_active },
 ];
 
+const signerAccessCodeOption = () =>
+	new Option('--signer-access-code <code>', 'Signer access code (for signer-side validation)').env(
+		'ASSINAFY_SIGNER_ACCESS_CODE',
+	);
+
 const createCommand = new Command('create')
 	.description('Create a custom field definition')
 	.requiredOption('--type <type>', 'Field type (see `fields types`)')
@@ -118,12 +123,7 @@ const validateCommand = new Command('validate')
 	.description('Validate a value against a field definition')
 	.argument('<id>', 'Field ID')
 	.argument('<value>', 'Value to validate')
-	.addOption(
-		new Option(
-			'--signer-access-code <code>',
-			'Signer access code (for signer-side validation)',
-		).env('ASSINAFY_SIGNER_ACCESS_CODE'),
-	)
+	.addOption(signerAccessCodeOption())
 	.action(async (id, value, opts, command) => {
 		const run = opts.signerAccessCode ? runWithPublicClient : runWithClient;
 		await run(command, async ({ client, config }) => {
@@ -140,11 +140,7 @@ const validateCommand = new Command('validate')
 const validateMultipleCommand = new Command('validate-multiple')
 	.description('Validate multiple field values at once')
 	.requiredOption('--entries <json>', 'JSON array of { field_id, value } entries')
-	.addOption(
-		new Option('--signer-access-code <code>', 'Signer access code').env(
-			'ASSINAFY_SIGNER_ACCESS_CODE',
-		),
-	)
+	.addOption(signerAccessCodeOption())
 	.action(async (opts, command) => {
 		const run = opts.signerAccessCode ? runWithPublicClient : runWithClient;
 		await run(command, async ({ client, config }) => {

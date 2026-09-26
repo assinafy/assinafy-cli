@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSigners } from './assignments';
+import { resolveAssignmentSignerRefs } from './assignments';
 
-describe('resolveSigners', () => {
+describe('resolveAssignmentSignerRefs', () => {
 	it('allows omitted signers only when the caller makes them optional', () => {
-		expect(resolveSigners(undefined, undefined, false)).toEqual([]);
-		expect(() => resolveSigners()).toThrow(/Provide signers/);
+		expect(resolveAssignmentSignerRefs(undefined, undefined, false)).toEqual([]);
+		expect(() => resolveAssignmentSignerRefs()).toThrow(/Provide signers/);
 	});
 
 	it('preserves structured assignment controls', () => {
-		const signers = resolveSigners(
+		const signers = resolveAssignmentSignerRefs(
 			'[{"id":"signer-1","verification_method":"Email","notification_methods":["Email"],"step":2}]',
 		);
 		expect(signers).toEqual([

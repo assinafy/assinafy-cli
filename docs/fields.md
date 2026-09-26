@@ -128,8 +128,8 @@ Validate multiple field values at once
 
 Options:
   --entries <json>             JSON array of { field_id, value } entries
-  --signer-access-code <code>  Signer access code (env:
-                               ASSINAFY_SIGNER_ACCESS_CODE)
+  --signer-access-code <code>  Signer access code (for signer-side validation)
+                               (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help                   display help for command
 ```
 

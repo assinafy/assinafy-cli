@@ -62,7 +62,8 @@ List workspace documents
 
 Options:
   --status <status>  Filter by document status
-  --method <method>  Filter by signature method (virtual or collect)
+  --method <method>  Filter by signature method (virtual or collect) (choices:
+                     "virtual", "collect")
   --tags <ids>       Comma-separated tag IDs (AND semantics)
   --page <n>         Page number to fetch
   --per-page <n>     Items per page
@@ -344,8 +345,9 @@ Arguments:
   id                   Document ID
 
 Options:
-  --email <email>      Email using the current published API payload
-  --recipient <value>  Email address or phone number (live legacy payload)
+  --email <email>      Email address (compatibility overload for older
+                       deployments)
+  --recipient <value>  Email address or phone number (production payload)
   --channel <channel>  email or whatsapp (default: "email")
   -h, --help           display help for command
 ```

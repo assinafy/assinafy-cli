@@ -50,7 +50,7 @@ Usage: assinafy auth social-login [options]
 Exchange a provider token for an Assinafy JWT (no existing credentials required)
 
 Options:
-  --provider <provider>     OAuth provider (e.g. google)
+  --provider <provider>     OAuth provider (choices: "google")
   --provider-token <token>  Provider token (env: ASSINAFY_PROVIDER_TOKEN)
   --accept-terms            Accept the platform terms
   -h, --help                display help for command
