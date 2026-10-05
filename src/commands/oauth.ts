@@ -25,8 +25,8 @@ const connectCommand = new Command('connect')
 	.option('--redirect-uri <uri>', 'Exactly registered HTTPS relay URI', CLI_OAUTH_REDIRECT_URI)
 	.option(
 		'--scope <scopes>',
-		'Space-separated scopes; the default requests every published scope',
-		'account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access',
+		'Space-separated scopes; the default requests the seven registered CLI scopes',
+		'account:read documents:read documents:write templates:read templates:write webhooks:write offline_access',
 	)
 	.option('--timeout <seconds>', 'Wait for browser consent (1–600 seconds)', '180')
 	.option('--no-browser', 'Print the authorization URL without opening the system browser')
@@ -64,7 +64,7 @@ export function withScopeHint(error: unknown): unknown {
 		return error;
 	return new ValidationError(
 		`${error.message}. The application is not registered for one of the requested scopes: ` +
-			'the default requests all ten published scopes, including webhooks:write. Ask the ' +
+			'the CLI default requests seven registered scopes, including webhooks:write and offline_access. Ask the ' +
 			'application owner to register them, or pass --scope with the scopes it permits.',
 		error.errors,
 	);

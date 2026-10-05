@@ -40,7 +40,7 @@ The resource indicator is an origin, distinct from the SDK `baseUrl`, which incl
 | `email` | Include permitted email claims. |
 | `offline_access` | Request rotating refresh tokens for background work. |
 
-`oauth connect` requests all ten published scopes by default, so the CLI can access documents, templates, the selected workspace, webhook settings and UserInfo, and obtain refresh tokens. The public application registration must permit all ten. Existing connections need a new authorization with the larger scope set; refreshing an old token does not add permissions. Use `--scope` to explicitly select fewer scopes when needed. For other applications, request only scopes they use. Resource metadata lists API scopes; authorization-server metadata also describes authentication features such as `offline_access`. The returned `scope` string is authoritative for the access token; do not infer granted scopes from what the browser requested. It never lists `offline_access`, even when granted: a `refresh_token` in the response is the only signal that refresh is available. A scope never bypasses a user's role or the token's workspace boundary. Billing, subscriptions, workspace membership, credential management, and administration remain unavailable to OAuth tokens; those CLI operations require the non-OAuth credential documented for each endpoint.
+`oauth connect` requests the seven scopes registered for the official CLI application by default: `account:read documents:read documents:write templates:read templates:write webhooks:write offline_access`. This supports documents, templates, the selected workspace, webhook settings, and rotating refresh tokens. The default does not request `openid`, `profile`, or `email`, so it does not issue an ID token or enable UserInfo. Those scopes remain available through `--scope` and the SDK for applications registered to use them. Existing connections need a new authorization with the larger scope set; refreshing an old token does not add permissions. Use `--scope` to explicitly select a different registered set when needed. For other applications, request only scopes they use. Resource metadata lists API scopes; authorization-server metadata also describes authentication features such as `offline_access`. The returned `scope` string is authoritative for the access token; do not infer granted scopes from what the browser requested. It never lists `offline_access`, even when granted: a `refresh_token` in the response is the only signal that refresh is available. A scope never bypasses a user's role or the token's workspace boundary. Billing, subscriptions, workspace membership, credential management, and administration remain unavailable to OAuth tokens; those CLI operations require the non-OAuth credential documented for each endpoint.
 
 ## Discover and start authorization
 
@@ -125,7 +125,7 @@ const tokens = await oauthClient.oauth.exchangeCode(
 );
 ```
 
-`exchangeCode(callbackUrl, request, clientSecret?)` checks the callback origin/path and registered query parameters, rejects duplicate protocol parameters, compares `state` in constant time, and requires the exact stored issuer. It rejects denied authorization before calling the token endpoint. Authorization codes expire after 60 seconds and can be used once. Exchange immediately and never retry a code blindly after a timeout.
+`exchangeCode(callbackUrl, request, clientSecret?)` checks the callback origin/path and registered query parameters, rejects duplicate protocol parameters, requires exactly one of `code` or `error`, compares `state` in constant time, and requires the exact stored issuer. It rejects denied authorization before calling the token endpoint. Authorization codes expire after 60 seconds and can be used once. Exchange immediately and never retry a code blindly after a timeout.
 
 An authorization error raises `ValidationError` with a bounded OAuth error code in `errors.oauthError` and the message, without retaining the callback URL. Unrecognized formats become `unknown_error`. For `invalid_scope`, check that the application registration permits every requested scope, including `offline_access`; do not treat the browser return as successful authorization.
 
@@ -261,7 +261,7 @@ await oauthClient.oauth.revoke({
 
 ### Automatic browser return
 
-The distributed CLI includes the official **Public** application's client ID, `96BZZ0sZTb2NkEXt1GCaIRCTprI2YKHZr8JDHawuXUyCLC88`. This public identifier is not a secret. The CLI uses PKCE S256 and the scopes `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`; keep the registered permissions consistent with the requested scopes. No client secret is used by `oauth connect`, including when `ASSINAFY_OAUTH_CLIENT_SECRET` is set for another application.
+The distributed CLI includes the official **Public** application's client ID, `96BZZ0sZTb2NkEXt1GCaIRCTprI2YKHZr8JDHawuXUyCLC88`. This public identifier is not a secret. The CLI uses PKCE S256 and the scopes `account:read documents:read documents:write templates:read templates:write webhooks:write offline_access`; keep the registered permissions consistent with the requested scopes. No client secret is used by `oauth connect`, including when `ASSINAFY_OAUTH_CLIENT_SECRET` is set for another application.
 
 Application maintainers must deploy the callback from `integrations-generic-callback` and register this exact HTTPS URI, without an extension or trailing slash:
 
@@ -287,7 +287,7 @@ assinafy documents list --json
 | --- | --- |
 | `--client-id <id>` | Override the bundled public application ID; takes precedence over `ASSINAFY_OAUTH_CLIENT_ID`. |
 | `--redirect-uri <uri>` | Registered HTTPS relay URI; defaults to the extensionless URL above. Query parameters and fragments are unsupported for this browser relay. |
-| `--scope '<scopes>'` | Space-separated scopes; defaults to `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`. |
+| `--scope '<scopes>'` | Space-separated scopes; defaults to `account:read documents:read documents:write templates:read templates:write webhooks:write offline_access`. |
 | `--timeout <seconds>` | Browser response deadline, 1–600 seconds; default 180. API calls use the SDK's network timeout. |
 | `--no-browser` | Print the authorization URL for manual opening; the local listener still receives the return automatically. |
 

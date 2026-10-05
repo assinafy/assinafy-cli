@@ -80,7 +80,7 @@ Options:
   --name <name>     Signer full name
   --email <email>   Email address
   --phone <number>  WhatsApp phone number (E.164)
-  --cpf <cpf>       Brazilian tax ID (CPF)
+  --cpf <cpf>       Brazilian tax ID (CPF/CNPJ), sent as government_id
   -h, --help        display help for command
 ```
 

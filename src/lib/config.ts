@@ -99,7 +99,37 @@ export function readConfigFile(options: { strict?: boolean } = {}): ConfigFile {
 	}
 	try {
 		const parsed = JSON.parse(readFileSync(file, 'utf8')) as ConfigFile;
-		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+			if (parsed.default_profile !== undefined && typeof parsed.default_profile !== 'string') {
+				throw new Error('Invalid default_profile');
+			}
+			if (parsed.profiles !== undefined) {
+				if (
+					!parsed.profiles ||
+					typeof parsed.profiles !== 'object' ||
+					Array.isArray(parsed.profiles)
+				) {
+					throw new Error('Invalid profiles');
+				}
+				for (const profile of Object.values(parsed.profiles)) {
+					if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+						throw new Error('Invalid profile');
+					}
+					for (const key of [
+						'api_key',
+						'token',
+						'account_id',
+						'base_url',
+						'webhook_secret',
+					] as const) {
+						if (profile[key] !== undefined && typeof profile[key] !== 'string') {
+							throw new Error('Invalid profile field');
+						}
+					}
+				}
+			}
+			return parsed;
+		}
 		if (options.strict) {
 			throw new CliError(`Config file at ${file} is not a JSON object; refusing to overwrite it.`);
 		}
@@ -110,10 +140,12 @@ export function readConfigFile(options: { strict?: boolean } = {}): ConfigFile {
 	} catch (error) {
 		if (error instanceof CliError) throw error;
 		if (options.strict) {
-			throw new CliError(`Config file at ${file} is not valid JSON; refusing to overwrite it.`);
+			throw new CliError(
+				`Config file at ${file} has invalid JSON or field types; refusing to overwrite it.`,
+			);
 		}
 		process.stderr.write(
-			`${pc.yellow('!')} Config file at ${sanitizeTerminalText(file)} is not valid JSON; ignoring it.\n`,
+			`${pc.yellow('!')} Config file at ${sanitizeTerminalText(file)} has invalid JSON or field types; ignoring it.\n`,
 		);
 		return {};
 	}
@@ -133,6 +165,7 @@ export function writeConfigFile(config: ConfigFile): void {
 	if (!existsSync(dir)) {
 		mkdirSync(dir, { recursive: true, mode: 0o700 });
 	}
+	if (process.platform !== 'win32') chmodSync(dir, 0o700);
 	const file = configPath();
 	const tmp = `${file}.${randomUUID()}.tmp`;
 	try {
@@ -163,7 +196,7 @@ export function resolveConfig(globals: GlobalOptions): ResolvedConfig {
 	const profile = file.profiles?.[profileName] ?? {};
 
 	const pick = (flag: string | undefined, env: string | undefined, stored: string | undefined) =>
-		flag ?? env ?? stored;
+		flag || env || stored || undefined;
 
 	const baseUrl =
 		pick(globals.baseUrl, process.env.ASSINAFY_BASE_URL, profile.base_url) ?? DEFAULT_BASE_URL;
@@ -171,7 +204,7 @@ export function resolveConfig(globals: GlobalOptions): ResolvedConfig {
 		{ apiKey: globals.apiKey, token: globals.token },
 		{ apiKey: process.env.ASSINAFY_API_KEY, token: process.env.ASSINAFY_TOKEN },
 		{ apiKey: profile.api_key, token: profile.token },
-	].find(({ apiKey, token }) => apiKey !== undefined || token !== undefined);
+	].find(({ apiKey, token }) => apiKey || token);
 
 	return {
 		apiKey: credentials?.apiKey,

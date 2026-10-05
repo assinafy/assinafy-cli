@@ -94,7 +94,7 @@ A CLI já inclui o ID público da aplicação oficial e usa PKCE S256, sem segre
 https://integrations.assinafy.com.br/assinafy-cli/oauth-callback
 ```
 
-A CLI solicita por padrão os dez escopos publicados: `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`, incluindo leitura e alteração de templates e `webhooks:write` para os comandos que alteram webhooks. O cadastro da aplicação deve permitir os dez; uma conexão existente precisa de novo consentimento para obter permissões adicionais. `--scope` permite solicitar um conjunto menor explicitamente.
+A CLI solicita por padrão os sete escopos cadastrados na aplicação oficial: `account:read documents:read documents:write templates:read templates:write webhooks:write offline_access`, incluindo leitura e alteração de templates e `webhooks:write` para os comandos que alteram webhooks. Uma conexão existente precisa de novo consentimento para obter permissões adicionais. `--scope` permite escolher outro conjunto. `openid`, `profile` e `email` não fazem parte do padrão; use-os apenas com uma aplicação cadastrada para esses escopos, para obter identidade OpenID Connect e UserInfo.
 
 Não é necessário configurar `ASSINAFY_OAUTH_CLIENT_ID` para usar a aplicação oficial. Para uma aplicação própria ou outro ambiente, use `--client-id` ou essa variável; a flag tem precedência. A aplicação escolhida precisa ter a URI de retorno e os escopos cadastrados. Em um diretório privado fora do repositório:
 
@@ -119,6 +119,8 @@ Os comandos `oauth authorize` e `oauth exchange` continuam disponíveis para apl
 ## Configuração e ambientes
 
 A precedência é **flag → ambiente → perfil → padrão**. As credenciais são escolhidas juntas no primeiro nível que fornecer uma delas; nesse mesmo nível, a chave de API prevalece sobre o token. Assim, `--token` substitui uma chave existente no ambiente ou perfil. Salvar somente um tipo de credencial com `config set` remove o outro tipo daquele perfil.
+
+Valores vazios de configurações opcionais são ignorados, inclusive os padrões de `.env.example`. Perfis com tipos de campos inválidos não são usados nem sobrescritos por comandos de configuração.
 
 | Configuração | Flag | Variável |
 | --- | --- | --- |
@@ -263,6 +265,12 @@ assinafy assignments create "$DOCUMENT_ID" --signers '[
 
 Passos explícitos devem ser contíguos a partir de `1`. Um signatário `DigitalCertificate` deve estar sozinho no seu passo, ter CPF/CNPJ em `government_id` e usar um certificado correspondente. A conta precisa do recurso Digital Certificate e dos créditos indicados pela estimativa. A1 e A3 usam o mesmo fluxo: `startCertificate`, assinatura local pelo Web PKI e `completeCertificate`. As chamadas seguem os payloads da aplicação Assinafy em produção; essas duas rotas ainda não constam como paths no OpenAPI. Veja [requisições, respostas e sequência completa](docs/sdk-reference.md#icp-brasil-a1a3-certificates).
 
+Antes de estimar ou criar um assignment com certificado, atualize o CPF/CNPJ do signatário. O cadastro por e-mail pode reutilizar um registro sem atualizar seus dados. A opção `--cpf` de atualização envia `government_id` e aceita CPF ou CNPJ:
+
+```bash
+assinafy signers update "$SIGNER_ID" --cpf '<CPF-ou-CNPJ-do-signatário>' --json
+```
+
 Verificação `Email` usa notificação `["Email"]`; `Whatsapp` usa `["Whatsapp"]`. `DigitalCertificate` permite um desses dois canais. Escolha apenas um canal por signatário; os mesmos campos são aceitos em documentos gerados de templates.
 
 Em produção, `notification_methods: []` assume `['Email']` e envia o convite. Para escolher o canal, informe-o explicitamente; o array vazio não desativa notificações.
@@ -287,12 +295,13 @@ Para organizar documentos, `documents tags-set <id> Contratos` substitui as tags
 
 ## Fluxo do signatário
 
-Os comandos `signer` usam o código privado do link de verificação, separado da credencial do proprietário. Na verificação por e-mail, use o link e o código de seis dígitos da mesma mensagem; um convite que contém apenas o ID do documento e o destinatário não contém essa credencial. Configure `ASSINAFY_SIGNER_ACCESS_CODE` de forma privada e confirme o signatário e o documento. A aplicação deve apresentar termos, dados e documento à pessoa antes de enviar suas decisões:
+Os comandos `signer` usam o código privado do link de verificação, separado da credencial do proprietário. Na verificação por e-mail ou WhatsApp, use o link e o código de seis dígitos da mesma mensagem; um convite que contém apenas o ID do documento e o destinatário não contém essa credencial. Configure `ASSINAFY_SIGNER_ACCESS_CODE` e `ASSINAFY_VERIFICATION_CODE` de forma privada e confirme o signatário e o documento. A aplicação deve apresentar termos, dados e documento à pessoa antes de enviar suas decisões:
 
 ```bash
 assinafy signer self --json
 assinafy signer document example_signer --json
 assinafy signer accept-terms --json
+assinafy signer verify-code --json
 assinafy signer confirm-data "$DOCUMENT_ID" --full-name 'Ana Lima' --email ana@example.com --json
 assinafy signer assignment --json
 assinafy signer upload-signature --file assinatura.png --json

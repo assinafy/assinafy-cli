@@ -16,7 +16,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsUrl = 'https://api.assinafy.com.br/v1/docs';
 const specUrl = `${docsUrl}/openapi.json`;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete']);
-// The OpenAPI document lists JSON bodies here; the SDK and CLI send what the OAuth guide specifies.
+// OAuth requests use form encoding; retain support for renderers that list JSON first.
 const formEncoded = new Set(['POST /v1/oauth/token', 'POST /v1/oauth/revoke']);
 const exampleIds = new Map();
 const exampleEmails = new Map();
@@ -93,7 +93,8 @@ function formMediaType(operation, markdown) {
 	const name = `${operation.method} ${operation.path}`;
 	if (!formEncoded.has(name)) return markdown;
 	const json = 'Fields (`application/json`):';
-	if (!markdown.includes(json)) throw new Error(`${name} no longer documents a JSON body`);
+	if (markdown.includes('Fields (`application/x-www-form-urlencoded`):')) return markdown;
+	if (!markdown.includes(json)) throw new Error(`${name} has no supported OAuth request body`);
 	return markdown.replace(
 		json,
 		`The [OAuth Integration Guide](${docsUrl}) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.\n\nFields (\`application/x-www-form-urlencoded\`):`,

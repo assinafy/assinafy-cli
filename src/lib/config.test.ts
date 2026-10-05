@@ -53,6 +53,15 @@ describe('config file round-trip', () => {
 	});
 
 	it.skipIf(process.platform === 'win32')(
+		're-applies owner-only permissions to an existing config directory',
+		() => {
+			chmodSync(tmpDir, 0o777);
+			writeConfigFile({});
+			expect(statSync(tmpDir).mode & 0o777).toBe(0o700);
+		},
+	);
+
+	it.skipIf(process.platform === 'win32')(
 		're-applies owner-only permissions when overwriting a pre-existing loose file',
 		() => {
 			// A previously-created, world-readable config must not keep its loose mode
@@ -89,6 +98,18 @@ describe('config file round-trip', () => {
 		expect(() => readConfigFile({ strict: true })).toThrow(/refusing to overwrite/i);
 		expect(readFileSync(configPath(), 'utf8')).toBe('recoverable malformed contents');
 	});
+
+	it.each([
+		{ profiles: [] },
+		{ profiles: { default: 'invalid' } },
+		{ profiles: { default: { token: 123 } } },
+		{ default_profile: 123 },
+	])('refuses to overwrite a config with invalid field types: %j', (config) => {
+		const original = JSON.stringify(config);
+		writeFileSync(configPath(), original);
+		expect(() => readConfigFile({ strict: true })).toThrow(/refusing to overwrite/i);
+		expect(readFileSync(configPath(), 'utf8')).toBe(original);
+	});
 });
 
 describe('activeProfileName', () => {
@@ -103,6 +124,24 @@ describe('activeProfileName', () => {
 });
 
 describe('resolveConfig precedence', () => {
+	it('uses built-in defaults when stored optional settings are empty', () => {
+		writeConfigFile({ profiles: { default: { base_url: '', account_id: '' } } });
+		expect(resolveConfig({})).toMatchObject({
+			baseUrl: DEFAULT_BASE_URL,
+			accountId: undefined,
+		});
+	});
+	it('ignores empty optional environment defaults while preserving credential tiers', () => {
+		writeConfigFile({ profiles: { default: { api_key: 'stored-key', account_id: 'acc' } } });
+		for (const key of ENV_KEYS) process.env[key] = '';
+		expect(resolveConfig({})).toMatchObject({
+			apiKey: 'stored-key',
+			accountId: 'acc',
+			baseUrl: DEFAULT_BASE_URL,
+		});
+		process.env.ASSINAFY_TOKEN = 'oauth-token';
+		expect(resolveConfig({})).toMatchObject({ apiKey: '', token: 'oauth-token' });
+	});
 	it('selects a credential source before choosing API key or bearer token', () => {
 		writeConfigFile({ profiles: { default: { api_key: 'stored-owner-key' } } });
 		process.env.ASSINAFY_API_KEY = 'environment-owner-key';

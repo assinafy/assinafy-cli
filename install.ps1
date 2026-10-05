@@ -41,6 +41,13 @@ function Add-UserPath([string]$Directory) {
 }
 
 function Test-ArchiveLayout([string]$Archive, [string]$Target) {
+	$details = @(& tar -tvzf $Archive)
+	if ($LASTEXITCODE -ne 0) {
+		Fail "Unable to read release archive"
+	}
+	if (@($details | Where-Object { -not $_.StartsWith("-") }).Count -gt 0) {
+		Fail "Release archive contained a link or special file"
+	}
 	$entries = @(& tar -tzf $Archive)
 	if ($LASTEXITCODE -ne 0) {
 		Fail "Unable to read release archive"
@@ -163,6 +170,9 @@ try {
 	Test-ArchiveLayout $archive $target
 
 	tar -xzf $archive -C $extractDir
+	if ($LASTEXITCODE -ne 0) {
+		Fail "Unable to extract release archive"
+	}
 	$unsafeEntry = Get-ChildItem $extractDir -Recurse -Force | Where-Object {
 		($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0
 	} | Select-Object -First 1

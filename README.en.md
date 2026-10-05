@@ -2,7 +2,7 @@
 
 *[Leia em português](README.md) · English*
 
-The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track the audit trail, and download certified documents — from a terminal, a shell script, or an application.
+The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track activity history, and download certified documents — from a terminal, a shell script, or an application.
 
 The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 93 published API operations.
 
@@ -32,7 +32,7 @@ This document reads top to bottom: install, authenticate, send your first signat
 
 - Node.js `>=22.12.0`. Node.js 24 LTS is recommended and is what CI publishes with; CI also tests 22 and 26.
 - HTTPS with TLS 1.2 or higher to reach the Assinafy API; supported Node.js versions use that minimum by default.
-- An Assinafy account and an API key (see [Authentication](#authentication)).
+- An Assinafy account and an API key or consented OAuth connection (see [Authentication](#authentication)).
 - Linux, macOS, or Windows. Release archives ship for `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`, and `windows-arm64`.
 
 ## Installation
@@ -111,7 +111,7 @@ The CLI includes the official application's public client ID and uses PKCE S256 
 https://integrations.assinafy.com.br/assinafy-cli/oauth-callback
 ```
 
-The CLI requests all ten published scopes by default: `account:read documents:read documents:write templates:read templates:write webhooks:write openid profile email offline_access`, including template read/write access and `webhooks:write` for the webhook write commands. The application registration must permit all ten; existing connections need fresh consent to gain additional permissions. An explicit `--scope` requests a smaller set.
+The CLI requests the seven scopes registered for its official application by default: `account:read documents:read documents:write templates:read templates:write webhooks:write offline_access`, including template read/write access and `webhooks:write` for webhook write commands. Existing connections need fresh consent to gain additional permissions. An explicit `--scope` selects another set. `openid`, `profile`, and `email` are excluded from the default; request them only with an application registered for those scopes to obtain OpenID Connect identity and UserInfo.
 
 No `ASSINAFY_OAUTH_CLIENT_ID` configuration is needed for the official application. For your own application or another environment, use `--client-id` or that variable; the flag takes precedence. Register the callback URI and scopes for the selected application. In a private directory outside the repository:
 
@@ -228,14 +228,14 @@ Keep the certified PDF, the certificate page, the bundle, and the `documents act
 
 ## The signer side
 
-Signers do not use your API key. The `assinafy signer` commands use a private **access code** from the signing verification link. For email verification, use the link and six-digit code from the same email; an invitation containing only a document ID and recipient does not contain this credential. Confirm the signer and document before submitting a decision:
+Signers do not use your API key. The `assinafy signer` commands use a private **access code** from the signing verification link. For email or WhatsApp verification, use the link and six-digit code from the same message; an invitation containing only a document ID and recipient does not contain this credential. Set `ASSINAFY_SIGNER_ACCESS_CODE` and `ASSINAFY_VERIFICATION_CODE` privately. Confirm the signer and document before submitting a decision:
 
 ```bash
-export ASSINAFY_SIGNER_ACCESS_CODE=<code-from-the-verification-link>
-
 assinafy signer self                              # who the code belongs to
 assinafy signer assignment                        # the document as the signer sees it
 assinafy signer accept-terms
+assinafy signer verify-code
+assinafy signer confirm-data <documentId> --full-name 'Ana Lima' --email ana@example.com
 assinafy signer upload-signature --file signature.png
 assinafy signer sign <documentId> <assignmentId> --entries '[
   {"itemId":"item_1","fieldId":"field_1","pageId":"page_1","value":"..."}
@@ -245,6 +245,8 @@ assinafy signer sign <documentId> <assignmentId> --entries '[
 Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code. `documents send-token <documentId> --recipient <email> --channel email` sends it by email; use `--recipient <phone> --channel whatsapp` for WhatsApp. Both use `signer verify-code`; `verify-email` remains an alias. Set `ASSINAFY_VERIFICATION_CODE` to keep the OTP out of command arguments and preserve leading zeroes. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
 
 For A1/A3 certificates, use Assinafy's hosted signing page or integrate Web PKI with the SDK. After document review and terms acceptance, `signer certificate-start --json` returns `{ "token": "..." }`. Have the browser sign that operation on the signer's device, then set `ASSINAFY_CERTIFICATE_TOKEN` to the same token and run `signer certificate-complete --json`; it returns `{ "signerName": "..." }`. Private keys and passwords/PINs stay on the device. Wait for `certificated` status and download `--artifact pades` or `bundle`. The ordinary `sign` command does not perform this handshake. These two production routes use the signing application's payloads and are not yet OpenAPI paths.
+
+Before estimating or creating a certificate assignment, set the signer's CPF/CNPJ with `signers.update(signerId, { government_id })`, or `assinafy signers update <signerId> --cpf '<signer-CPF-or-CNPJ>'`. The update command sends `government_id`. Creating a signer by email may reuse an existing record without updating it. Each certificate signer needs a matching certificate and an individual signing step.
 
 Verification, data confirmation, and signature upload may return `[]` on success. Fetch `signer self` for the updated profile and check document progress and certified artifacts after signing. Full request and response examples are in the [signer SDK reference](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
 
@@ -299,9 +301,8 @@ assinafy documents list --page 2 --per-page 50 --json | jq '.meta'
 # Upload and capture the new document ID
 DOC=$(assinafy documents upload contract.pdf --json | jq -r '.id')
 
-# Attach an existing tag by its ID
-TAG_ID=$(assinafy tags list --search legal --json | jq -r '.[0].id')
-assinafy documents tags-add "$DOC" "$TAG_ID"
+# Attach a tag by name; production creates it if missing
+assinafy documents tags-add "$DOC" legal
 ```
 
 JSON errors carry a stable shape:
@@ -325,6 +326,8 @@ Destructive commands prompt for confirmation and refuse to run unattended unless
 
 Every setting resolves as **CLI flag → environment variable → config-file profile → built-in default**. Credentials are selected together from the first level that supplies either type; an API key wins only when both types are supplied at that same level. Saving one credential type with `config set` clears the other from that profile. The CLI reads process environment variables; it does not automatically load `.env` files. The OAuth variables are listed in [.env.example](./.env.example).
 
+Empty optional settings are ignored, including `.env.example` defaults. Configurations with invalid profile field types are ignored for reads and rejected by mutations.
+
 | What | Flag | Environment variable |
 | --- | --- | --- |
 | API key (sent as `X-Api-Key`) | `--api-key` | `ASSINAFY_API_KEY` |
@@ -345,7 +348,7 @@ Public document verification and lookup, password reset, login and social login,
 
 ### Config file and profiles
 
-`assinafy login` and `assinafy config set` write a JSON config file with owner-only (`0600`) permissions:
+`assinafy login` and `assinafy config set` write a JSON config file with owner-only POSIX permissions (`0600` for the file and `0700` for its directory), including existing files and directories:
 
 - Linux / macOS: `~/.config/assinafy/config.json` (honours `XDG_CONFIG_HOME`)
 - Windows: `%APPDATA%\assinafy\config.json`

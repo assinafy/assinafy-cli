@@ -243,6 +243,9 @@ validate_archive() {
 	local archive="$1"
 	local target="$2"
 	local entry expected executable_count=0 version_count=0
+	if ! tar -tvzf "$archive" | awk 'substr($0, 1, 1) != "-" { invalid = 1 } END { exit invalid }'; then
+		fail "Release archive contained a link or special file"
+	fi
 	if [[ "$target" == windows-* ]]; then
 		expected='assinafy.cmd|assinafy.cjs'
 	else

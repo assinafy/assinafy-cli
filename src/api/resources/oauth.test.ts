@@ -163,6 +163,17 @@ describe('OAuth flow', () => {
 		}
 	});
 
+	it('rejects a callback containing both code and error as ambiguous', async () => {
+		const { client, requests } = setup();
+		const request = await authorize(client);
+		const url = callback(request);
+		url.searchParams.set('error', 'invalid_scope');
+		await expect(client.oauth.exchangeCode(url.toString(), request)).rejects.toThrow(
+			'exactly one of code or error',
+		);
+		expect(requests).toHaveLength(2);
+	});
+
 	it.each([
 		['missing', undefined],
 		['null', null],

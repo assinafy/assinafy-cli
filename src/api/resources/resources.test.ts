@@ -635,6 +635,23 @@ describe('TagResource', () => {
 });
 
 describe('FieldsResource', () => {
+	it.each(['', ' '])(
+		'rejects an explicitly blank signer code %j without owner fallback',
+		async (code) => {
+			const calls: CapturedCall[] = [];
+			const fields = new FieldsResource(mockHttp(calls), 'acc');
+			await expect(fields.validate('field1', 'value', { signerAccessCode: code })).rejects.toThrow(
+				ValidationError,
+			);
+			await expect(
+				fields.validateMultiple([{ field_id: 'field1', value: 'value' }], {
+					signerAccessCode: code,
+				}),
+			).rejects.toThrow(ValidationError);
+			expect(calls).toHaveLength(0);
+		},
+	);
+
 	it('validates create input and signer-code validation params', async () => {
 		const calls: CapturedCall[] = [];
 		const fields = new FieldsResource(mockHttp(calls), 'acc');

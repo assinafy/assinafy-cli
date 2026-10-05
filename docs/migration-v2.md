@@ -15,9 +15,10 @@ Version 2 publishes the Node.js SDK at `@assinafy/cli/api` and requires Node.js
   verification and notification. Explicit signer controls still take precedence.
 - `uploadAndRequestSignatures` rejects with `PartialWorkflowError` when it fails
   after the upload, exposing the `documentId` and `signerIds` it already created
-  so callers can clean up or resume without searching for orphans.
-- Signer artifact downloads perform an identity preflight because older sandbox
-  deployments did not enforce the documented access code on the raw download route.
+  so callers can inspect remote state and resume. Signer IDs may have been reused;
+  never delete those signers automatically after a failed workflow.
+- Signer artifact downloads use the published public route. Supplying an optional
+  access code adds an identity preflight before downloading.
 
 Legacy signer aliases (`phone`, `cpf`, and assignment `signer_ids`/`signerIds`),
 both public `sendToken` request forms, and existing CLI functionality remain

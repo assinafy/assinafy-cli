@@ -253,9 +253,6 @@ it.each([true, false])(
 					'templates:read',
 					'templates:write',
 					'webhooks:write',
-					'openid',
-					'profile',
-					'email',
 					'offline_access',
 				],
 			},
@@ -322,6 +319,7 @@ it('explains an invalid_scope refusal and leaves other errors untouched', async 
 	const hinted = withScopeHint(refused) as InstanceType<typeof ValidationError>;
 	expect(hinted).toBeInstanceOf(ValidationError);
 	expect(hinted.message).toContain('webhooks:write');
+	expect(hinted.message).toContain('seven registered scopes');
 	expect(hinted.message).toContain('--scope');
 	expect(hinted.errors).toEqual({ oauthError: 'invalid_scope' });
 

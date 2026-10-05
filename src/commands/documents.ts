@@ -8,7 +8,7 @@ import type {
 	ITemplateSigner,
 } from '../api';
 import { PartialWorkflowError } from '../api';
-import { requireDocumentArtifactName } from '../api/utils';
+import { requireDocumentArtifactName, stripEmpty } from '../api/utils';
 import { requireAccountId } from '../lib/client';
 import { CliError, errorMessage } from '../lib/errors';
 import { defaultArtifactFilename, saveDownload } from '../lib/files';
@@ -323,7 +323,7 @@ const createFromTemplateCommand = new Command('create-from-template')
 			const editorFields = parseJsonArray(opts.editorFields, '--editor-fields') as
 				| ITemplateEditorField[]
 				| undefined;
-			const options = clean({
+			const options = stripEmpty({
 				name: opts.name,
 				message: opts.message,
 				expires_at: opts.expiresAt,
@@ -467,15 +467,6 @@ const waitCommand = new Command('wait')
 function parseSendTokenChannel(value: string): 'email' | 'whatsapp' {
 	if (value === 'email' || value === 'whatsapp') return value;
 	throw new CliError('--channel must be email or whatsapp');
-}
-
-/** Drop undefined/null entries so we never send empty params. */
-function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
-	const out: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(obj)) {
-		if (v !== undefined && v !== null) out[k] = v;
-	}
-	return out as Partial<T>;
 }
 
 export const documentsCommand = new Command('documents')

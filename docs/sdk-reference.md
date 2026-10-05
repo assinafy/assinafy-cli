@@ -224,7 +224,7 @@ Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cp
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. For email verification, obtain the access code from the verification link and the OTP from the same email. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
+These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
@@ -444,7 +444,7 @@ Metadata, discovery, token, and revoke calls remove owner headers. UserInfo uses
 | `validateMultiple(entries, options?)` | [`POST …/fields/validate-multiple`](./api-reference.md#validate-multiple-field-values) | `IFieldValidationResult[]` |
 | `listTypes()` | [`GET /field-types`](./api-reference.md#list-field-types) | `IFieldType[]` |
 
-Published create payload: `{ type: string; name: string; regex?; is_required? }`. Published update payload: `{ name?; regex?: string | null; is_active? }`. The SDK retains create-time `is_active` and update-time `type`/`is_required` as compatibility extensions. List params are `{ include_inactive?, include_standard? }`. Validation options are `{ signerAccessCode?, accountId? }`; multiple entries are `{ field_id, value }[]`. When a signer code is supplied, the SDK removes any configured owner API-key/bearer headers from that request.
+Published create payload: `{ type: string; name: string; regex?; is_required? }`. Published update payload: `{ name?; regex?: string | null; is_active? }`. The SDK retains create-time `is_active` and update-time `type`/`is_required` as compatibility extensions. List params are `{ include_inactive?, include_standard? }`. Validation options are `{ signerAccessCode?, accountId? }`; multiple entries are `{ field_id, value }[]`. When a signer code is supplied, the SDK removes any configured owner API-key/bearer headers from that request. An explicitly empty or blank code raises `ValidationError` before any request; omit the option for owner-authenticated validation.
 
 ## Tags (`client.tags`)
 
@@ -541,7 +541,7 @@ try {
 | API | Result |
 | --- | --- |
 | `new WebhookVerifier(secret?, { algorithm?, encoding? }?)` | Compatibility verifier; defaults to `sha256` and `hex`. |
-| `verify(rawBody, signature)` | `boolean`; HMAC comparison under the configured, assumed scheme. |
+| `verify(rawBody, signature)` | `boolean`; HMAC verification under the configured, assumed scheme. |
 | `extractEvent(rawBody)` | Parsed `IWebhookPayload`, or `null` for invalid JSON/non-object data. |
 | `getEventType(event)` | `event`/`type` string, or `null`. |
 | `getEventData(event)` | First object found at `payload`, `data`, or `object`; otherwise `{}`. |

@@ -148,5 +148,9 @@ export class FieldsResource extends BaseResource {
 }
 
 function validationConfig(signerAccessCode?: string) {
-	return signerAccessCode ? signerAccessConfig(signerAccessCode) : undefined;
+	if (signerAccessCode === undefined) return undefined;
+	if (typeof signerAccessCode !== 'string' || !signerAccessCode.trim()) {
+		throw new ValidationError('signerAccessCode is required when supplied');
+	}
+	return signerAccessConfig(signerAccessCode);
 }

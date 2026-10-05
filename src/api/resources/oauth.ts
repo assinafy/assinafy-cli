@@ -140,6 +140,9 @@ export class OAuthResource extends BaseResource {
 		if (callback.searchParams.get('iss') !== request.issuer) {
 			throw new ValidationError('OAuth issuer mismatch');
 		}
+		if (callback.searchParams.has('code') === callback.searchParams.has('error')) {
+			throw new ValidationError('OAuth callback must contain exactly one of code or error');
+		}
 		if (callback.searchParams.has('error')) {
 			const error = callback.searchParams.get('error')!;
 			const oauthError =

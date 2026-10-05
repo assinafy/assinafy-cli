@@ -86,7 +86,7 @@ const updateCommand = new Command('update')
 	.option('--name <name>', 'Signer full name')
 	.option('--email <email>', 'Email address')
 	.option('--phone <number>', 'WhatsApp phone number (E.164)')
-	.option('--cpf <cpf>', 'Brazilian tax ID (CPF)')
+	.option('--cpf <cpf>', 'Brazilian tax ID (CPF/CNPJ), sent as government_id')
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);

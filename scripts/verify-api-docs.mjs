@@ -63,10 +63,18 @@ for (const line of reference.split('\n')) {
 	}
 }
 
-const unsafeEmail = reference
-	.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)
-	?.find((email) => !/@(example\.com|example\.test|example\.invalid)$/i.test(email));
-if (unsafeEmail) throw new Error('API reference contains a non-placeholder email');
+for (const file of [
+	'README.md',
+	'README.en.md',
+	...readdirSync(path.join(root, 'docs'))
+		.filter((name) => name.endsWith('.md'))
+		.map((name) => path.join('docs', name)),
+]) {
+	const unsafeEmail = readFileSync(path.join(root, file), 'utf8')
+		.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)
+		?.find((email) => !/@example\.com$/i.test(email));
+	if (unsafeEmail) throw new Error(`${file} contains a non-placeholder email`);
+}
 
 if (/"(?:api_key|access_token)"\s*:\s*"(?!example_credential")/i.test(reference)) {
 	throw new Error('API reference contains a non-placeholder credential');

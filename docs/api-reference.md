@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.0.0
 - API document version: 1.0.0
 - Operations: 93
-- Contract SHA-256: `f6e6b3062de0fce91640b99e78df5f42174a9a5a90750945096d7db91e055ab7`
+- Contract SHA-256: `68e588d7c7b648f55e886e60d8cbfddc8ae640fbbfe1f680471b5bfaf6a1fec1`
 
 ## Accounts
 
@@ -4730,8 +4730,6 @@ Implements the RFC 6749 §5.1/§5.2 token-endpoint body contract in
 
 #### Request Body (required)
 
-The [OAuth Integration Guide](https://api.assinafy.com.br/v1/docs) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.
-
 Fields (`application/x-www-form-urlencoded`):
 
 - `grant_type` (string, required) — `urn:ietf:params:oauth:grant-type:token-exchange` is for internal service clients only (Assinafy's own MCP server) — an ordinary confidential or public client authenticates with it and always gets `invalid_client`, exactly as an unrecognized client would. Everyday integrators use `authorization_code` and `refresh_token`.
@@ -4817,8 +4815,6 @@ Revokes an access or refresh token. Every token outcome always returns 200 — i
 **Authentication:** none (public endpoint).
 
 #### Request Body (required)
-
-The [OAuth Integration Guide](https://api.assinafy.com.br/v1/docs) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.
 
 Fields (`application/x-www-form-urlencoded`):
 
