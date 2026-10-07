@@ -52,7 +52,7 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 | `timeout` | `number` | Request timeout in milliseconds; default `30_000`. |
 | `logger` | `Logger` | Optional `debug`/`info`/`warn`/`error` functions; otherwise no-op. |
 | `allowUnauthenticated` | `boolean` | Permit construction without `apiKey`/`token`; use only for public, OAuth bootstrap, and signer-code flows. |
-| `webhookSecret` | `string` | Used only by the experimental `webhookVerifier`; see [Webhook verification](#webhook-verification-experimental). |
+| `webhookSecret` | `string` | Endpoint `whsec_` signing secret used by `client.webhookVerifier`; see [Webhook verification](#webhook-verification). |
 
 | API | Result |
 | --- | --- |
@@ -412,8 +412,27 @@ Notification counters can overlap when a request uses multiple delivery channels
 | `createApiKey(password)` | [`POST /users/api-keys`](./api-reference.md#create-api-key) | `IApiKeyResponse` |
 | `getApiKey()` | [`GET /users/api-keys`](./api-reference.md#get-api-key) | `IMaskedApiKeyResponse`; 404 means no key |
 | `deleteApiKey()` | [`DELETE /users/api-keys`](./api-reference.md#delete-api-key) | `IEmptyResult` (`unknown[]`) |
+| `verifyMfa({ mfa_token, code })` | [`POST /authentication/mfa/verify`](./api-reference.md#complete-a-two-factor-login) | `IMfaVerifyPayload` → `ILoginResponse` |
+| `listMfaMethods()` | [`GET /users/self/mfa`](./api-reference.md#list-two-factor-methods) | `IMfaStatus` (`{ methods, recovery_codes_remaining }`) |
+| `startTotpEnrollment(label?)` | [`POST /users/self/mfa/totp`](./api-reference.md#start-authenticator-enrollment) | `{ label? }` → `ITotpEnrollment` (`{ id, secret, provisioning_uri }`) |
+| `confirmTotpEnrollment({ id, code, password?, reauth_code? })` | [`PUT /users/self/mfa/totp/confirm`](./api-reference.md#confirm-authenticator-enrollment) | `ITotpConfirmPayload` → `IMfaRecoveryCodes` |
+| `regenerateRecoveryCodes({ password?, code? })` | [`POST /users/self/mfa/recovery-codes`](./api-reference.md#regenerate-recovery-codes) | `IMfaReauthPayload` → `IMfaRecoveryCodes` |
+| `removeMfaMethod(methodId, { password?, code? })` | [`DELETE /users/self/mfa/{methodId}`](./api-reference.md#remove-a-two-factor-method) | JSON body `IMfaReauthPayload` → `{ is_mfa_enabled }` |
 
-Login/social/reset bootstrap calls can use an unauthenticated client. The published authenticated user endpoints permit either a bearer JWT or `X-Api-Key`; use the credential type appropriate to the account and endpoint policy.
+### Two-factor authentication
+
+When the user has a confirmed authenticator, `login` returns an `mfa_token` challenge instead of a session. Exchange it within 5 minutes, once, with a 6-digit authenticator code or a recovery code:
+
+```ts
+let session = await client.auth.login('user@example.com', password);
+if (!session.access_token && session.mfa_token) {
+  session = await client.auth.verifyMfa({ mfa_token: session.mfa_token, code: '123456' });
+}
+```
+
+Enrollment is `startTotpEnrollment` (show `provisioning_uri` as a QR code; the secret is returned only once) followed by `confirmTotpEnrollment({ id, code })`, which returns ten one-time recovery codes. Replacing a confirmed method also needs `password` or `reauth_code`. `regenerateRecoveryCodes` and `removeMfaMethod` require the current password or a live/recovery `code`; the SDK rejects a payload with neither before sending. `verifyMfa` strips owner credentials.
+
+Login/social/reset/two-factor-verify bootstrap calls can use an unauthenticated client. The published authenticated user endpoints permit either a bearer JWT or `X-Api-Key`; use the credential type appropriate to the account and endpoint policy.
 
 ## OAuth (`client.oauth`)
 
@@ -504,16 +523,39 @@ Template list params support pagination, published `search`, and compatible `sor
 
 ## Webhooks (`client.webhooks`)
 
+An account can register 1 webhook endpoint, or up to 3 on paid plans. Each endpoint has its own URL, events, active flag, and signing setting; every active endpoint subscribed to an event receives it independently. The `subscriptions` operations remain and act on the account's oldest endpoint.
+
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
-| `register(payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#update-webhook-subscription) | `IWebhookSubscription` |
+| `listEndpoints(accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#list-webhook-endpoints) | `IWebhookEndpoint[]`, oldest first |
+| `createEndpoint(payload, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#create-webhook-endpoint) | `IWebhookEndpointCreatePayload` → `IWebhookEndpoint` |
+| `getEndpoint(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#get-webhook-endpoint) | `IWebhookEndpoint` |
+| `updateEndpoint(endpointId, payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#update-webhook-endpoint) | `IWebhookEndpointUpdatePayload` → `IWebhookEndpoint` |
+| `deleteEndpoint(endpointId, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#delete-webhook-endpoint) | `IEmptyResult` (`[]`) |
+| `getEndpointSecret(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`](./api-reference.md#get-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` (`{ secret }`) |
+| `rotateEndpointSecret(endpointId, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`](./api-reference.md#rotate-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` |
+| `register(payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#update-webhook-subscription) | `IWebhookSubscription` (oldest endpoint) |
 | `get(accountId?)` | [`GET /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#get-webhook-subscription) | `IWebhookSubscription | null` |
 | `inactivate(accountId?)` | [`PUT /accounts/{accountId}/webhooks/inactivate`](./api-reference.md#inactivate-webhook-subscription) | `IWebhookSubscription` |
 | `listEventTypes()` | [`GET /webhooks/event-types`](./api-reference.md#list-webhook-event-types) | `IWebhookEventTypeInfo[]` |
 | `listDispatches(params?, accountId?)` | [`GET /accounts/{accountId}/webhooks`](./api-reference.md#list-webhook-deliveries) | `PaginatedResult<IWebhookDispatch>` |
 | `retryDispatch(dispatchId, accountId?)` | [`POST /accounts/{accountId}/webhooks/{dispatchId}/retry`](./api-reference.md#retry-webhook-delivery) | `IWebhookDispatch` |
 
-Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch `search` is unsupported and rejected locally. The API does not expose a delete-subscription operation; use `inactivate`.
+Endpoint payload: `{ url: string; email: string; events?: string[]; name?: string; is_active?: boolean; signing_enabled?: boolean }`. Update sends only the given fields and requires at least one. URLs must be HTTP(S) and unique within the workspace (`400`); creating past the plan limit returns `403`. Enabling signing creates a `whsec_` secret if none exists; disabling it discards the secret. Secret read and rotation return `400` when signing is disabled and are not available to OAuth applications; rotation invalidates the previous secret immediately.
+
+```ts
+const endpoint = await client.webhooks.createEndpoint({
+  url: 'https://example.com/assinafy/webhooks',
+  email: 'ops@example.com',
+  name: 'ERP',
+  events: ['document_ready', 'signer_signed_document'],
+  signing_enabled: true,
+});
+const { secret } = await client.webhooks.getEndpointSecret(endpoint.id);
+// Store `secret` in your receiver's secret manager.
+```
+
+Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted on `register` or `createEndpoint`, the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ endpoint_id?, event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch records include `endpoint_id`. Dispatch `search` is unsupported and rejected locally. Retrying re-sends only to that entry's endpoint and requires the endpoint to be active. There is no delete-subscription operation; delete a specific endpoint with `deleteEndpoint` or deactivate the oldest with `inactivate`.
 
 Decline operations require a non-empty reason of at most 2,000 Unicode characters. `signers.findByEmail` follows pagination metadata until an exact case-insensitive email match is found or the search is exhausted; when a response carries no pagination metadata a partial page ends the search, and the scan is bounded at 100 pages.
 
@@ -536,21 +578,41 @@ try {
 }
 ```
 
-## Webhook verification (experimental)
+## Webhook verification
+
+Deliveries are `POST` requests with `Content-Type: application/json`, a `webhook-id` (stable across retries of the same event to the same endpoint; use it to deduplicate), a `webhook-timestamp` (Unix seconds), and, when the endpoint has `signing_enabled`, a `webhook-signature` following [Standard Webhooks](https://www.standardwebhooks.com). Any `2xx` is success; a failed delivery is retried once after 3 seconds. After 10 consecutive failed events the endpoint's delivery is paused and probed until one succeeds; use `retryDispatch` to force redelivery.
 
 | API | Result |
 | --- | --- |
-| `new WebhookVerifier(secret?, { algorithm?, encoding? }?)` | Compatibility verifier; defaults to `sha256` and `hex`. |
-| `verify(rawBody, signature)` | `boolean`; HMAC verification under the configured, assumed scheme. |
+| `new WebhookVerifier(secret?, { algorithm?, encoding? }?)` | Verifier keyed with an endpoint's `whsec_` secret. The options apply only to the deprecated `verify`. |
+| `verifyDelivery(rawBody, headers, { toleranceSeconds?, now? }?)` | `boolean`. Checks `v1` HMAC-SHA256 over `{webhook-id}.{webhook-timestamp}.{rawBody}` with the base64-decoded secret, constant-time, against every space-separated signature entry, and rejects timestamps more than `toleranceSeconds` (default 300) from `now` (ms, default `Date.now()`). `headers` may be Node `IncomingHttpHeaders`, a plain record (case-insensitive), or Fetch `Headers`; repeated headers are rejected. |
+| `verify(rawBody, signature)` | Deprecated body-only HMAC kept for existing callers; Assinafy deliveries do not use it. |
 | `extractEvent(rawBody)` | Parsed `IWebhookPayload`, or `null` for invalid JSON/non-object data. |
 | `getEventType(event)` | `event`/`type` string, or `null`. |
 | `getEventData(event)` | First object found at `payload`, `data`, or `object`; otherwise `{}`. |
 
-Assinafy's published API does **not** define a signature header, algorithm, digest encoding, timestamp, or replay-protection scheme. Therefore this helper is experimental and unverified; do not use it as a production trust boundary until Assinafy publishes the scheme or you validate every detail against real deliveries. Preserve the exact raw request bytes for any future verification.
+`client.webhookVerifier` uses the `webhookSecret` client option. Each endpoint has its own secret, so construct one verifier per signed endpoint.
+
+```ts
+import express from 'express';
+import { WebhookVerifier } from '@assinafy/cli/api';
+
+const verifier = new WebhookVerifier(process.env.ASSINAFY_WEBHOOK_SECRET);
+const app = express();
+
+app.post('/assinafy/webhooks', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!verifier.verifyDelivery(req.body, req.headers)) return res.sendStatus(401);
+  const event = verifier.extractEvent(req.body);
+  // Deduplicate by req.headers['webhook-id'], enqueue the work, and answer quickly.
+  res.sendStatus(204);
+});
+```
+
+Verify the raw bytes before parsing; re-serialized JSON does not match. The envelope is `{ id, event, message, payload, origin, created_at, subject, object, account_id }`; `subject` and `object` carry a `type` of `User`, `Signer`, `Account`, `Document`, or `Template`. Unknown fields are forward-compatible additions. Confirm business state (for example a document's status) through the API before irreversible actions.
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 93 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
-- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 93 OpenAPI operations; the API manifest contains only published paths.
+- Production OpenAPI currently publishes 106 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 106 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above and both published/legacy public `sendToken` payloads for compatible deployments.
 - Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

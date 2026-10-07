@@ -4,10 +4,10 @@ Generated from the official [Assinafy OpenAPI document](https://api.assinafy.com
 
 The renderer reuses a generic 400 envelope for several non-400 errors; top-level numeric `status` fields below are normalized to their documented HTTP response code. Example identifiers, contact details, and credentials are replaced with deterministic non-production placeholders.
 
-- OpenAPI: 3.0.0
+- OpenAPI: 3.1.0
 - API document version: 1.0.0
-- Operations: 93
-- Contract SHA-256: `68e588d7c7b648f55e886e60d8cbfddc8ae640fbbfe1f680471b5bfaf6a1fec1`
+- Operations: 106
+- Contract SHA-256: `2185c05ff19372702195ba272078272b87a4be0aad85b7c327b84b2634e104e1`
 
 ## Accounts
 
@@ -703,11 +703,8 @@ List the activities recorded for a document. Each entry carries an event-specifi
             "id": 4,
             "event": "assignment_created",
             "message": "Assignment created by John Smith.",
-            "payload": {},
-            "origin": {
-                "ip": "192.0.2.1",
-                "user-agent": "string"
-            },
+            "payload": null,
+            "origin": null,
             "created_at": "2022-07-19T19:28:13Z"
         }
     ],
@@ -784,75 +781,14 @@ List documents of the workspace.
                     "name": "string"
                 }
             ],
-            "assignment": {
-                "resource": "assignment",
-                "id": "example_id_6",
-                "sender_email": "user1@example.com",
-                "method": "virtual",
-                "expires_at": null,
-                "message": "string",
-                "signers": [
-                    {
-                        "verification_method": "Email",
-                        "notification_methods": [
-                            "Email"
-                        ],
-                        "step": 1,
-                        "notified": true,
-                        "completed": true,
-                        "notification_history": [
-                            {
-                                "event": "signature_request",
-                                "status": "sent",
-                                "error_code": "string",
-                                "error_message": "string",
-                                "sent_at": "2026-07-07T12:00:00Z",
-                                "failed_at": null
-                            }
-                        ],
-                        "resource": "signer",
-                        "id": "example_id_7",
-                        "full_name": "Example User",
-                        "email": "user2@example.com",
-                        "whatsapp_phone_number": "+5500000000000",
-                        "has_accepted_terms": false
-                    }
-                ],
-                "copy_receivers": [
-                    {}
-                ],
-                "items": [
-                    {
-                        "id": "example_id_5",
-                        "page": null,
-                        "signer": {},
-                        "field": {},
-                        "display_settings": null,
-                        "value": null,
-                        "completed": true
-                    }
-                ],
-                "summary": {
-                    "signer_count": 0,
-                    "completed_count": 0,
-                    "signers": [
-                        {}
-                    ]
-                },
-                "signing_urls": [
-                    {
-                        "signer_id": "example_id_5",
-                        "url": "https://example.com/example-url-4"
-                    }
-                ]
-            },
+            "assignment": null,
             "pages": [
                 {
-                    "id": "example_id_8",
+                    "id": "example_id_6",
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-5"
+                    "download_url": "https://example.com/example-url-4"
                 }
             ],
             "created_at": "2026-06-03T03:54:16Z",
@@ -938,75 +874,14 @@ Example:
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -1092,75 +967,14 @@ Search documents of the workspace, returning a compact representation (no expand
                     "name": "string"
                 }
             ],
-            "assignment": {
-                "resource": "assignment",
-                "id": "example_id_6",
-                "sender_email": "user1@example.com",
-                "method": "virtual",
-                "expires_at": null,
-                "message": "string",
-                "signers": [
-                    {
-                        "verification_method": "Email",
-                        "notification_methods": [
-                            "Email"
-                        ],
-                        "step": 1,
-                        "notified": true,
-                        "completed": true,
-                        "notification_history": [
-                            {
-                                "event": "signature_request",
-                                "status": "sent",
-                                "error_code": "string",
-                                "error_message": "string",
-                                "sent_at": "2026-07-07T12:00:00Z",
-                                "failed_at": null
-                            }
-                        ],
-                        "resource": "signer",
-                        "id": "example_id_7",
-                        "full_name": "Example User",
-                        "email": "user2@example.com",
-                        "whatsapp_phone_number": "+5500000000000",
-                        "has_accepted_terms": false
-                    }
-                ],
-                "copy_receivers": [
-                    {}
-                ],
-                "items": [
-                    {
-                        "id": "example_id_5",
-                        "page": null,
-                        "signer": {},
-                        "field": {},
-                        "display_settings": null,
-                        "value": null,
-                        "completed": true
-                    }
-                ],
-                "summary": {
-                    "signer_count": 0,
-                    "completed_count": 0,
-                    "signers": [
-                        {}
-                    ]
-                },
-                "signing_urls": [
-                    {
-                        "signer_id": "example_id_5",
-                        "url": "https://example.com/example-url-4"
-                    }
-                ]
-            },
+            "assignment": null,
             "pages": [
                 {
-                    "id": "example_id_8",
+                    "id": "example_id_6",
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-5"
+                    "download_url": "https://example.com/example-url-4"
                 }
             ],
             "created_at": "2026-06-03T03:54:16Z",
@@ -1291,75 +1105,14 @@ Get a document by its ID. `decline_reason` is only present when the access token
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -1510,75 +1263,14 @@ Example:
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -1699,8 +1391,8 @@ Verify a document by its signature hash (found on a signed document) and return 
 ```json
 {
     "data": {
-        "hash": "example_id_9",
-        "id": "example_id_10",
+        "hash": "example_id_7",
+        "id": "example_id_8",
         "agreement_code": "550E8400-E29B-41D4-A716-446655440000",
         "status": "certificated",
         "page_count": "1",
@@ -1750,7 +1442,7 @@ List the tags attached to a document.
     "data": [
         {
             "resource": "tag",
-            "id": "example_id_11",
+            "id": "example_id_9",
             "name": "Contracts",
             "color": "ff8800",
             "created_at": "2026-05-14T12:00:00Z",
@@ -1822,7 +1514,7 @@ Example:
     "data": [
         {
             "resource": "tag",
-            "id": "example_id_11",
+            "id": "example_id_9",
             "name": "Contracts",
             "color": "ff8800",
             "created_at": "2026-05-14T12:00:00Z",
@@ -1894,7 +1586,7 @@ Example:
     "data": [
         {
             "resource": "tag",
-            "id": "example_id_11",
+            "id": "example_id_9",
             "name": "Contracts",
             "color": "ff8800",
             "created_at": "2026-05-14T12:00:00Z",
@@ -2105,8 +1797,8 @@ Example:
 {
     "signers": [
         {
-            "role_id": "example_id_12",
-            "id": "example_id_13",
+            "role_id": "example_id_10",
+            "id": "example_id_11",
             "verification_method": "Email",
             "notification_methods": [
                 "Email"
@@ -2116,7 +1808,7 @@ Example:
     ],
     "editor_fields": [
         {
-            "field_id": "example_id_14",
+            "field_id": "example_id_12",
             "value": "Field value"
         }
     ],
@@ -2155,75 +1847,14 @@ Example:
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -2291,7 +1922,7 @@ Example:
 {
     "signers": [
         {
-            "role_id": "example_id_12",
+            "role_id": "example_id_10",
             "verification_method": "Whatsapp",
             "notification_methods": [
                 "Whatsapp"
@@ -2326,7 +1957,7 @@ Example:
         "credit_balance": 0,
         "has_sufficient_resources": true,
         "blocking_reason": null,
-        "message": "string"
+        "message": null
     },
     "status": 200,
     "message": ""
@@ -2379,11 +2010,11 @@ List the assignments belonging to the authenticated user's current account.
     "data": [
         {
             "resource": "assignment",
-            "id": "example_id_6",
+            "id": "example_id_13",
             "sender_email": "user1@example.com",
             "method": "virtual",
             "expires_at": null,
-            "message": "string",
+            "message": null,
             "signers": [
                 {
                     "verification_method": "Email",
@@ -2391,23 +2022,15 @@ List the assignments belonging to the authenticated user's current account.
                         "Email"
                     ],
                     "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
+                    "notified": null,
+                    "completed": null,
+                    "notification_history": null,
                     "resource": "signer",
-                    "id": "example_id_7",
+                    "id": "example_id_14",
                     "full_name": "Example User",
                     "email": "user2@example.com",
                     "whatsapp_phone_number": "+5500000000000",
+                    "government_id": "00000000000",
                     "has_accepted_terms": false
                 }
             ],
@@ -2419,7 +2042,7 @@ List the assignments belonging to the authenticated user's current account.
                     "id": "example_id_5",
                     "page": null,
                     "signer": {},
-                    "field": {},
+                    "field": null,
                     "display_settings": null,
                     "value": null,
                     "completed": true
@@ -2435,7 +2058,7 @@ List the assignments belonging to the authenticated user's current account.
             "signing_urls": [
                 {
                     "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
+                    "url": "https://example.com/example-url-5"
                 }
             ]
         }
@@ -2755,7 +2378,7 @@ Example — Create with input fields (method: collect):
     "message": "",
     "data": {
         "resource": "assignment",
-        "id": "example_id_6",
+        "id": "example_id_13",
         "sender_email": "user1@example.com",
         "method": "collect",
         "expires_at": "2021-09-30T21:00:00Z",
@@ -2928,7 +2551,7 @@ Per-unit costs (in credits) used to build the estimate:
 | Extra document | 1 credit |
 | Email notification | 0 credits |
 | WhatsApp notification | 0.45 credits |
-| Digital certificate signature (per signer) | 2 credits |
+| Digital certificate signature (per signer) | 0.5 credits |
 
 Verification methods are not priced separately — every line in the `breakdown` is a notification or a signature. A `Whatsapp`-verified signer therefore shows up as a WhatsApp notification, because that channel is mandatory for that verification method. A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code.
 
@@ -2992,7 +2615,7 @@ Example:
         "credit_balance": 0,
         "has_sufficient_resources": true,
         "blocking_reason": null,
-        "message": "string"
+        "message": null
     },
     "status": 200,
     "message": ""
@@ -3122,7 +2745,7 @@ Estimate the cost of resending the signature request to a signer.
         "credit_balance": 0,
         "has_sufficient_resources": true,
         "blocking_reason": null,
-        "message": "string"
+        "message": null
     },
     "status": 200,
     "message": ""
@@ -3186,11 +2809,11 @@ Example:
 {
     "data": {
         "resource": "assignment",
-        "id": "example_id_6",
+        "id": "example_id_13",
         "sender_email": "user1@example.com",
         "method": "virtual",
         "expires_at": null,
-        "message": "string",
+        "message": null,
         "signers": [
             {
                 "verification_method": "Email",
@@ -3198,23 +2821,15 @@ Example:
                     "Email"
                 ],
                 "step": 1,
-                "notified": true,
-                "completed": true,
-                "notification_history": [
-                    {
-                        "event": "signature_request",
-                        "status": "sent",
-                        "error_code": "string",
-                        "error_message": "string",
-                        "sent_at": "2026-07-07T12:00:00Z",
-                        "failed_at": null
-                    }
-                ],
+                "notified": null,
+                "completed": null,
+                "notification_history": null,
                 "resource": "signer",
-                "id": "example_id_7",
+                "id": "example_id_14",
                 "full_name": "Example User",
                 "email": "user2@example.com",
                 "whatsapp_phone_number": "+5500000000000",
+                "government_id": "00000000000",
                 "has_accepted_terms": false
             }
         ],
@@ -3226,7 +2841,7 @@ Example:
                 "id": "example_id_5",
                 "page": null,
                 "signer": {},
-                "field": {},
+                "field": null,
                 "display_settings": null,
                 "value": null,
                 "completed": true
@@ -3242,7 +2857,7 @@ Example:
         "signing_urls": [
             {
                 "signer_id": "example_id_5",
-                "url": "https://example.com/example-url-4"
+                "url": "https://example.com/example-url-5"
             }
         ]
     },
@@ -3609,6 +3224,435 @@ Example:
 }
 ```
 
+### Complete a two-factor login
+
+`POST /v1/authentication/mfa/verify`
+
+Exchanges the `mfa_token` returned by login for an access token. `code` is either the 6-digit code from the authenticator app or one of the recovery codes issued at enrollment. The challenge is single-use and expires 5 minutes after login.
+
+**Authentication:** none (public endpoint).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `mfa_token` (string, required) — The token returned by the login response.
+- `code` (string, required) — A 6-digit authenticator code, or a recovery code such as ABCD-EFGH-JKMN.
+
+Example:
+
+```json
+{
+    "mfa_token": "example_secret",
+    "code": "123456"
+}
+```
+
+#### Responses
+
+##### 200 — Access token, user and accounts
+
+```json
+{
+    "data": {
+        "access_token": "example_credential",
+        "user": {
+            "id": "example_id_27",
+            "name": "John Smith",
+            "email": "user8@example.com",
+            "telephone": "+5500000000000",
+            "government_id": "00000000000",
+            "is_email_verified": false,
+            "has_accepted_terms": true,
+            "created_at": "2023-03-03T11:51:34Z",
+            "to_be_deleted_at": null
+        },
+        "accounts": [
+            {
+                "id": "example_id_1",
+                "name": "JS",
+                "roles": [
+                    "owner"
+                ],
+                "is_delete_allowed": true,
+                "created_at": "2023-03-03T11:51:34Z"
+            }
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — The challenge expired, was already used, or too many codes were tried
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List two-factor methods
+
+`GET /v1/users/self/mfa`
+
+The authenticated user's enrolled two-factor methods and how many recovery codes remain unused.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — Enrolled methods
+
+```json
+{
+    "data": {
+        "methods": [
+            {
+                "id": "example_id_28",
+                "type": "Totp",
+                "label": "My phone",
+                "confirmed_at": "2026-09-09T14:21:03Z",
+                "last_used_at": "2026-09-09T18:02:44Z"
+            }
+        ],
+        "recovery_codes_remaining": 8
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Start authenticator enrollment
+
+`POST /v1/users/self/mfa/totp`
+
+Creates an unconfirmed authenticator method and returns the shared secret. The secret is returned only by this call and cannot be retrieved again. Two-factor authentication is not active until the enrollment is confirmed.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `label` (string)
+
+Example:
+
+```json
+{
+    "label": "My phone"
+}
+```
+
+#### Responses
+
+##### 200 — Enrollment started
+
+```json
+{
+    "data": {
+        "id": "example_id_28",
+        "secret": "example_secret",
+        "provisioning_uri": "https://example.com/example-url-11"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Confirm authenticator enrollment
+
+`PUT /v1/users/self/mfa/totp/confirm`
+
+Activates the method by proving one live code from the NEW device (`code`). Returns the recovery codes, which are shown only once and cannot be retrieved again. From this point every login requires a second factor. If the user already has a confirmed method of the same type, confirming REPLACES it — the old one is soft-deleted and recovery codes are reissued — so this call additionally requires re-authentication via `password` or `reauth_code` (a live code from the CURRENT device, or one of the existing recovery codes), exactly like disabling a method. First-time enrollment needs neither.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `id` (string, required)
+- `code` (string, required) — Live code from the NEW device being confirmed.
+- `password` (string) — Re-authentication proof, required only when replacing an existing confirmed method.
+- `reauth_code` (string) — Re-authentication proof alternative to password: a live code from the CURRENT device, or a recovery code. Required only when replacing an existing confirmed method.
+
+Example:
+
+```json
+{
+    "id": "example_id_28",
+    "code": "123456",
+    "password": "example_secret",
+    "reauth_code": "string"
+}
+```
+
+#### Responses
+
+##### 200 — Two-factor enabled
+
+```json
+{
+    "data": {
+        "recovery_codes": [
+            "ABCD-EFGH-JKMN"
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Regenerate recovery codes
+
+`POST /v1/users/self/mfa/recovery-codes`
+
+Issues a fresh set of ten recovery codes and invalidates the previous set. Requires the current password, a live authenticator code, or one of the existing recovery codes (which is then consumed).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `password` (string)
+- `code` (string) — A live 6-digit authenticator code, or one of the existing recovery codes.
+
+Example:
+
+```json
+{
+    "password": "example_secret",
+    "code": "123456"
+}
+```
+
+#### Responses
+
+##### 200 — New recovery codes
+
+```json
+{
+    "data": {
+        "recovery_codes": [
+            "ABCD-EFGH-JKMN"
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Remove a two-factor method
+
+`DELETE /v1/users/self/mfa/{customId}`
+
+Removes an enrolled method. Requires the current password, a live authenticator code, or one of the existing recovery codes (which is then consumed), so that a stolen session cannot silently disable two-factor authentication. Removing the last method also discards the recovery codes.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `customId` | path | string | yes |  |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `password` (string)
+- `code` (string) — A live 6-digit authenticator code, or one of the existing recovery codes.
+
+Example:
+
+```json
+{
+    "password": "example_secret",
+    "code": "123456"
+}
+```
+
+#### Responses
+
+##### 200 — Method removed
+
+```json
+{
+    "data": {
+        "is_mfa_enabled": false
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
 ### Social login
 
 `POST /v1/authentication/social-login`
@@ -3926,7 +3970,7 @@ When `include_standard` is enabled, records of type `signature`, `initial` and `
             "id": "example_id_20",
             "name": "Signature",
             "type": "signature",
-            "regex": "string",
+            "regex": null,
             "is_pre_defined": true,
             "is_active": true,
             "is_required": true,
@@ -3980,7 +4024,7 @@ Fields (`application/json`):
 
 - `name` (string, required)
 - `type` (string, required)
-- `regex` (string)
+- `regex` (Array)
 - `is_required` (boolean)
 
 Example:
@@ -3989,7 +4033,7 @@ Example:
 {
     "name": "Full name",
     "type": "text",
-    "regex": "string",
+    "regex": null,
     "is_required": true
 }
 ```
@@ -4005,7 +4049,7 @@ Example:
         "id": "example_id_20",
         "name": "Signature",
         "type": "signature",
-        "regex": "string",
+        "regex": null,
         "is_pre_defined": true,
         "is_active": true,
         "is_required": true,
@@ -4074,7 +4118,7 @@ Retrieve a single field definition.
         "id": "example_id_20",
         "name": "Signature",
         "type": "signature",
-        "regex": "string",
+        "regex": null,
         "is_pre_defined": true,
         "is_active": true,
         "is_required": true,
@@ -4137,7 +4181,7 @@ Update a field definition.
 Fields (`application/json`):
 
 - `name` (string)
-- `regex` (string)
+- `regex` (Array)
 - `is_active` (boolean)
 
 Example:
@@ -4145,7 +4189,7 @@ Example:
 ```json
 {
     "name": "string",
-    "regex": "string",
+    "regex": null,
     "is_active": true
 }
 ```
@@ -4161,7 +4205,7 @@ Example:
         "id": "example_id_20",
         "name": "Signature",
         "type": "signature",
-        "regex": "string",
+        "regex": null,
         "is_pre_defined": true,
         "is_active": true,
         "is_required": true,
@@ -4347,7 +4391,7 @@ Example:
 ```json
 [
     {
-        "field_id": "example_id_28",
+        "field_id": "example_id_29",
         "value": "1111111111111"
     }
 ]
@@ -4361,7 +4405,7 @@ Example:
 {
     "data": [
         {
-            "field_id": "example_id_28",
+            "field_id": "example_id_29",
             "type": "cpf",
             "success": false,
             "error_message": "Invalid CPF."
@@ -4750,7 +4794,7 @@ Example:
 {
     "grant_type": "authorization_code",
     "code": "string",
-    "redirect_uri": "https://example.com/example-url-11",
+    "redirect_uri": "https://example.com/example-url-12",
     "code_verifier": "string",
     "refresh_token": "example_secret",
     "client_id": "example_id_5",
@@ -4772,9 +4816,9 @@ Example:
     "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
     "token_type": "Bearer",
     "expires_in": 3600,
-    "refresh_token": "example_secret",
+    "refresh_token": null,
     "scope": "documents:read",
-    "id_token": "example_secret"
+    "id_token": null
 }
 ```
 
@@ -4871,10 +4915,10 @@ Claims about the user who authorized this token. Requires the openid scope; name
 
 ```json
 {
-    "sub": "example_id_29",
+    "sub": "example_id_30",
     "name": "Maria Silva",
-    "email": "user9@example.com",
-    "email_verified": true
+    "email": null,
+    "email_verified": null
 }
 ```
 
@@ -4994,75 +5038,14 @@ Retrieve a publicly shared document by ID. Public endpoint.
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -5161,10 +5144,11 @@ Return the signer identified by the signer access code, including the `has_signa
         "has_initial": false,
         "is_signature_reusable": false,
         "resource": "signer",
-        "id": "example_id_7",
+        "id": "example_id_14",
         "full_name": "Example User",
         "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
+        "government_id": "00000000000",
         "has_accepted_terms": false
     },
     "status": 200,
@@ -5232,75 +5216,14 @@ Return the document and the signer's assignment items, scoped to the signer acce
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -5383,75 +5306,14 @@ Retrieve the document a signer has been invited to sign, using the signer access
                 "name": "string"
             }
         ],
-        "assignment": {
-            "resource": "assignment",
-            "id": "example_id_6",
-            "sender_email": "user1@example.com",
-            "method": "virtual",
-            "expires_at": null,
-            "message": "string",
-            "signers": [
-                {
-                    "verification_method": "Email",
-                    "notification_methods": [
-                        "Email"
-                    ],
-                    "step": 1,
-                    "notified": true,
-                    "completed": true,
-                    "notification_history": [
-                        {
-                            "event": "signature_request",
-                            "status": "sent",
-                            "error_code": "string",
-                            "error_message": "string",
-                            "sent_at": "2026-07-07T12:00:00Z",
-                            "failed_at": null
-                        }
-                    ],
-                    "resource": "signer",
-                    "id": "example_id_7",
-                    "full_name": "Example User",
-                    "email": "user2@example.com",
-                    "whatsapp_phone_number": "+5500000000000",
-                    "has_accepted_terms": false
-                }
-            ],
-            "copy_receivers": [
-                {}
-            ],
-            "items": [
-                {
-                    "id": "example_id_5",
-                    "page": null,
-                    "signer": {},
-                    "field": {},
-                    "display_settings": null,
-                    "value": null,
-                    "completed": true
-                }
-            ],
-            "summary": {
-                "signer_count": 0,
-                "completed_count": 0,
-                "signers": [
-                    {}
-                ]
-            },
-            "signing_urls": [
-                {
-                    "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-4"
-                }
-            ]
-        },
+        "assignment": null,
         "pages": [
             {
-                "id": "example_id_8",
+                "id": "example_id_6",
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-5"
+                "download_url": "https://example.com/example-url-4"
             }
         ],
         "created_at": "2026-06-03T03:54:16Z",
@@ -5632,8 +5494,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_30",
-        "example_id_31"
+        "example_id_31",
+        "example_id_32"
     ]
 }
 ```
@@ -5690,8 +5552,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_30",
-        "example_id_31"
+        "example_id_31",
+        "example_id_32"
     ],
     "decline_reason": "Unfavorable terms."
 }
@@ -5832,10 +5694,11 @@ Example:
 {
     "data": {
         "resource": "signer",
-        "id": "example_id_7",
+        "id": "example_id_14",
         "full_name": "Example User",
         "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
+        "government_id": "00000000000",
         "has_accepted_terms": false
     },
     "status": 200,
@@ -6047,75 +5910,14 @@ List the documents a signer is party to. Uses the signer access code.
                     "name": "string"
                 }
             ],
-            "assignment": {
-                "resource": "assignment",
-                "id": "example_id_6",
-                "sender_email": "user1@example.com",
-                "method": "virtual",
-                "expires_at": null,
-                "message": "string",
-                "signers": [
-                    {
-                        "verification_method": "Email",
-                        "notification_methods": [
-                            "Email"
-                        ],
-                        "step": 1,
-                        "notified": true,
-                        "completed": true,
-                        "notification_history": [
-                            {
-                                "event": "signature_request",
-                                "status": "sent",
-                                "error_code": "string",
-                                "error_message": "string",
-                                "sent_at": "2026-07-07T12:00:00Z",
-                                "failed_at": null
-                            }
-                        ],
-                        "resource": "signer",
-                        "id": "example_id_7",
-                        "full_name": "Example User",
-                        "email": "user2@example.com",
-                        "whatsapp_phone_number": "+5500000000000",
-                        "has_accepted_terms": false
-                    }
-                ],
-                "copy_receivers": [
-                    {}
-                ],
-                "items": [
-                    {
-                        "id": "example_id_5",
-                        "page": null,
-                        "signer": {},
-                        "field": {},
-                        "display_settings": null,
-                        "value": null,
-                        "completed": true
-                    }
-                ],
-                "summary": {
-                    "signer_count": 0,
-                    "completed_count": 0,
-                    "signers": [
-                        {}
-                    ]
-                },
-                "signing_urls": [
-                    {
-                        "signer_id": "example_id_5",
-                        "url": "https://example.com/example-url-4"
-                    }
-                ]
-            },
+            "assignment": null,
             "pages": [
                 {
-                    "id": "example_id_8",
+                    "id": "example_id_6",
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-5"
+                    "download_url": "https://example.com/example-url-4"
                 }
             ],
             "created_at": "2026-06-03T03:54:16Z",
@@ -6189,75 +5991,14 @@ Search the documents a signer is party to (compact representation). Uses the sig
                     "name": "string"
                 }
             ],
-            "assignment": {
-                "resource": "assignment",
-                "id": "example_id_6",
-                "sender_email": "user1@example.com",
-                "method": "virtual",
-                "expires_at": null,
-                "message": "string",
-                "signers": [
-                    {
-                        "verification_method": "Email",
-                        "notification_methods": [
-                            "Email"
-                        ],
-                        "step": 1,
-                        "notified": true,
-                        "completed": true,
-                        "notification_history": [
-                            {
-                                "event": "signature_request",
-                                "status": "sent",
-                                "error_code": "string",
-                                "error_message": "string",
-                                "sent_at": "2026-07-07T12:00:00Z",
-                                "failed_at": null
-                            }
-                        ],
-                        "resource": "signer",
-                        "id": "example_id_7",
-                        "full_name": "Example User",
-                        "email": "user2@example.com",
-                        "whatsapp_phone_number": "+5500000000000",
-                        "has_accepted_terms": false
-                    }
-                ],
-                "copy_receivers": [
-                    {}
-                ],
-                "items": [
-                    {
-                        "id": "example_id_5",
-                        "page": null,
-                        "signer": {},
-                        "field": {},
-                        "display_settings": null,
-                        "value": null,
-                        "completed": true
-                    }
-                ],
-                "summary": {
-                    "signer_count": 0,
-                    "completed_count": 0,
-                    "signers": [
-                        {}
-                    ]
-                },
-                "signing_urls": [
-                    {
-                        "signer_id": "example_id_5",
-                        "url": "https://example.com/example-url-4"
-                    }
-                ]
-            },
+            "assignment": null,
             "pages": [
                 {
-                    "id": "example_id_8",
+                    "id": "example_id_6",
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-5"
+                    "download_url": "https://example.com/example-url-4"
                 }
             ],
             "created_at": "2026-06-03T03:54:16Z",
@@ -6357,10 +6098,11 @@ List the signers of a workspace.
     "data": [
         {
             "resource": "signer",
-            "id": "example_id_7",
+            "id": "example_id_14",
             "full_name": "Example User",
             "email": "user2@example.com",
             "whatsapp_phone_number": "+5500000000000",
+            "government_id": "00000000000",
             "has_accepted_terms": false
         }
     ],
@@ -6410,6 +6152,7 @@ Fields (`application/json`):
 - `full_name` (string, required)
 - `email` (string)
 - `whatsapp_phone_number` (string) — E.164; normalized on save.
+- `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save.
 
 Example:
 
@@ -6417,7 +6160,8 @@ Example:
 {
     "full_name": "Example User",
     "email": "user2@example.com",
-    "whatsapp_phone_number": "+5500000000000"
+    "whatsapp_phone_number": "+5500000000000",
+    "government_id": "00000000000"
 }
 ```
 
@@ -6429,10 +6173,11 @@ Example:
 {
     "data": {
         "resource": "signer",
-        "id": "example_id_7",
+        "id": "example_id_14",
         "full_name": "Example User",
         "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
+        "government_id": "00000000000",
         "has_accepted_terms": false
     },
     "status": 200,
@@ -6493,10 +6238,11 @@ Retrieve a signer's information.
 {
     "data": {
         "resource": "signer",
-        "id": "example_id_7",
+        "id": "example_id_14",
         "full_name": "Example User",
         "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
+        "government_id": "00000000000",
         "has_accepted_terms": false
     },
     "status": 200,
@@ -6558,7 +6304,7 @@ Fields (`application/json`):
 - `full_name` (string)
 - `email` (string)
 - `whatsapp_phone_number` (string) — E.164; normalized on save.
-- `government_id` (string) — Signer's CPF/CNPJ; digits only on save.
+- `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save.
 
 Example:
 
@@ -6579,10 +6325,11 @@ Example:
 {
     "data": {
         "resource": "signer",
-        "id": "example_id_7",
+        "id": "example_id_14",
         "full_name": "Example User",
         "email": "user2@example.com",
         "whatsapp_phone_number": "+5500000000000",
+        "government_id": "00000000000",
         "has_accepted_terms": false
     },
     "status": 200,
@@ -6713,7 +6460,7 @@ List the tags of a workspace.
     "data": [
         {
             "resource": "tag",
-            "id": "example_id_11",
+            "id": "example_id_9",
             "name": "Contracts",
             "color": "ff8800",
             "created_at": "2026-05-14T12:00:00Z",
@@ -6764,7 +6511,7 @@ Create a tag in the workspace. Names are unique per workspace (case-insensitive)
 Fields (`application/json`):
 
 - `name` (string, required) — Trimmed; whitespace collapsed; max 64 chars.
-- `color` (string) — 6-char hex (with or without leading #).
+- `color` (Array) — 6-char hex (with or without leading #).
 
 Example:
 
@@ -6783,7 +6530,7 @@ Example:
 {
     "data": {
         "resource": "tag",
-        "id": "example_id_11",
+        "id": "example_id_9",
         "name": "Contracts",
         "color": "ff8800",
         "created_at": "2026-05-14T12:00:00Z",
@@ -6854,7 +6601,7 @@ Update a tag's name or color.
 Fields (`application/json`):
 
 - `name` (string)
-- `color` (string)
+- `color` (Array)
 
 Example:
 
@@ -6873,7 +6620,7 @@ Example:
 {
     "data": {
         "resource": "tag",
-        "id": "example_id_11",
+        "id": "example_id_9",
         "name": "Contracts",
         "color": "ff8800",
         "created_at": "2026-05-14T12:00:00Z",
@@ -7022,10 +6769,10 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_32",
+            "id": "example_id_33",
             "name": "template.pdf",
-            "document_name": "string",
-            "message": "string",
+            "document_name": null,
+            "message": null,
             "status": "ready",
             "pages": [
                 {
@@ -7033,7 +6780,7 @@ The `status` field of a template is one of:
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-11",
+                    "download_url": "https://example.com/example-url-12",
                     "fields": [
                         {
                             "id": "example_id_5",
@@ -7103,7 +6850,7 @@ The `status` field of a template is one of:
 
 `GET /v1/accounts/{accountId}/webhooks/subscriptions`
 
-Retrieve the current webhook subscription for the account — which events it is subscribed to and the delivery configuration. Requires the `account:read` OAuth scope.
+Retrieve the account's oldest webhook endpoint — which events it is subscribed to and the delivery configuration. Accounts with several endpoints should use **List webhook endpoints**. Requires the `account:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7125,7 +6872,7 @@ Retrieve the current webhook subscription for the account — which events it is
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-12",
+        "url": "https://example.com/example-url-13",
         "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7158,7 +6905,7 @@ Retrieve the current webhook subscription for the account — which events it is
 
 `PUT /v1/accounts/{accountId}/webhooks/subscriptions`
 
-Update the webhook subscription settings for the account — which events are monitored, whether delivery is enabled, and the delivery/contact details. Requires the `webhooks:write` OAuth scope.
+Update the account's oldest webhook endpoint (creating it if the account has none) — which events are monitored, whether delivery is enabled, and the delivery/contact details. Accounts with several endpoints should use **Update webhook endpoint**. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7186,7 +6933,7 @@ Example:
         "document_prepared"
     ],
     "is_active": true,
-    "url": "https://example.com/example-url-12",
+    "url": "https://example.com/example-url-13",
     "email": "user10@example.com"
 }
 ```
@@ -7203,7 +6950,7 @@ Example:
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-12",
+        "url": "https://example.com/example-url-13",
         "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7246,7 +6993,7 @@ Example:
 
 `PUT /v1/accounts/{accountId}/webhooks/inactivate`
 
-Deactivate the webhook integration for the account. While inactive, no events are sent to the configured endpoint. Requires the `webhooks:write` OAuth scope.
+Deactivate the account's oldest webhook endpoint. While inactive, no events are sent to it; other endpoints are unaffected. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7268,7 +7015,7 @@ Deactivate the webhook integration for the account. While inactive, no events ar
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-12",
+        "url": "https://example.com/example-url-13",
         "email": "user10@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7346,7 +7093,7 @@ List all available event types that can be subscribed to via webhooks. Requires 
 
 `GET /v1/accounts/{accountId}/webhooks`
 
-Retrieve the delivery history for webhooks sent to the account's configured endpoint — use it to monitor status, debug failures, and verify payloads. Pagination is returned in the `X-Pagination-*` response headers. Requires the `documents:read` OAuth scope.
+Retrieve the delivery history for webhooks sent to the account's endpoints — use it to monitor status, debug failures, and verify payloads. Pagination is returned in the `X-Pagination-*` response headers. Requires the `documents:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7355,6 +7102,7 @@ Retrieve the delivery history for webhooks sent to the account's configured endp
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
+| `endpoint_id` | query | string | no | Only deliveries to this webhook endpoint. |
 | `event` | query | string | no | Filter by event type (e.g. `document_ready`). |
 | `delivered` | query | string | no | Filter by delivery status: `true` or `false`. |
 | `from` | query | integer | no | Unix timestamp — only entries after this time. |
@@ -7371,11 +7119,12 @@ Retrieve the delivery history for webhooks sent to the account's configured endp
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_33",
+            "id": "example_id_34",
             "event": "document_ready",
             "activity_id": 456,
-            "endpoint": "https://example.com/example-url-13",
-            "payload": {},
+            "endpoint_id": "example_id_35",
+            "endpoint": "https://example.com/example-url-14",
+            "payload": null,
             "delivered": true,
             "http_status": 200,
             "response_body": "OK",
@@ -7413,7 +7162,7 @@ Retrieve the delivery history for webhooks sent to the account's configured endp
 
 `POST /v1/accounts/{accountId}/webhooks/{historyId}/retry`
 
-Manually retry a webhook delivery for a specific entry, without waiting for automatic retries. Returns the newly created dispatch entry.
+Manually retry a webhook delivery for a specific entry, without waiting for automatic retries. The event is sent again only to the endpoint of that entry. Returns the newly created dispatch entry.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7432,17 +7181,556 @@ Manually retry a webhook delivery for a specific entry, without waiting for auto
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_33",
+        "id": "example_id_34",
         "event": "document_ready",
         "activity_id": 456,
-        "endpoint": "https://example.com/example-url-13",
-        "payload": {},
+        "endpoint_id": "example_id_35",
+        "endpoint": "https://example.com/example-url-14",
+        "payload": null,
         "delivered": true,
         "http_status": 200,
         "response_body": "OK",
         "error": null,
         "created_at": "2024-01-15T10:30:00Z",
         "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List webhook endpoints
+
+`GET /v1/accounts/{accountId}/webhooks/endpoints`
+
+List the account's webhook endpoints, oldest first. Requires the `account:read` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The endpoints
+
+```json
+{
+    "data": [
+        {
+            "id": "example_id_35",
+            "name": "ERP",
+            "url": "https://example.com/example-url-15",
+            "email": "user11@example.com",
+            "events": [
+                "document_ready",
+                "signer_signed_document"
+            ],
+            "is_active": true,
+            "signing_enabled": true,
+            "created_at": "2026-10-01T12:00:00Z",
+            "updated_at": "2026-10-01T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Create webhook endpoint
+
+`POST /v1/accounts/{accountId}/webhooks/endpoints`
+
+Register a URL to receive the account's webhook events. An account can have 1 endpoint, or up to 3 on paid plans; creating one past the limit returns `403`. Each endpoint of a workspace must have a different `url` (`400` otherwise). When `signing_enabled` is `true`, a signing secret is generated: read it with **Get webhook endpoint signing secret**. Requires the `webhooks:write` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `url` (string, required) — URL that receives the events (http or https).
+- `email` (string, required) — Contact email for delivery-failure notices.
+- `events` (array, required) — Event types to deliver (see `GET /v1/webhooks/event-types`).
+- `name` (string) — Label to tell endpoints apart.
+- `is_active` (boolean) — Whether events are delivered. Defaults to `true`.
+- `signing_enabled` (boolean) — Sign deliveries with a Standard Webhooks signature. Defaults to `false`.
+
+Example:
+
+```json
+{
+    "url": "https://example.com/example-url-15",
+    "email": "user11@example.com",
+    "events": [
+        "document_ready",
+        "signer_signed_document"
+    ],
+    "name": "ERP",
+    "is_active": true,
+    "signing_enabled": true
+}
+```
+
+#### Responses
+
+##### 200 — The created endpoint
+
+```json
+{
+    "data": {
+        "id": "example_id_35",
+        "name": "ERP",
+        "url": "https://example.com/example-url-15",
+        "email": "user11@example.com",
+        "events": [
+            "document_ready",
+            "signer_signed_document"
+        ],
+        "is_active": true,
+        "signing_enabled": true,
+        "created_at": "2026-10-01T12:00:00Z",
+        "updated_at": "2026-10-01T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get webhook endpoint
+
+`GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}`
+
+Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Responses
+
+##### 200 — The endpoint
+
+```json
+{
+    "data": {
+        "id": "example_id_35",
+        "name": "ERP",
+        "url": "https://example.com/example-url-15",
+        "email": "user11@example.com",
+        "events": [
+            "document_ready",
+            "signer_signed_document"
+        ],
+        "is_active": true,
+        "signing_enabled": true,
+        "created_at": "2026-10-01T12:00:00Z",
+        "updated_at": "2026-10-01T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Update webhook endpoint
+
+`PUT /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}`
+
+Change a webhook endpoint. Only the fields sent are updated; `url` cannot be one another endpoint of the workspace already uses (`400`). Setting `signing_enabled` to `true` generates a secret if the endpoint has none and keeps the current one otherwise; setting it to `false` discards the secret. Requires the `webhooks:write` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `url` (string)
+- `email` (string)
+- `events` (array)
+- `name` (string)
+- `is_active` (boolean)
+- `signing_enabled` (boolean)
+
+Example:
+
+```json
+{
+    "url": "https://example.com/example-url-15",
+    "email": "user11@example.com",
+    "events": [
+        "document_ready"
+    ],
+    "name": "ERP",
+    "is_active": false,
+    "signing_enabled": true
+}
+```
+
+#### Responses
+
+##### 200 — The updated endpoint
+
+```json
+{
+    "data": {
+        "id": "example_id_35",
+        "name": "ERP",
+        "url": "https://example.com/example-url-15",
+        "email": "user11@example.com",
+        "events": [
+            "document_ready",
+            "signer_signed_document"
+        ],
+        "is_active": true,
+        "signing_enabled": true,
+        "created_at": "2026-10-01T12:00:00Z",
+        "updated_at": "2026-10-01T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Delete webhook endpoint
+
+`DELETE /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}`
+
+Stop delivering events to an endpoint and free its slot. Requires the `webhooks:write` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Responses
+
+##### 200 — Endpoint deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get webhook endpoint signing secret
+
+`GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`
+
+Return the secret used to sign deliveries to this endpoint (see **Webhook Payloads → Verifying signatures**). Returns `400` when signing is disabled. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Responses
+
+##### 200 — The secret
+
+```json
+{
+    "data": {
+        "secret": "example_secret"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Rotate webhook endpoint signing secret
+
+`POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`
+
+Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Responses
+
+##### 200 — The new secret
+
+```json
+{
+    "data": {
+        "secret": "example_secret"
     },
     "status": 200,
     "message": ""

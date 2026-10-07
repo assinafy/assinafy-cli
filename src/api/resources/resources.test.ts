@@ -814,6 +814,56 @@ describe('WebhookResource', () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	it('manages webhook endpoints with defaults, partial updates, and endpoint filters', async () => {
+		const calls: CapturedCall[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		await webhooks.createEndpoint({
+			url: 'https://example.com/hook-2',
+			email: 'ops@example.com',
+			signing_enabled: true,
+		});
+		await webhooks.updateEndpoint('ep', { signing_enabled: false });
+		await webhooks.deleteEndpoint('ep');
+		await webhooks.listDispatches({ endpoint_id: 'ep' });
+		expect(calls[0]).toMatchObject({
+			method: 'POST',
+			url: '/accounts/acc/webhooks/endpoints',
+			body: { signing_enabled: true, events: expect.arrayContaining(['document_ready']) },
+		});
+		expect(calls[1]).toMatchObject({
+			method: 'PUT',
+			url: '/accounts/acc/webhooks/endpoints/ep',
+			body: { signing_enabled: false },
+		});
+		expect(calls[2]).toMatchObject({
+			method: 'DELETE',
+			url: '/accounts/acc/webhooks/endpoints/ep',
+		});
+		expect(calls[3]?.config).toMatchObject({ params: { endpoint_id: 'ep' } });
+	});
+
+	it('rejects invalid webhook endpoint input before making a request', async () => {
+		const calls: CapturedCall[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		await expect(webhooks.createEndpoint({ url: '', email: 'ops@example.com' })).rejects.toThrow(
+			/URL/,
+		);
+		await expect(
+			webhooks.createEndpoint({
+				url: 'https://example.com/hook',
+				email: 'ops@example.com',
+				signing_enabled: 'yes' as never,
+			}),
+		).rejects.toThrow(/signing_enabled/);
+		await expect(webhooks.updateEndpoint('ep', {})).rejects.toThrow(/At least one/);
+		await expect(webhooks.updateEndpoint('ep', { url: 'ftp://example.com' })).rejects.toThrow(
+			/HTTP/,
+		);
+		await expect(webhooks.getEndpointSecret('')).rejects.toThrow(ValidationError);
+		await expect(webhooks.rotateEndpointSecret('')).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(0);
+	});
+
 	it('rejects ignored dispatch search and unsupported sort values', async () => {
 		const webhooks = new WebhookResource(mockHttp(), 'acc');
 		await expect(webhooks.listDispatches({ search: 'ignored' } as never)).rejects.toThrow(
@@ -822,6 +872,39 @@ describe('WebhookResource', () => {
 		await expect(webhooks.listDispatches({ sort: 'event' as never })).rejects.toThrow(
 			ValidationError,
 		);
+	});
+});
+
+describe('two-factor authentication', () => {
+	it('sends MFA verification without owner credentials and re-authentication bodies on writes', async () => {
+		const calls: CapturedCall[] = [];
+		const auth = new AuthenticationResource(mockHttp(calls));
+		await auth.verifyMfa({ mfa_token: 'challenge', code: ' 123456 ' });
+		await auth.startTotpEnrollment();
+		await auth.removeMfaMethod('method', { code: 'ABCD-EFGH-JKMN' });
+		expect(calls[0]).toMatchObject({
+			url: '/authentication/mfa/verify',
+			body: { mfa_token: 'challenge', code: '123456' },
+			config: { headers: { Authorization: undefined, 'X-Api-Key': undefined } },
+		});
+		expect(calls[1]).toMatchObject({ url: '/users/self/mfa/totp', body: {} });
+		expect(calls[2]).toMatchObject({
+			method: 'DELETE',
+			url: '/users/self/mfa/method',
+			config: { data: { code: 'ABCD-EFGH-JKMN' } },
+		});
+	});
+
+	it('rejects missing MFA inputs before making a request', async () => {
+		const calls: CapturedCall[] = [];
+		const auth = new AuthenticationResource(mockHttp(calls));
+		await expect(auth.verifyMfa({ mfa_token: '', code: '123456' })).rejects.toThrow(/mfa_token/);
+		await expect(auth.verifyMfa({ mfa_token: 'challenge', code: ' ' })).rejects.toThrow(/code/);
+		await expect(auth.confirmTotpEnrollment({ id: 'method', code: '' })).rejects.toThrow(/code/);
+		await expect(auth.regenerateRecoveryCodes({})).rejects.toThrow(/password or code/);
+		await expect(auth.removeMfaMethod('method', {})).rejects.toThrow(/password or code/);
+		await expect(auth.removeMfaMethod('', { code: '123456' })).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(0);
 	});
 });
 

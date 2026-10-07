@@ -68,8 +68,9 @@ export interface AssinafyClientOptions {
 	 */
 	allowInsecureHttp?: boolean;
 	/**
-	 * Experimental secret for {@link WebhookVerifier}. Assinafy does not publish
-	 * a webhook-signature contract; do not rely on it without provider confirmation.
+	 * Default `whsec_` endpoint signing secret for {@link WebhookVerifier}
+	 * (`client.webhookVerifier`). Each endpoint has its own secret; construct a
+	 * separate verifier per endpoint when several are signed.
 	 */
 	webhookSecret?: string;
 	/** Request timeout in milliseconds. Defaults to 30_000. */
@@ -697,6 +698,41 @@ export interface IWebhookSubscription {
 	updated_at?: string | null;
 }
 
+/** A webhook endpoint (`/accounts/{accountId}/webhooks/endpoints`). */
+export interface IWebhookEndpoint {
+	id: string;
+	name: string | null;
+	url: string;
+	email: string;
+	events: string[];
+	is_active: boolean;
+	/** `true` when deliveries carry a Standard Webhooks `webhook-signature` header. */
+	signing_enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+/** `POST /accounts/{accountId}/webhooks/endpoints` body. */
+export interface IWebhookEndpointCreatePayload {
+	url: string;
+	email: string;
+	/** Defaults to the SDK's standard event set when omitted. */
+	events?: WebhookEventType[] | string[];
+	name?: string;
+	/** Server default: `true`. */
+	is_active?: boolean;
+	/** Server default: `false`. */
+	signing_enabled?: boolean;
+}
+
+/** `PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}` body; only sent fields change. */
+export type IWebhookEndpointUpdatePayload = Partial<IWebhookEndpointCreatePayload>;
+
+/** Endpoint signing secret, prefixed `whsec_`. */
+export interface IWebhookEndpointSecret {
+	secret: string;
+}
+
 export interface IWebhookEventTypeInfo {
 	id: WebhookEventType | string;
 	description: string;
@@ -707,6 +743,8 @@ export interface IWebhookDispatch {
 	id: string;
 	event: WebhookEventType | string;
 	activity_id: number;
+	/** Endpoint that received this delivery. */
+	endpoint_id?: string | null;
 	endpoint: string | null;
 	payload: IWebhookPayload | Record<string, unknown> | null;
 	delivered: boolean;
@@ -720,6 +758,8 @@ export interface IWebhookDispatch {
 }
 
 export interface IWebhookDispatchListParams extends IPaginationParams {
+	/** Only deliveries to this webhook endpoint. */
+	endpoint_id?: string;
 	event?: WebhookEventType | string;
 	delivered?: boolean | 'true' | 'false';
 	from?: number;
@@ -955,6 +995,62 @@ export interface ILoginResponse {
 	access_token: string;
 	user: IAuthUser;
 	accounts: IAuthAccount[];
+	/**
+	 * Two-factor challenge returned by `POST /login` when the user has a
+	 * confirmed method. Complete it with `auth.verifyMfa` within 5 minutes.
+	 */
+	mfa_token?: string;
+}
+
+/** `POST /authentication/mfa/verify` body. */
+export interface IMfaVerifyPayload {
+	mfa_token: string;
+	/** 6-digit authenticator code or a recovery code such as `ABCD-EFGH-JKMN`. */
+	code: string;
+}
+
+/** An enrolled two-factor method. */
+export interface IMfaMethod {
+	id: string;
+	type: 'Totp' | (string & {});
+	label: string | null;
+	confirmed_at: string | null;
+	last_used_at: string | null;
+}
+
+/** `GET /users/self/mfa` response. */
+export interface IMfaStatus {
+	methods: IMfaMethod[];
+	recovery_codes_remaining: number;
+}
+
+/** `POST /users/self/mfa/totp` response; `secret` is returned only once. */
+export interface ITotpEnrollment {
+	id: string;
+	secret: string;
+	provisioning_uri: string;
+}
+
+/** `PUT /users/self/mfa/totp/confirm` body. */
+export interface ITotpConfirmPayload {
+	id: string;
+	/** Live code from the device being enrolled. */
+	code: string;
+	/** Re-authentication, required only when replacing a confirmed method. */
+	password?: string;
+	/** Alternative re-authentication: a code from the current device or a recovery code. */
+	reauth_code?: string;
+}
+
+/** Re-authentication proof: the current password, or a live/recovery `code`. */
+export interface IMfaReauthPayload {
+	password?: string;
+	code?: string;
+}
+
+/** One-time recovery codes. */
+export interface IMfaRecoveryCodes {
+	recovery_codes: string[];
 }
 
 /**

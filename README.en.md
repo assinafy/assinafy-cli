@@ -4,7 +4,7 @@
 
 The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track activity history, and download certified documents — from a terminal, a shell script, or an application.
 
-The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 93 published API operations.
+The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 106 published API operations.
 
 This document reads top to bottom: install, authenticate, send your first signature request, then understand the model well enough to automate it. The [command reference](#command-reference) and [SDK](#nodejs-sdk) sections near the end are lookup tables you can jump to once the flow makes sense.
 
@@ -91,6 +91,8 @@ Generate an API key from the Assinafy dashboard, or from the CLI with an existin
 assinafy auth login you@example.com          # returns a JWT
 assinafy auth api-keys create --token <jwt>  # generates (and rotates) the key
 ```
+
+When two-factor authentication is enabled, `auth login` asks for an authenticator or recovery code (or reads `--mfa-code` / `ASSINAFY_MFA_CODE`); the challenge is single-use and expires after 5 minutes. `auth mfa enroll`, `confirm`, `list`, `recovery-codes`, and `remove` manage the authenticator and recovery codes.
 
 Store the key once, then confirm it works:
 
@@ -263,24 +265,44 @@ Owner API credentials are stripped from every public and signer-side request, so
 
 ## Webhooks
 
-Polling works, but webhooks are the right way to react to signing events:
+Polling works, but webhooks are the right way to react to signing events. A workspace can register 1 webhook endpoint, or up to 3 on paid plans. Each endpoint has its own URL, events, active flag, and signing setting, and every active endpoint subscribed to an event receives it independently.
 
 ```bash
 assinafy webhooks event-types                       # what the platform can send
-assinafy webhooks register \
+assinafy webhooks endpoints create \
   --url https://example.com/hooks/assinafy \
   --email ops@example.com \
-  --events document_ready,signer_signed_document,signer_rejected_document
+  --name ERP \
+  --events document_ready,signer_signed_document,signer_rejected_document \
+  --signing                                         # sign deliveries
+assinafy webhooks endpoints list
+assinafy webhooks endpoints secret <endpointId>     # whsec_ secret for your receiver
+assinafy webhooks endpoints update <endpointId> --inactive
+assinafy webhooks endpoints rotate-secret <endpointId>
+assinafy webhooks endpoints delete <endpointId>
 
-assinafy webhooks dispatches --delivered false      # what failed to deliver
+assinafy webhooks dispatches --endpoint <endpointId> --delivered false
 assinafy webhooks retry <dispatchId>                # redeliver one event
-assinafy webhooks get                               # current subscription
-assinafy webhooks inactivate                        # stop deliveries
 ```
 
-One subscription exists per workspace; `register` replaces it. Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. The API has no delete-subscription operation — use `inactivate` to stop deliveries, and note that `retry` only works while the subscription is active.
+Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. `endpoints update` changes only the flags given (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); disabling signing discards the secret. `rotate-secret` invalidates the previous secret immediately. A duplicate URL within the workspace returns `400`; creating past the plan limit returns `403`. Secret read and rotation are not available to OAuth applications. `retry` re-sends only to that delivery's endpoint, and only while it is active.
 
-Assinafy does not publish a webhook signing scheme, so the SDK's `WebhookVerifier` is experimental. See [Contract boundaries](#contract-boundaries).
+`webhooks register`, `webhooks get`, and `webhooks inactivate` remain and act on the workspace's oldest endpoint.
+
+Each delivery is a JSON `POST` with a `webhook-id` header (stable across retries of the same event to the same endpoint; use it to deduplicate) and a `webhook-timestamp`. Signed endpoints add a [Standard Webhooks](https://www.standardwebhooks.com) `webhook-signature`. Verify the raw body before parsing it:
+
+```ts
+import { WebhookVerifier } from '@assinafy/cli/api';
+
+const verifier = new WebhookVerifier(process.env.ASSINAFY_WEBHOOK_SECRET);
+// rawBody: the Buffer exactly as received; headers: the request headers
+if (!verifier.verifyDelivery(rawBody, headers)) {
+  // answer 401 and drop the delivery
+}
+const event = verifier.extractEvent(rawBody);
+```
+
+`verifyDelivery` compares the HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}` in constant time and rejects timestamps more than 5 minutes from your clock. Answer with a `2xx` quickly: a failure is retried once after 3 seconds, and 10 consecutive failed events pause the endpoint until a delivery succeeds. `document_ready` means the last signer signed, not that upload processing finished. Treat events as signals and confirm state through the API before irreversible actions.
 
 ## Output and scripting
 
@@ -336,7 +358,7 @@ Empty optional settings are ignored, including `.env.example` defaults. Configur
 | API base URL | `--base-url` | `ASSINAFY_BASE_URL` |
 | Config profile | `-p, --profile` | `ASSINAFY_PROFILE` |
 | Config directory | — | `ASSINAFY_CONFIG_DIR` |
-| Experimental webhook-verifier secret | _(config only)_ | `ASSINAFY_WEBHOOK_SECRET` |
+| Webhook endpoint signing secret (`whsec_`) | _(config only)_ | `ASSINAFY_WEBHOOK_SECRET` |
 | Password / new password | `--password` / `--new-password` | `ASSINAFY_PASSWORD` / `ASSINAFY_NEW_PASSWORD` |
 | Social provider / reset token | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN` |
 | Signer access code / email or WhatsApp OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
@@ -458,7 +480,7 @@ Field definitions are what `--method collect` assignments gather. Run `fields ty
 
 ### `webhooks`
 
-`register --url --email [--events] [--inactive]` · `get` · `inactivate` · `event-types` · `dispatches [--event] [--delivered] [--from] [--to] [--page] [--per-page] [--sort]` · `retry <dispatchId>`
+`endpoints list` · `endpoints create --url --email [--name] [--events] [--active|--inactive] [--signing]` · `endpoints get <id>` · `endpoints update <id> [--url] [--email] [--name] [--events] [--active|--inactive] [--signing|--no-signing]` · `endpoints delete <id> [-y]` · `endpoints secret <id>` · `endpoints rotate-secret <id> [-y]` · `register --url --email [--events] [--inactive]` · `get` · `inactivate` · `event-types` · `dispatches [--endpoint] [--event] [--delivered] [--from] [--to] [--page] [--per-page] [--sort]` · `retry <dispatchId>`
 
 ### `workspaces` (alias `accounts`)
 
@@ -478,9 +500,9 @@ Every signer command except the public artifact `download` requires `--access-co
 
 ### `auth`
 
-`login <email>` · `social-login` · `link-social-login` · `change-password` · `request-password-reset <email>` · `reset-password --reset-token` · `api-keys create|get|delete`
+`login <email> [--mfa-code]` · `social-login` · `link-social-login` · `change-password` · `request-password-reset <email>` · `reset-password --reset-token` · `api-keys create|get|delete` · `mfa verify --mfa-token [--mfa-code]` · `mfa list` · `mfa enroll [--label]` · `mfa confirm <methodId> [--code] [--password|--reauth-code]` · `mfa recovery-codes [--password|--mfa-code]` · `mfa remove <methodId> [--password|--mfa-code] [-y]`
 
-For server-to-server use, prefer an API key (`assinafy login` or `--api-key`) and skip this group. `auth login`, `auth social-login`, `auth request-password-reset`, and `auth reset-password` run without stored credentials; the rest accept the API key or JWT documented for their endpoint.
+For server-to-server use, prefer an API key (`assinafy login` or `--api-key`) and skip this group. `auth login`, `auth mfa verify`, `auth social-login`, `auth request-password-reset`, and `auth reset-password` run without stored credentials; the rest accept the API key or JWT documented for their endpoint.
 
 ### `oauth`
 
@@ -572,11 +594,11 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 
 ## Contract boundaries
 
-- The production OpenAPI publishes 93 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
+- The production OpenAPI publishes 106 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
 - The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
-- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 93 OpenAPI operations.
+- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 106 OpenAPI operations.
 - Both the published and legacy `send-token` payloads are supported for compatible deployments.
-- `WebhookVerifier` is **experimental**. Assinafy does not publish the signature header, algorithm, encoding, timestamp, or replay-protection scheme, so it is not a production trust boundary until the exact scheme is published or independently verified against real deliveries.
+- Webhook signatures follow Standard Webhooks; `WebhookVerifier.verifyDelivery` implements the published scheme. The older `verify(body, signature)` method is deprecated and does not match Assinafy deliveries.
 
 ## License
 

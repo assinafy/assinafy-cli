@@ -4,15 +4,19 @@ import path from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, type IDocumentUploadResponse, OAuthResource } from '../api';
+import { AuthenticationResource } from '../api/resources/authentication';
 import { DocumentResource } from '../api/resources/documents';
 import { SignerDocumentsResource } from '../api/resources/signer-documents';
+import { WebhookResource } from '../api/resources/webhooks';
 import * as cliClient from '../lib/client';
 import { readConfigFile } from '../lib/config';
 import * as browserOAuth from '../lib/oauth-browser';
+import { authCommand } from './auth';
 import { configCommand } from './config';
 import { documentsCommand } from './documents';
 import { oauthCommand } from './oauth';
 import { signerCommand } from './signer';
+import { webhooksCommand } from './webhooks';
 
 let directory: string;
 let stdout: string;
@@ -329,4 +333,78 @@ it('explains an invalid_scope refusal and leaves other errors untouched', async 
 	expect(withScopeHint(denied)).toBe(denied);
 	const other = new Error('boom');
 	expect(withScopeHint(other)).toBe(other);
+});
+
+it('completes a two-factor login challenge without owner credentials', async () => {
+	vi.stubEnv('ASSINAFY_API_KEY', undefined);
+	vi.stubEnv('ASSINAFY_PASSWORD', 'example-password');
+	vi.stubEnv('ASSINAFY_MFA_CODE', '123456');
+	const session = {
+		access_token: 'example-access',
+		user: { id: 'example-user', name: 'Example', email: 'user@example.com' },
+		accounts: [],
+	};
+	vi.spyOn(AuthenticationResource.prototype, 'login').mockResolvedValue({
+		mfa_token: 'example-challenge',
+	} as never);
+	const verify = vi
+		.spyOn(AuthenticationResource.prototype, 'verifyMfa')
+		.mockResolvedValue(session as never);
+	const program = new Command().option('--json').addCommand(authCommand);
+	await program.parseAsync(['--json', 'auth', 'login', 'user@example.com'], { from: 'user' });
+	expect(verify).toHaveBeenCalledWith({ mfa_token: 'example-challenge', code: '123456' });
+	expect(JSON.parse(stdout)).toMatchObject({ access_token: 'example-access' });
+});
+
+it('maps webhook endpoint flags to a partial update and leaves omitted booleans out', async () => {
+	const update = vi
+		.spyOn(WebhookResource.prototype, 'updateEndpoint')
+		.mockResolvedValue({ id: 'example-endpoint' } as never);
+	const program = new Command().option('--json').addCommand(webhooksCommand);
+	await program.parseAsync(
+		['--json', 'webhooks', 'endpoints', 'update', 'example-endpoint', '--no-signing'],
+		{ from: 'user' },
+	);
+	await program.parseAsync(
+		[
+			'--json',
+			'webhooks',
+			'endpoints',
+			'update',
+			'example-endpoint',
+			'--name',
+			'ERP',
+			'--inactive',
+		],
+		{ from: 'user' },
+	);
+	expect(update.mock.calls).toEqual([
+		['example-endpoint', { signing_enabled: false }, 'example-account'],
+		['example-endpoint', { name: 'ERP', is_active: false }, 'example-account'],
+	]);
+});
+
+it('creates signed webhook endpoints with the default event set', async () => {
+	const create = vi
+		.spyOn(WebhookResource.prototype, 'createEndpoint')
+		.mockResolvedValue({ id: 'example-endpoint' } as never);
+	const program = new Command().option('--json').addCommand(webhooksCommand);
+	await program.parseAsync(
+		[
+			'--json',
+			'webhooks',
+			'endpoints',
+			'create',
+			'--url',
+			'https://example.com/hook',
+			'--email',
+			'ops@example.com',
+			'--signing',
+		],
+		{ from: 'user' },
+	);
+	expect(create).toHaveBeenCalledWith(
+		{ url: 'https://example.com/hook', email: 'ops@example.com', signing_enabled: true },
+		'example-account',
+	);
 });

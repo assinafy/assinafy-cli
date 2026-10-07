@@ -16,7 +16,11 @@ export { TemplateResource } from './resources/templates.js';
 export { UsersResource } from './resources/users.js';
 export { WebhookResource } from './resources/webhooks.js';
 export { WorkspaceResource } from './resources/workspaces.js';
-export type { WebhookVerifierOptions } from './support/webhook-verifier.js';
+export type {
+	WebhookDeliveryOptions,
+	WebhookHeaders,
+	WebhookVerifierOptions,
+} from './support/webhook-verifier.js';
 export { WebhookVerifier } from './support/webhook-verifier.js';
 export * from './types.js';
 export { normalizeBaseUrl, requireDocumentArtifactName, requireSignerImageType } from './utils.js';

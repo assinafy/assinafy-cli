@@ -1,38 +1,200 @@
 import { Command, Option } from '@commander-js/extra-typings';
+import type { ILoginResponse } from '../api';
 import { printData, printSuccess } from '../lib/output';
 import { confirmDestructive, promptSecret } from '../lib/prompts';
 import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
-import { renderKeyValue } from '../lib/table';
+import { renderKeyValue, renderTable } from '../lib/table';
 
 export function resetPasswordPayload(email: string, resetToken: string, newPassword: string) {
 	return { email, token: resetToken, new_password: newPassword };
 }
 
+const mfaCodeOption = () =>
+	new Option(
+		'--mfa-code <code>',
+		'Authenticator or recovery code (prompted if required and omitted)',
+	).env('ASSINAFY_MFA_CODE');
+
+const printSession = (result: ILoginResponse, config: Parameters<typeof printData>[1]) => {
+	printSuccess(`Logged in as ${result.user.email}`, config);
+	printData(result, config, (r) =>
+		renderKeyValue({
+			access_token: r.access_token,
+			user: r.user.email,
+			accounts: r.accounts.map((a) => a.id),
+		}),
+	);
+};
+
 const loginCommand = new Command('login')
 	.description(
-		'Exchange email + password for a JWT access token (no existing credentials required)',
+		'Exchange email + password (and a two-factor code when enabled) for a JWT access token (no existing credentials required)',
 	)
 	.argument('<email>', 'Account email')
 	.addOption(
 		new Option('--password <password>', 'Password (prompted if omitted)').env('ASSINAFY_PASSWORD'),
 	)
+	.addOption(mfaCodeOption())
 	.action(async (email, opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const password = opts.password ?? (await promptSecret('Password'));
-			const result = await withSpinner('Logging in', config, () =>
+			let result = await withSpinner('Logging in', config, () =>
 				client.auth.login(email, password),
 			);
-			printSuccess(`Logged in as ${result.user.email}`, config);
+			if (!result.access_token && result.mfa_token) {
+				const mfaToken = result.mfa_token;
+				const code = opts.mfaCode ?? (await promptSecret('Two-factor code'));
+				result = await withSpinner('Verifying two-factor code', config, () =>
+					client.auth.verifyMfa({ mfa_token: mfaToken, code }),
+				);
+			}
+			printSession(result, config);
+		});
+	});
+
+const mfaVerifyCommand = new Command('verify')
+	.description(
+		'Complete a two-factor login with the mfa_token from login (no existing credentials required)',
+	)
+	.addOption(
+		new Option('--mfa-token <token>', 'Challenge token returned by login')
+			.env('ASSINAFY_MFA_TOKEN')
+			.makeOptionMandatory(),
+	)
+	.addOption(mfaCodeOption())
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const code = opts.mfaCode ?? (await promptSecret('Two-factor code'));
+			const result = await withSpinner('Verifying two-factor code', config, () =>
+				client.auth.verifyMfa({ mfa_token: opts.mfaToken, code }),
+			);
+			printSession(result, config);
+		});
+	});
+
+const mfaListCommand = new Command('list')
+	.alias('ls')
+	.description('List enrolled two-factor methods and remaining recovery codes')
+	.action(async (_opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Fetching two-factor methods', config, () =>
+				client.auth.listMfaMethods(),
+			);
 			printData(result, config, (r) =>
-				renderKeyValue({
-					access_token: r.access_token,
-					user: r.user.email,
-					accounts: r.accounts.map((a) => a.id),
-				}),
+				[
+					renderTable(r.methods, [
+						{ header: 'ID', value: (m) => m.id },
+						{ header: 'TYPE', value: (m) => m.type },
+						{ header: 'LABEL', value: (m) => m.label },
+						{ header: 'CONFIRMED', value: (m) => m.confirmed_at },
+						{ header: 'LAST USED', value: (m) => m.last_used_at },
+					]),
+					`Recovery codes remaining: ${r.recovery_codes_remaining}`,
+				].join('\n'),
 			);
 		});
 	});
+
+const mfaEnrollCommand = new Command('enroll')
+	.description('Start authenticator enrollment; prints the one-time secret and provisioning URI')
+	.option('--label <label>', 'Name for the authenticator')
+	.action(async (opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Starting enrollment', config, () =>
+				client.auth.startTotpEnrollment(opts.label),
+			);
+			printSuccess(
+				`Enrollment started. Confirm with: assinafy auth mfa confirm ${result.id}`,
+				config,
+			);
+			printData(result, config, (r) => renderKeyValue({ ...r }));
+		});
+	});
+
+const reauthPasswordOption = () =>
+	new Option('--password <password>', 'Current password').env('ASSINAFY_PASSWORD');
+
+async function reauthPayload(opts: { password?: string; mfaCode?: string }) {
+	if (opts.password) return { password: opts.password };
+	return { code: opts.mfaCode ?? (await promptSecret('Authenticator or recovery code')) };
+}
+
+const mfaConfirmCommand = new Command('confirm')
+	.description('Activate an enrolled authenticator and print the one-time recovery codes')
+	.argument('<methodId>', 'Method ID returned by enroll')
+	.addOption(new Option('--code <code>', 'Live code from the new authenticator'))
+	.addOption(
+		new Option(
+			'--password <password>',
+			'Current password (only when replacing a confirmed method)',
+		).env('ASSINAFY_PASSWORD'),
+	)
+	.addOption(
+		new Option(
+			'--reauth-code <code>',
+			'Code from the current authenticator or a recovery code (only when replacing)',
+		).conflicts('password'),
+	)
+	.action(async (methodId, opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const code = opts.code ?? (await promptSecret('Code from the new authenticator'));
+			const result = await withSpinner('Confirming enrollment', config, () =>
+				client.auth.confirmTotpEnrollment({
+					id: methodId,
+					code,
+					...(opts.password ? { password: opts.password } : {}),
+					...(opts.reauthCode ? { reauth_code: opts.reauthCode } : {}),
+				}),
+			);
+			printSuccess('Two-factor authentication enabled. Store the recovery codes now.', config);
+			printData(result, config, (r) => r.recovery_codes.join('\n'));
+		});
+	});
+
+const mfaRecoveryCodesCommand = new Command('recovery-codes')
+	.description('Issue ten new recovery codes and invalidate the previous set')
+	.addOption(reauthPasswordOption())
+	.addOption(mfaCodeOption().conflicts('password'))
+	.action(async (opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const payload = await reauthPayload(opts);
+			const result = await withSpinner('Regenerating recovery codes', config, () =>
+				client.auth.regenerateRecoveryCodes(payload),
+			);
+			printSuccess('Recovery codes regenerated. Store them now.', config);
+			printData(result, config, (r) => r.recovery_codes.join('\n'));
+		});
+	});
+
+const mfaRemoveCommand = new Command('remove')
+	.alias('rm')
+	.description('Remove a two-factor method (the last one also discards recovery codes)')
+	.argument('<methodId>', 'Method ID')
+	.addOption(reauthPasswordOption())
+	.addOption(mfaCodeOption().conflicts('password'))
+	.option('-y, --yes', 'Skip the confirmation prompt')
+	.action(async (methodId, opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			if (!(await confirmDestructive(`Remove two-factor method ${methodId}?`, Boolean(opts.yes))))
+				return;
+			const payload = await reauthPayload(opts);
+			const result = await withSpinner('Removing two-factor method', config, () =>
+				client.auth.removeMfaMethod(methodId, payload),
+			);
+			printSuccess('Two-factor method removed', config);
+			printData(result, config);
+		});
+	});
+
+const mfaCommand = new Command('mfa')
+	.description('Two-factor authentication: login verification, enrollment, and recovery codes')
+	.addCommand(mfaVerifyCommand)
+	.addCommand(mfaListCommand)
+	.addCommand(mfaEnrollCommand)
+	.addCommand(mfaConfirmCommand)
+	.addCommand(mfaRecoveryCodesCommand)
+	.addCommand(mfaRemoveCommand);
 
 const socialLoginCommand = new Command('social-login')
 	.description('Exchange a provider token for an Assinafy JWT (no existing credentials required)')
@@ -201,4 +363,5 @@ export const authCommand = new Command('auth')
 	.addCommand(changePasswordCommand)
 	.addCommand(requestResetCommand)
 	.addCommand(resetPasswordCommand)
-	.addCommand(apiKeysCommand);
+	.addCommand(apiKeysCommand)
+	.addCommand(mfaCommand);

@@ -4,15 +4,30 @@ import type {
 	IEmptyResult,
 	ILoginResponse,
 	IMaskedApiKeyResponse,
+	IMfaReauthPayload,
+	IMfaRecoveryCodes,
+	IMfaStatus,
+	IMfaVerifyPayload,
 	IStatusResponse,
+	ITotpConfirmPayload,
+	ITotpEnrollment,
 	SocialLoginProvider,
 } from '../types.js';
 import { publicRequestConfig } from '../utils.js';
 import { BaseResource } from './base.js';
 
+/** Two-factor re-authentication requires the password or a live/recovery code. */
+function requireReauth(payload: IMfaReauthPayload): IMfaReauthPayload {
+	if (!payload?.password && !payload?.code) {
+		throw new ValidationError('password or code is required');
+	}
+	return payload;
+}
+
 /**
- * Authentication endpoints (login, social login, password management) and
- * personal API key management (`/users/api-keys`).
+ * Authentication endpoints (login, two-factor, social login, password
+ * management), personal API key management (`/users/api-keys`), and
+ * two-factor enrollment (`/users/self/mfa`).
  *
  * Most of these endpoints are intended to bootstrap an authenticated session
  * for a human user. Production server-to-server integrations should use
@@ -25,6 +40,74 @@ export class AuthenticationResource extends BaseResource {
 		if (!password) throw new ValidationError('password is required');
 		return this.call('Login failed', () =>
 			this.http.post('/login', { email, password }, publicRequestConfig()),
+		);
+	}
+
+	/**
+	 * `POST /authentication/mfa/verify` — exchange the login `mfa_token` and an
+	 * authenticator or recovery code for an access token. The challenge is
+	 * single-use and expires 5 minutes after login.
+	 */
+	async verifyMfa(payload: IMfaVerifyPayload): Promise<ILoginResponse> {
+		if (!payload?.mfa_token) throw new ValidationError('mfa_token is required');
+		if (!payload.code?.trim()) throw new ValidationError('code is required');
+		return this.call('Two-factor verification failed', () =>
+			this.http.post(
+				'/authentication/mfa/verify',
+				{ mfa_token: payload.mfa_token, code: payload.code.trim() },
+				publicRequestConfig(),
+			),
+		);
+	}
+
+	/** `GET /users/self/mfa` — enrolled two-factor methods and remaining recovery codes. */
+	async listMfaMethods(): Promise<IMfaStatus> {
+		return this.call('Failed to list two-factor methods', () => this.http.get('/users/self/mfa'));
+	}
+
+	/**
+	 * `POST /users/self/mfa/totp` — start authenticator enrollment. The secret
+	 * and provisioning URI are returned only once; two-factor stays inactive
+	 * until {@link confirmTotpEnrollment}.
+	 */
+	async startTotpEnrollment(label?: string): Promise<ITotpEnrollment> {
+		return this.call('Failed to start authenticator enrollment', () =>
+			this.http.post('/users/self/mfa/totp', label ? { label } : {}),
+		);
+	}
+
+	/**
+	 * `PUT /users/self/mfa/totp/confirm` — activate the method with a live code
+	 * and receive one-time recovery codes. Replacing a confirmed method also
+	 * requires `password` or `reauth_code`.
+	 */
+	async confirmTotpEnrollment(payload: ITotpConfirmPayload): Promise<IMfaRecoveryCodes> {
+		if (!payload?.id) throw new ValidationError('id is required');
+		if (!payload.code?.trim()) throw new ValidationError('code is required');
+		return this.call('Failed to confirm authenticator enrollment', () =>
+			this.http.put('/users/self/mfa/totp/confirm', payload),
+		);
+	}
+
+	/** `POST /users/self/mfa/recovery-codes` — issue ten new recovery codes, invalidating the old set. */
+	async regenerateRecoveryCodes(payload: IMfaReauthPayload): Promise<IMfaRecoveryCodes> {
+		return this.call('Failed to regenerate recovery codes', () =>
+			this.http.post('/users/self/mfa/recovery-codes', requireReauth(payload)),
+		);
+	}
+
+	/**
+	 * `DELETE /users/self/mfa/{methodId}` — remove a method. Removing the last
+	 * one also discards the recovery codes.
+	 */
+	async removeMfaMethod(
+		methodId: string,
+		payload: IMfaReauthPayload,
+	): Promise<{ is_mfa_enabled: boolean }> {
+		const id = this.requireId(methodId, 'Method ID');
+		const data = requireReauth(payload);
+		return this.call('Failed to remove two-factor method', () =>
+			this.http.delete(`/users/self/mfa/${id}`, { data }),
 		);
 	}
 

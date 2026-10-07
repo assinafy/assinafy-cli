@@ -2,7 +2,7 @@
 
 *Português · [Read in English](README.en.md)*
 
-A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 93 operações publicadas.
+A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 106 operações publicadas.
 
 Este guia segue o fluxo de uma integração: instalação, autenticação, envio, assinatura e armazenamento do resultado. A [referência do SDK](docs/sdk-reference.md) documenta cada método; a [referência HTTP](docs/api-reference.md) contém os parâmetros e os payloads completos de requisição e resposta publicados pela Assinafy.
 
@@ -84,7 +84,7 @@ assinafy whoami
 
 `login` solicita a chave e o ID do workspace. `whoami` lista os workspaces acessíveis e confirma a credencial e a URL base. Verifique se o workspace selecionado aparece nessa lista; `whoami` não valida automaticamente o ID padrão configurado.
 
-`auth login user@example.com` inicia uma sessão de usuário. `auth api-keys create` gera e rotaciona a chave dessa conta; use esse comando apenas quando essa rotação fizer parte do seu fluxo. Prefira prompts protegidos e variáveis de ambiente a segredos em argumentos.
+`auth login user@example.com` inicia uma sessão de usuário. Com a verificação em duas etapas ativa, o comando pede o código do aplicativo autenticador ou um código de recuperação (`--mfa-code` ou `ASSINAFY_MFA_CODE`); o desafio expira em 5 minutos e só pode ser usado uma vez. `auth mfa enroll`, `auth mfa confirm`, `auth mfa list`, `auth mfa recovery-codes` e `auth mfa remove` gerenciam o autenticador e os códigos de recuperação. `auth api-keys create` gera e rotaciona a chave dessa conta; use esse comando apenas quando essa rotação fizer parte do seu fluxo. Prefira prompts protegidos e variáveis de ambiente a segredos em argumentos.
 
 ### Aplicativos OAuth
 
@@ -329,19 +329,36 @@ Os comandos de confirmação de dados, assinatura e recusa de um único document
 
 ## Eventos e webhooks
 
+Cada workspace pode cadastrar 1 endpoint de webhook, ou até 3 nos planos pagos. Cada endpoint tem URL, eventos, estado e assinatura próprios, e todo endpoint ativo inscrito em um evento o recebe de forma independente.
+
 ```bash
 assinafy webhooks event-types --json
-assinafy webhooks register \
-  --url https://example.com/hooks/assinafy \
-  --email ops@example.com \
-  --events document_ready,signer_signed_document,signer_rejected_document \
-  --json
-assinafy webhooks dispatches --delivered false --json
+assinafy webhooks endpoints create   --url https://example.com/hooks/assinafy   --email ops@example.com   --name ERP   --events document_ready,signer_signed_document,signer_rejected_document   --signing   --json
+assinafy webhooks endpoints list
+assinafy webhooks endpoints secret "$ENDPOINT_ID"        # segredo whsec_ para o receptor
+assinafy webhooks dispatches --endpoint "$ENDPOINT_ID" --delivered false --json
 ```
 
-Há uma assinatura de webhook por workspace; `register` substitui sua configuração. `document_ready` indica a assinatura pelo último signatário, não o término do processamento inicial do upload. Confirme estado e artefatos pela API antes de baixar o resultado. Processe eventos de forma idempotente e consulte `event-types` para a lista vigente.
+Sem `--events`, o endpoint recebe `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document` e `document_processing_failed`. `endpoints update <id>` altera apenas as opções informadas (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); desativar a assinatura descarta o segredo. `endpoints rotate-secret <id>` gera um novo segredo e invalida o anterior imediatamente. `endpoints delete <id>` remove o endpoint e libera a vaga. URLs repetidas no mesmo workspace retornam `400`; criar acima do limite do plano retorna `403`. A leitura e a rotação do segredo não estão disponíveis para aplicativos OAuth.
 
-`webhooks retry <dispatchId>` solicita uma nova entrega. `webhooks inactivate` desativa a assinatura, sem excluí-la. A Assinafy não publica um esquema de assinatura criptográfica de webhooks: `WebhookVerifier` é experimental e não deve autenticar eventos de produção sem validação independente do protocolo. Trate notificações como sinais para consultar o estado autorizado pela API.
+`webhooks register`, `webhooks get` e `webhooks inactivate` continuam disponíveis e atuam sobre o endpoint mais antigo do workspace.
+
+Cada entrega é um `POST` JSON com os cabeçalhos `webhook-id` (igual em todas as tentativas do mesmo evento para o mesmo endpoint; use-o para eliminar duplicatas) e `webhook-timestamp`. Com a assinatura ativa, `webhook-signature` segue o padrão [Standard Webhooks](https://www.standardwebhooks.com). Valide o corpo bruto, antes de convertê-lo em JSON, com `WebhookVerifier`:
+
+```ts
+import { WebhookVerifier } from '@assinafy/cli/api';
+
+const verifier = new WebhookVerifier(process.env.ASSINAFY_WEBHOOK_SECRET);
+// rawBody: Buffer exatamente como recebido; headers: cabeçalhos da requisição
+if (!verifier.verifyDelivery(rawBody, headers)) {
+  // responda 401 e descarte a entrega
+}
+const event = verifier.extractEvent(rawBody);
+```
+
+`verifyDelivery` compara em tempo constante o HMAC-SHA256 de `{webhook-id}.{webhook-timestamp}.{corpo}` e rejeita carimbos de tempo com mais de 5 minutos de diferença. Responda com `2xx` rapidamente; uma falha é tentada novamente uma vez após 3 segundos, e 10 eventos seguidos com falha pausam o endpoint até uma entrega funcionar. `webhooks retry <dispatchId>` reenvia uma entrega para o endpoint dela, desde que esteja ativo.
+
+`document_ready` indica a assinatura pelo último signatário, não o término do processamento inicial do upload. Processe eventos de forma idempotente, consulte `event-types` para a lista vigente e confirme estado e artefatos pela API antes de ações irreversíveis.
 
 ## SDK Node.js
 
@@ -419,13 +436,13 @@ No SDK, `ValidationError` indica entrada inválida; `ApiError` carrega `statusCo
 | [`assignments`](docs/assignments.md) | Solicitações, estimativas, vencimento, reenvios e notificações. |
 | [`signer`](docs/signer.md) | Perfil, documentos, termos, verificação, assinatura e recusa. |
 | [`oauth`](docs/oauth.md) | Conexão pelo navegador, discovery, autorização, exchange, refresh, UserInfo e revogação. |
-| [`auth`](docs/auth.md) | Login de usuário, login social, senhas e chaves de API. |
+| [`auth`](docs/auth.md) | Login de usuário com verificação em duas etapas, login social, senhas e chaves de API. |
 | [`workspaces`](docs/workspaces.md) / `accounts` | Cadastro, consulta, tema, logo e estatísticas. |
 | [`users`](docs/users.md) | Perfil, estatísticas e preferências de notificação. |
 | [`templates`](docs/templates.md) | Listagem, detalhes e páginas de templates. |
 | [`tags`](docs/tags.md) | Organização dos documentos por tags. |
 | [`fields`](docs/fields.md) | Definições, tipos e validação de campos. |
-| [`webhooks`](docs/webhooks.md) | Assinatura de eventos e acompanhamento das entregas. |
+| [`webhooks`](docs/webhooks.md) | Endpoints de webhook, segredos de assinatura e acompanhamento das entregas. |
 | [`config`](docs/config.md) | Perfis, credenciais e configuração efetiva. |
 | [`send`](docs/send.md) | Upload e solicitação de assinaturas em um comando. |
 

@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "68e588d7c7b648f55e886e60d8cbfddc8ae640fbbfe1f680471b5bfaf6a1fec1",
+  "hash": "2185c05ff19372702195ba272078272b87a4be0aad85b7c327b84b2634e104e1",
   "operations": [
     {
       "method": "GET",
@@ -160,6 +160,14 @@
       "tag": "Authentication",
       "summary": "Change password",
       "operationId": "aae47ded024b93634bebe51d72629c5a",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/authentication/mfa/verify",
+      "tag": "Authentication",
+      "summary": "Complete a two-factor login",
+      "operationId": "9ea9814ff561803efd9f68fe549ef5a5",
       "hasRequestBody": true
     },
     {
@@ -329,6 +337,46 @@
       "summary": "List field types",
       "operationId": "f6ac99a60d22a08e8f58568c50d904d8",
       "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/self/mfa",
+      "tag": "Authentication",
+      "summary": "List two-factor methods",
+      "operationId": "9147d8d9d2e6bd305d6d574107a6edba",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users/self/mfa/totp",
+      "tag": "Authentication",
+      "summary": "Start authenticator enrollment",
+      "operationId": "555fe2357f9fc70f9c05fe884a6cd99b",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/users/self/mfa/totp/confirm",
+      "tag": "Authentication",
+      "summary": "Confirm authenticator enrollment",
+      "operationId": "777393d6a37829f88147df5345af6175",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users/self/mfa/recovery-codes",
+      "tag": "Authentication",
+      "summary": "Regenerate recovery codes",
+      "operationId": "cdb12748ba14cede2779c111f1c6e01e",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/self/mfa/{customId}",
+      "tag": "Authentication",
+      "summary": "Remove a two-factor method",
+      "operationId": "fec05054a3e21e9ef5b248edcb736873",
+      "hasRequestBody": true
     },
     {
       "method": "GET",
@@ -728,6 +776,62 @@
       "tag": "Webhooks",
       "summary": "Retry webhook delivery",
       "operationId": "70960dceda68fdccf3c821c362638e87",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints",
+      "tag": "Webhooks",
+      "summary": "List webhook endpoints",
+      "operationId": "fa6c6e778dcfd9a1568c98517b0e53d6",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints",
+      "tag": "Webhooks",
+      "summary": "Create webhook endpoint",
+      "operationId": "6c80dc654eb285c39c8c25d8df17ff15",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}",
+      "tag": "Webhooks",
+      "summary": "Get webhook endpoint",
+      "operationId": "21bdbbbeb94d9d02346f7568d9119dab",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}",
+      "tag": "Webhooks",
+      "summary": "Update webhook endpoint",
+      "operationId": "a1adc59ebf84921d457d0122805f863d",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}",
+      "tag": "Webhooks",
+      "summary": "Delete webhook endpoint",
+      "operationId": "d6dded7b3176384ad318ece3c4bfbf3f",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret",
+      "tag": "Webhooks",
+      "summary": "Get webhook endpoint signing secret",
+      "operationId": "08ccfbe2558873c5b5f4407e684de5f1",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate",
+      "tag": "Webhooks",
+      "summary": "Rotate webhook endpoint signing secret",
+      "operationId": "b2b6f38f1e0ed2795e48b90533236a6f",
       "hasRequestBody": false
     },
     {

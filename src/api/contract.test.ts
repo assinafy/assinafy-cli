@@ -27,6 +27,14 @@ const webhook = {
 	events: ['document_ready'],
 	is_active: true,
 };
+const webhookEndpoint = {
+	url: 'https://example.com/hook-2',
+	email,
+	events: ['document_ready'],
+	name: 'Example',
+	signing_enabled: true,
+};
+const mfaVerify = { mfa_token: 'example-mfa-token', code: '123456' };
 const image = Buffer.from('example-image');
 const cases: Case[] = [
 	['GET /v1/accounts/{accountId}', (c) => c.workspaces.get(id)],
@@ -412,6 +420,68 @@ const cases: Case[] = [
 		undefined,
 		'flat',
 		'public',
+	],
+	[
+		'POST /v1/authentication/mfa/verify',
+		(c) => c.auth.verifyMfa(mfaVerify),
+		mfaVerify,
+		undefined,
+		'public',
+	],
+	['GET /v1/users/self/mfa', (c) => c.auth.listMfaMethods()],
+	[
+		'POST /v1/users/self/mfa/totp',
+		(c) => c.auth.startTotpEnrollment('Example'),
+		{ label: 'Example' },
+	],
+	[
+		'PUT /v1/users/self/mfa/totp/confirm',
+		(c) => c.auth.confirmTotpEnrollment({ id, code: '123456' }),
+		{ id, code: '123456' },
+	],
+	[
+		'POST /v1/users/self/mfa/recovery-codes',
+		(c) => c.auth.regenerateRecoveryCodes({ code: '123456' }),
+		{ code: '123456' },
+	],
+	[
+		'DELETE /v1/users/self/mfa/{customId}',
+		(c) => c.auth.removeMfaMethod(id, { password: 'example-secret' }),
+		{ password: 'example-secret' },
+	],
+	[
+		'GET /v1/accounts/{accountId}/webhooks/endpoints',
+		(c) => c.webhooks.listEndpoints(),
+		undefined,
+		'array',
+	],
+	[
+		'POST /v1/accounts/{accountId}/webhooks/endpoints',
+		(c) => c.webhooks.createEndpoint(webhookEndpoint),
+		webhookEndpoint,
+	],
+	[
+		'GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}',
+		(c) => c.webhooks.getEndpoint(id),
+	],
+	[
+		'PUT /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}',
+		(c) => c.webhooks.updateEndpoint(id, { is_active: false }),
+		{ is_active: false },
+	],
+	[
+		'DELETE /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}',
+		(c) => c.webhooks.deleteEndpoint(id),
+		undefined,
+		'array',
+	],
+	[
+		'GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret',
+		(c) => c.webhooks.getEndpointSecret(id),
+	],
+	[
+		'POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate',
+		(c) => c.webhooks.rotateEndpointSecret(id),
 	],
 	[
 		'GET /v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications',
