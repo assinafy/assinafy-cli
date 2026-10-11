@@ -39,42 +39,59 @@ export class SignerDocumentsResource extends BaseResource {
 		);
 	}
 
-	/**
-	 * `GET /signers/{signer_id}/documents` — with a signer access code, or with
-	 * the client's owner credentials when the code is omitted (the signer must
-	 * belong to that workspace).
-	 */
+	/** `GET /signers/{signer_id}/documents?signer-access-code=…` */
 	async list(
 		signerId: string,
-		signerAccessCode?: string,
+		signerAccessCode: string,
 		params: ISignerDocumentListParams = {},
 	): Promise<IDocumentListResponse> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.listDocuments(signerId, signerAccessConfig(code, { ...params }));
+	}
+
+	/**
+	 * `GET /signers/{signer_id}/documents` with the client's owner credentials
+	 * (API key or token) instead of a signer access code. The signer must belong
+	 * to that workspace.
+	 */
+	async listAsOwner(
+		signerId: string,
+		params: ISignerDocumentListParams = {},
+	): Promise<IDocumentListResponse> {
+		return this.listDocuments(signerId, { params: cleanParams({ ...params }) });
+	}
+
+	/** `GET /signers/{signer_id}/documents/search?search=…&signer-access-code=…` */
+	async search(
+		signerId: string,
+		search: string,
+		signerAccessCode: string,
+	): Promise<IDocumentListResponse> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.searchDocuments(signerId, signerAccessConfig(code, { search }));
+	}
+
+	/**
+	 * `GET /signers/{signer_id}/documents/search?search=…` with the client's owner
+	 * credentials instead of a signer access code. The signer must belong to that
+	 * workspace.
+	 */
+	async searchAsOwner(signerId: string, search: string): Promise<IDocumentListResponse> {
+		return this.searchDocuments(signerId, { params: cleanParams({ search }) });
+	}
+
+	private listDocuments(signerId: string, config: Parameters<typeof this.http.get>[1]) {
 		const sid = this.requireId(signerId, 'Signer ID');
-		const config = this.signerOrOwnerConfig(signerAccessCode, { ...params });
 		return this.callList<IDocumentListItem>('Failed to list signer documents', () =>
 			this.http.get(`/signers/${sid}/documents`, config),
 		);
 	}
 
-	/** `GET /signers/{signer_id}/documents/search?search=…` — access code or owner credentials. */
-	async search(
-		signerId: string,
-		search: string,
-		signerAccessCode?: string,
-	): Promise<IDocumentListResponse> {
+	private searchDocuments(signerId: string, config: Parameters<typeof this.http.get>[1]) {
 		const sid = this.requireId(signerId, 'Signer ID');
-		const config = this.signerOrOwnerConfig(signerAccessCode, { search });
 		return this.callList<IDocumentListItem>('Failed to search signer documents', () =>
 			this.http.get(`/signers/${sid}/documents/search`, config),
 		);
-	}
-
-	private signerOrOwnerConfig(
-		signerAccessCode: string | undefined,
-		params: Record<string, unknown>,
-	) {
-		if (signerAccessCode === undefined) return { params: cleanParams(params) };
-		return signerAccessConfig(this.requireId(signerAccessCode, 'signer-access-code'), params);
 	}
 
 	/**

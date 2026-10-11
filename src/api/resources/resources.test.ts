@@ -1072,12 +1072,11 @@ describe('SignerDocumentsResource', () => {
 		]);
 	});
 
-	it('uses owner credentials for signer document list and search without an access code', async () => {
+	it('uses owner credentials only through the explicit AsOwner methods', async () => {
 		const calls: CapturedCall[] = [];
 		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
-		await signerDocs.list('signer1', undefined, { page: 2 });
-		await signerDocs.search('signer1', 'contract');
-		await expect(signerDocs.search('signer1', 'contract', '')).rejects.toThrow(ValidationError);
+		await signerDocs.listAsOwner('signer1', { page: 2 });
+		await signerDocs.searchAsOwner('signer1', 'contract');
 		expect(calls).toHaveLength(2);
 		for (const call of calls) {
 			expect(call.config?.params).not.toHaveProperty('signer-access-code');
@@ -1085,6 +1084,19 @@ describe('SignerDocumentsResource', () => {
 		}
 		expect(calls[0]?.config?.params).toEqual({ page: 2 });
 		expect(calls[1]?.config?.params).toEqual({ search: 'contract' });
+	});
+
+	it('never falls back to owner credentials when the access code is missing or blank', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		const missing = undefined as unknown as string;
+		await expect(signerDocs.list('signer1', missing)).rejects.toThrow(ValidationError);
+		await expect(signerDocs.list('signer1', '')).rejects.toThrow(ValidationError);
+		await expect(signerDocs.search('signer1', 'contract', missing)).rejects.toThrow(
+			ValidationError,
+		);
+		await expect(signerDocs.search('signer1', 'contract', '  ')).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(0);
 	});
 
 	it('preserves signer acknowledgement data without assuming a status body', async () => {

@@ -224,13 +224,15 @@ Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cp
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. `list` and `search` also accept the client's API key or bearer token when the access code is omitted; the signer must belong to that workspace. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
+These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. `listAsOwner` and `searchAsOwner` call the same routes with the client's API key or bearer token instead; the signer must belong to that workspace. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
 | `getCurrent(signerId, accessCode)` | [`GET /signers/{signerId}/document`](./api-reference.md#get-signers-document) | `IDocumentDetailsResponse` |
-| `list(signerId, accessCode?, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
-| `search(signerId, search, accessCode?)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
+| `list(signerId, accessCode, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
+| `listAsOwner(signerId, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) with owner credentials | `IDocumentListResponse` |
+| `search(signerId, search, accessCode)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
+| `searchAsOwner(signerId, search)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) with owner credentials | `IDocumentListResponse` |
 | `download(signerId, documentId, artifact, accessCode?)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-signers-document-artifact) | `Buffer` |
 | `signMultiple(documentIds, accessCode)` | [`PUT /signers/documents/sign-multiple`](./api-reference.md#sign-multiple-documents) | `unknown[]` |
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |

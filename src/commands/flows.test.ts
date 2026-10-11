@@ -461,9 +461,11 @@ it('sends signing tokens with the email-only production body', async () => {
 it('lists signer documents with owner credentials when no access code is given', async () => {
 	vi.stubEnv('ASSINAFY_SIGNER_ACCESS_CODE', undefined);
 	const create = vi.spyOn(cliClient, 'createClient');
-	const list = vi.spyOn(SignerDocumentsResource.prototype, 'list').mockResolvedValue({ data: [] });
+	const list = vi
+		.spyOn(SignerDocumentsResource.prototype, 'listAsOwner')
+		.mockResolvedValue({ data: [] });
 	const program = new Command().option('--json').addCommand(signerCommand);
 	await program.parseAsync(['--json', 'signer', 'documents', 'example-signer'], { from: 'user' });
-	expect(list).toHaveBeenCalledWith('example-signer', undefined, expect.any(Object));
+	expect(list).toHaveBeenCalledWith('example-signer', expect.any(Object));
 	expect(create.mock.calls[0]?.[1]).toBeUndefined();
 });

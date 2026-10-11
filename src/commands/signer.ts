@@ -45,7 +45,9 @@ const documentsCommand = addListOptions(
 ).action(async (signerId, opts, command) => {
 	await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 		const result = await withSpinner('Fetching documents', config, () =>
-			client.signerDocuments.list(signerId, opts.accessCode, listParams(opts)),
+			opts.accessCode === undefined
+				? client.signerDocuments.listAsOwner(signerId, listParams(opts))
+				: client.signerDocuments.list(signerId, opts.accessCode, listParams(opts)),
 		);
 		printPaginatedData(result, config, (rows) =>
 			renderTable(rows, [
@@ -65,7 +67,9 @@ const searchCommand = new Command('search')
 	.action(async (signerId, query, opts, command) => {
 		await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 			const result = await withSpinner('Searching documents', config, () =>
-				client.signerDocuments.search(signerId, query, opts.accessCode),
+				opts.accessCode === undefined
+					? client.signerDocuments.searchAsOwner(signerId, query)
+					: client.signerDocuments.search(signerId, query, opts.accessCode),
 			);
 			printPaginatedData(result, config, (rows) =>
 				renderTable(rows, [

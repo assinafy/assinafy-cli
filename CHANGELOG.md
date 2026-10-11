@@ -6,6 +6,12 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.5.3] - 2026-10-11
+
+### Changed
+
+- `signerDocuments.list()` and `search()` in the SDK require a signer access code again; a missing or blank code is rejected instead of switching to the client's API key or token. `listAsOwner()` and `searchAsOwner()` list and search a workspace signer's documents with owner credentials. The `signer documents` and `signer search` commands keep using owner credentials when `--access-code` is omitted.
+
 ## [2.5.2] - 2026-10-11
 
 ### Changed
