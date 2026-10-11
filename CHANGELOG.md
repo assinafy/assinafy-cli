@@ -6,6 +6,10 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `fields.create` accepts `regex: null`, matching the published schema.
+
 ## [2.5.1] - 2026-10-11
 
 ### Added
@@ -18,6 +22,8 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
   prints how many seconds to wait from `Retry-After`.
 - `signer documents` and `signer search` (and `signerDocuments.list`/`search` in the SDK)
   work without a signer access code, using the workspace API key or token.
+- `oauth.token` accepts the RFC 8693 `urn:ietf:params:oauth:grant-type:token-exchange`
+  grant published for Assinafy internal-service confidential clients.
 
 ### Changed
 

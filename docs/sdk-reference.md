@@ -441,7 +441,7 @@ Login/social/reset/two-factor-verify bootstrap calls can use an unauthenticated 
 | `discovery(issuer)` | `GET {issuer}/.well-known/oauth-authorization-server`; requires HTTPS and matching issuer | `IOAuthAuthorizationServer` |
 | `authorize({ clientId, redirectUri, scopes })` | Discover resource/server and generate a fresh S256 verifier, state, and optional OIDC nonce | `IOAuthAuthorizationRequest` |
 | `exchangeCode(callbackUrl, request, clientSecret?)` | Validate callback URI/state/issuer and submit the authorization code | `IOAuthTokenResponse` |
-| `token(payload)` | [`POST /oauth/token`](./api-reference.md#exchange-a-code-refresh-token-or-subject-token-for-an-access-token), with code or refresh grant | `IOAuthTokenResponse` |
+| `token(payload)` | [`POST /oauth/token`](./api-reference.md#exchange-a-code-refresh-token-or-subject-token-for-an-access-token), with code, refresh, or `urn:ietf:params:oauth:grant-type:token-exchange` grant (internal-service confidential clients only; requires `client_secret`, `resource`, `subject_token`, and `subject_token_type: urn:ietf:params:oauth:token-type:access_token`; issues no refresh token) | `IOAuthTokenResponse` |
 | `revoke(payload)` | [`POST /oauth/revoke`](./api-reference.md#revoke-a-token) | `void` |
 | `userinfo()` | `GET /oauth/userinfo`, using the current OAuth bearer token with `openid` | `IOAuthUserInfo` |
 

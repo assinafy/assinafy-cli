@@ -1097,7 +1097,8 @@ export interface IFieldDefinition {
 export interface ICreateFieldPayload {
 	type: string;
 	name: string;
-	regex?: string;
+	/** Validation regex; `null` or omitted for none. */
+	regex?: string | null;
 	is_required?: boolean;
 	/** Compatibility extension; not present in the published create schema. */
 	is_active?: boolean;
