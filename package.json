@@ -54,7 +54,7 @@
 	"bugs": {
 		"url": "https://github.com/assinafy/assinafy-cli/issues"
 	},
-	"homepage": "https://github.com/assinafy/assinafy-cli#readme",
+	"homepage": "https://www.assinafy.com.br",
 	"scripts": {
 		"dev": "tsx src/cli.ts",
 		"dev:watch": "tsx --watch src/cli.ts",
