@@ -6,6 +6,8 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-10-11
+
 ### Changed
 
 - `fields.create` accepts `regex: null`, matching the published schema.
