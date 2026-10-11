@@ -1,6 +1,6 @@
 # TypeScript SDK reference
 
-The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 24 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; operations with empty result data resolve to `IEmptyResult` (`unknown[]`). Responses without `data` remain unchanged, including direct `IStatusResponse` (`{ status, message }`) bodies. `sendToken` preserves either that published body or the production `{ document, channel, recipient }` body.
+The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 24 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; operations with empty result data resolve to `IEmptyResult` (`unknown[]`). Responses without `data` remain unchanged, including direct `IStatusResponse` (`{ status, message }`) bodies. `sendToken` resolves to `{ document, channel, recipient }`.
 
 The [API request/response reference](./api-reference.md) is the canonical source for every published HTTP payload and example. Complete TypeScript declarations are exported and packaged with `@assinafy/cli/api`.
 
@@ -131,7 +131,7 @@ try {
 | `verify(hash)` | [`GET /documents/{signatureHash}/verify`](./api-reference.md#verify-a-signed-document) | `IDocumentVerifyResponse` |
 | `statuses()` | [`GET /documents/statuses`](./api-reference.md#list-document-statuses) | `IDocumentStatusInfo[]` |
 | `getPublic(documentId)` | [`GET /public/documents/{documentId}`](./api-reference.md#view-public-document) | `IPublicDocumentInfo` |
-| `sendToken(documentId, { email })` or `sendToken(documentId, recipient, channel?)` | [`PUT /public/documents/{documentId}/send-token`](./api-reference.md#send-access-token-for-public-document) | `ISendTokenResponse` (`{ status; message }` or `{ document; channel; recipient }`) |
+| `sendToken(documentId, email, channel?)` or `sendToken(documentId, { email })` | [`PUT /public/documents/{documentId}/send-token`](./api-reference.md#send-access-token-for-public-document) | `ISendTokenResponse` (`{ document; channel; recipient }`) |
 | `isFullySigned(documentId)` | SDK helper over `details` | `boolean` |
 | `getSigningProgress(documentId)` | SDK helper over `details` | `{ signed; total; pending; percentage }` |
 
@@ -149,7 +149,7 @@ interface IDocumentUploadOptions {
 }
 ```
 
-Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. For production email delivery, use `sendToken(documentId, 'signer@example.com', 'email')`, which sends `{ recipient, channel }`. The `{ email }` overload preserves the published request form for deployments that support it.
+Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. `sendToken(documentId, 'signer@example.com')` emails a one-time access token to a signer who has not signed a pending document yet and sends `{ "channel": "email", "recipient": "signer@example.com" }`. Only the `email` channel is accepted; any other channel is rejected locally. The `{ email }` overload sends the same body.
 
 Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id, verification_method?, notification_methods?, step? }`; each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations.
 
@@ -224,13 +224,13 @@ Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cp
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
+These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. `list` and `search` also accept the client's API key or bearer token when the access code is omitted; the signer must belong to that workspace. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
 | `getCurrent(signerId, accessCode)` | [`GET /signers/{signerId}/document`](./api-reference.md#get-signers-document) | `IDocumentDetailsResponse` |
-| `list(signerId, accessCode, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
-| `search(signerId, search, accessCode)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
+| `list(signerId, accessCode?, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
+| `search(signerId, search, accessCode?)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
 | `download(signerId, documentId, artifact, accessCode?)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-signers-document-artifact) | `Buffer` |
 | `signMultiple(documentIds, accessCode)` | [`PUT /signers/documents/sign-multiple`](./api-reference.md#sign-multiple-documents) | `unknown[]` |
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |
@@ -279,9 +279,8 @@ Choose one notification channel. With neither field specified, the API defaults 
 `IVerifySignerCodePayload` is `{ signerAccessCode: string; verificationCode: string }`. Keep the OTP as a string to preserve leading zeroes. Email and WhatsApp use the same verification endpoint and response; the access code identifies the channel and document.
 
 ```ts
-// Choose the channel configured for this signer; these calls send messages.
-await client.documents.sendToken('example_document', 'signer@example.com', 'email');
-await client.documents.sendToken('example_document', '+5500000000000', 'whatsapp');
+// Optional: email a new one-time access token (email channel only; sends a message).
+await client.documents.sendToken('example_document', 'signer@example.com');
 
 // Use the private link and OTP from the selected channel's same message.
 await client.signerDocuments.verifyCode({
@@ -290,7 +289,7 @@ await client.signerDocuments.verifyCode({
 }); // [] on production success
 ```
 
-The delivery request bodies are `{ "recipient": "signer@example.com", "channel": "email" }` and `{ "recipient": "+5500000000000", "channel": "whatsapp" }`. `sendToken` preserves the response forms documented in [Documents](#documents-clientdocuments). Verification sends `{ "verification-code": "012345" }` with `?signer-access-code=example_access_code`; a successful envelope `{ "status": 200, "message": "", "data": [] }` resolves to `[]`. Invalid codes surface as `ApiError` with the server's status and message. `verifyEmail` remains a compatible alias. Continue with data confirmation and virtual/collect signing as described above.
+The token request body is `{ "channel": "email", "recipient": "signer@example.com" }` and the response data is `{ "document": { "resource": "document", "id": "example_document", "name": "Contract.pdf", "page_count": 3, "created_by": "Example User" }, "channel": "email", "recipient": "signer@example.com" }`. WhatsApp-verified signers receive their code in the WhatsApp invitation itself. Verification sends `{ "verification-code": "012345" }` with `?signer-access-code=example_access_code`; a successful envelope `{ "status": 200, "message": "", "data": [] }` resolves to `[]`. Invalid codes surface as `ApiError` with the server's status and message. `verifyEmail` remains a compatible alias. Continue with data confirmation and virtual/collect signing as described above.
 
 ### ICP-Brasil A1/A3 certificates
 
@@ -563,10 +562,10 @@ Decline operations require a non-empty reason of at most 2,000 Unicode character
 
 - JSON responses with `data` are unwrapped from the API envelope; direct status bodies remain `IStatusResponse`. Paginated calls resolve to `{ data: T[]; meta?: { current_page?, last_page?, per_page?, total? } }`; metadata comes from `X-Pagination-*` headers.
 - Binary methods resolve to Node.js `Buffer`; the SDK is not a browser package. It never writes downloaded data to disk.
-- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode`, `responseData`, `wwwAuthenticate` and `retryAfter`; binary JSON error bodies are decoded before normalization. OAuth responses are flat JSON, and OAuth revocation resolves to `undefined`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports `documents upload --wait` or a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
+- `ValidationError` means local input validation failed before a request. `ApiError` exposes `statusCode`, `responseData`, `wwwAuthenticate`, `retryAfter` and `rateLimit` (`{ limit?, remaining?, reset? }` from `X-Rate-Limit-*`); a `429` carries `Retry-After` seconds to wait before retrying, and the SDK never retries automatically. OAuth errors use `error: error_description` as the message; binary JSON error bodies are decoded before normalization. OAuth responses are flat JSON, and OAuth revocation resolves to `undefined`. `NetworkError` covers timeout/DNS/transport failures. `PartialWorkflowError` reports `documents upload --wait` or a multi-step helper that failed after creating resources and exposes `documentId` and `signerIds`. All extend `AssinafyError`, which exposes `context` and preserves `cause` where available.
 - `normalizeBaseUrl(url)` is exported and removes one trailing slash. The CLI-facing guards `requireDocumentArtifactName(name)` and `requireSignerImageType(type)` are also exported.
 
-Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause?, wwwAuthenticate?, retryAfter? }?)`, `ApiError.fromResponse(statusCode, responseData, headers?)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
+Exported error constructors/helpers are `new AssinafyError(message, context?, { cause? }?)`, `new ApiError(message, statusCode, responseData?, { cause?, wwwAuthenticate?, retryAfter?, rateLimit? }?)`, `ApiError.fromResponse(statusCode, responseData, headers?)`, `new ValidationError(message?, errors?)`, `new NetworkError(message, { cause? }?)`, and `new PartialWorkflowError(message, { documentId?, signerIds? }, { cause? }?)`. Resource classes and all named request/response types are also exported for dependency injection and type annotations; normal applications should obtain resource instances from `AssinafyClient`.
 
 ```ts
 try {
@@ -614,5 +613,5 @@ Verify the raw bytes before parsing; re-serialized JSON does not match. The enve
 
 - Production OpenAPI currently publishes 106 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
 - Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 106 OpenAPI operations; the API manifest contains only published paths.
-- The SDK retains the two template compatibility routes above and both published/legacy public `sendToken` payloads for compatible deployments.
+- The SDK retains the two template compatibility routes above. Both `sendToken` call forms send the email-only production body.
 - Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

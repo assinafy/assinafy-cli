@@ -3,6 +3,7 @@ import {
 	AssinafyError,
 	NetworkError,
 	PartialWorkflowError,
+	type RateLimitInfo,
 	ValidationError,
 } from '../api';
 
@@ -30,6 +31,7 @@ export interface NormalizedError {
 	statusCode?: number;
 	wwwAuthenticate?: string;
 	retryAfter?: string;
+	rateLimit?: RateLimitInfo;
 	/** Process exit code to use (carried from {@link CliError}); defaults to 1. */
 	exitCode?: number;
 	details?: unknown;
@@ -48,6 +50,7 @@ export function normalizeError(err: unknown): NormalizedError {
 			details: err.responseData ?? undefined,
 			...(err.wwwAuthenticate ? { wwwAuthenticate: err.wwwAuthenticate } : {}),
 			...(err.retryAfter ? { retryAfter: err.retryAfter } : {}),
+			...(err.rateLimit ? { rateLimit: err.rateLimit } : {}),
 		};
 	}
 	// Keep the underlying code/status so a half-finished workflow still reports
@@ -62,6 +65,7 @@ export function normalizeError(err: unknown): NormalizedError {
 		if (cause.statusCode !== undefined) normalized.statusCode = cause.statusCode;
 		if (cause.wwwAuthenticate !== undefined) normalized.wwwAuthenticate = cause.wwwAuthenticate;
 		if (cause.retryAfter !== undefined) normalized.retryAfter = cause.retryAfter;
+		if (cause.rateLimit !== undefined) normalized.rateLimit = cause.rateLimit;
 		return normalized;
 	}
 	if (err instanceof ValidationError) {

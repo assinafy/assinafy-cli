@@ -13,6 +13,13 @@ export class AssinafyError extends Error {
 	}
 }
 
+/** `X-Rate-Limit-*` values reported with a response (window size, requests left, seconds to reset). */
+export interface RateLimitInfo {
+	limit?: number;
+	remaining?: number;
+	reset?: number;
+}
+
 /** Thrown when the API returns a non-success HTTP status. */
 export class ApiError extends AssinafyError {
 	public readonly statusCode: number;
@@ -21,12 +28,19 @@ export class ApiError extends AssinafyError {
 	public readonly wwwAuthenticate: string | undefined;
 	/** Server retry delay (seconds or HTTP date), when provided. */
 	public readonly retryAfter: string | undefined;
+	/** Rate-limit window reported by the API, when the headers are present. */
+	public readonly rateLimit: RateLimitInfo | undefined;
 
 	constructor(
 		message: string,
 		statusCode: number,
 		responseData: unknown = null,
-		options?: { cause?: unknown; wwwAuthenticate?: string; retryAfter?: string },
+		options?: {
+			cause?: unknown;
+			wwwAuthenticate?: string;
+			retryAfter?: string;
+			rateLimit?: RateLimitInfo;
+		},
 	) {
 		super(message, { statusCode, responseData }, options);
 		this.name = 'ApiError';
@@ -34,6 +48,7 @@ export class ApiError extends AssinafyError {
 		this.responseData = responseData;
 		this.wwwAuthenticate = options?.wwwAuthenticate;
 		this.retryAfter = options?.retryAfter;
+		this.rateLimit = options?.rateLimit;
 	}
 
 	static fromResponse(
@@ -54,18 +69,31 @@ export class ApiError extends AssinafyError {
 		const data = (responseData ?? {}) as Record<string, unknown>;
 		const rawMessage = data.message;
 		const rawError = data.error;
+		const description = data.error_description;
 		const message =
 			typeof rawMessage === 'string' && rawMessage.length > 0
 				? rawMessage
 				: typeof rawError === 'string'
-					? rawError
+					? typeof description === 'string' && description.length > 0
+						? `${rawError}: ${description}`
+						: rawError
 					: 'API request failed';
 		return new ApiError(message, statusCode, responseData, {
 			wwwAuthenticate:
 				typeof headers['www-authenticate'] === 'string' ? headers['www-authenticate'] : undefined,
 			retryAfter: typeof headers['retry-after'] === 'string' ? headers['retry-after'] : undefined,
+			rateLimit: parseRateLimit(headers),
 		});
 	}
+}
+
+function parseRateLimit(headers: Record<string, unknown>): RateLimitInfo | undefined {
+	const info: RateLimitInfo = {};
+	for (const key of ['limit', 'remaining', 'reset'] as const) {
+		const value = Number.parseInt(String(headers[`x-rate-limit-${key}`]), 10);
+		if (Number.isFinite(value)) info[key] = value;
+	}
+	return Object.keys(info).length > 0 ? info : undefined;
 }
 
 /** Thrown when client-side validation fails before the request is sent. */

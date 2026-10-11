@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
 - Operations: 106
-- Contract SHA-256: `2185c05ff19372702195ba272078272b87a4be0aad85b7c327b84b2634e104e1`
+- Contract SHA-256: `c4913641cd4881b515b5b7ad1a180c393c321d97fd74fff73080618c8b130ecf`
 
 ## Accounts
 
@@ -2776,7 +2776,7 @@ Estimate the cost of resending the signature request to a signer.
 
 `PUT /v1/documents/{documentId}/assignments/{assignmentId}/reset-expiration`
 
-Set a new expiration date for an assignment.
+Set a new expiration date for an assignment, or remove its expiration by sending `expires_at: null`. Not allowed once the document is closed.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -2791,7 +2791,7 @@ Set a new expiration date for an assignment.
 
 Fields (`application/json`):
 
-- `expires_at` (string) — New expiration date (ISO 8601). Must be at least one hour in the future.
+- `expires_at` (string | null, required) — New expiration date (ISO 8601). Must be at least one hour in the future. Send `null` to remove the expiration — the key itself is required.
 
 Example:
 
@@ -4024,7 +4024,7 @@ Fields (`application/json`):
 
 - `name` (string, required)
 - `type` (string, required)
-- `regex` (Array)
+- `regex` (string | null)
 - `is_required` (boolean)
 
 Example:
@@ -4181,7 +4181,7 @@ Update a field definition.
 Fields (`application/json`):
 
 - `name` (string)
-- `regex` (Array)
+- `regex` (string | null)
 - `is_active` (boolean)
 
 Example:
@@ -4840,6 +4840,8 @@ Example:
 }
 ```
 
+##### 429 — Rate limit exceeded; wait the `Retry-After` seconds. Limited per caller IP.
+
 ##### 500 — Unexpected server error.
 
 ```json
@@ -5080,7 +5082,7 @@ Retrieve a publicly shared document by ID. Public endpoint.
 
 `PUT /v1/public/documents/{documentId}/send-token`
 
-Send a one-time access token (email/WhatsApp) to view a public document. Public endpoint.
+Send a one-time access token to a signer of a public document, so they can view it. The document must be pending signature, and `recipient` must belong to a signer of the document who has not signed yet. Only the `email` channel is supported. Public endpoint.
 
 **Authentication:** none (public endpoint).
 
@@ -5090,17 +5092,19 @@ Send a one-time access token (email/WhatsApp) to view a public document. Public 
 |---|---|---|---|---|
 | `documentId` | path | string | yes | The document ID. |
 
-#### Request Body
+#### Request Body (required)
 
 Fields (`application/json`):
 
-- `email` (string)
+- `channel` (string, required) — Where to send the token. Only `email` is supported.
+- `recipient` (string, required) — The signer's address on that channel — for `email`, the signer's email address.
 
 Example:
 
 ```json
 {
-    "email": "user9@example.com"
+    "channel": "email",
+    "recipient": "user9@example.com"
 }
 ```
 
@@ -5110,8 +5114,39 @@ Example:
 
 ```json
 {
+    "data": {
+        "document": {
+            "resource": "document",
+            "id": "example_id_31",
+            "name": "Contract.pdf",
+            "page_count": 3,
+            "created_by": "Jane Doe"
+        },
+        "channel": "email",
+        "recipient": "user9@example.com"
+    },
     "status": 200,
     "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
 }
 ```
 
@@ -5494,8 +5529,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_31",
-        "example_id_32"
+        "example_id_32",
+        "example_id_33"
     ]
 }
 ```
@@ -5552,8 +5587,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_31",
-        "example_id_32"
+        "example_id_32",
+        "example_id_33"
     ],
     "decline_reason": "Unfavorable terms."
 }
@@ -5681,7 +5716,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user9@example.com",
+    "email": "user10@example.com",
     "government_id": "00000000000"
 }
 ```
@@ -5871,9 +5906,9 @@ Download the signer's stored signature/initials image. Uses the signer access co
 
 `GET /v1/signers/{signerId}/documents`
 
-List the documents a signer is party to. Uses the signer access code.
+List the documents a signer is party to. Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`access_code` query parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
 #### Parameters
 
@@ -5953,9 +5988,9 @@ List the documents a signer is party to. Uses the signer access code.
 
 `GET /v1/signers/{signerId}/documents/search`
 
-Search the documents a signer is party to (compact representation). Uses the signer access code.
+Search the documents a signer is party to (compact representation). Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`access_code` query parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
 #### Parameters
 
@@ -6511,7 +6546,7 @@ Create a tag in the workspace. Names are unique per workspace (case-insensitive)
 Fields (`application/json`):
 
 - `name` (string, required) — Trimmed; whitespace collapsed; max 64 chars.
-- `color` (Array) — 6-char hex (with or without leading #).
+- `color` (string | null) — 6-char hex (with or without leading #).
 
 Example:
 
@@ -6601,7 +6636,7 @@ Update a tag's name or color.
 Fields (`application/json`):
 
 - `name` (string)
-- `color` (Array)
+- `color` (string | null)
 
 Example:
 
@@ -6769,7 +6804,7 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_33",
+            "id": "example_id_34",
             "name": "template.pdf",
             "document_name": null,
             "message": null,
@@ -6873,7 +6908,7 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
         ],
         "is_active": true,
         "url": "https://example.com/example-url-13",
-        "email": "user10@example.com",
+        "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -6934,7 +6969,7 @@ Example:
     ],
     "is_active": true,
     "url": "https://example.com/example-url-13",
-    "email": "user10@example.com"
+    "email": "user11@example.com"
 }
 ```
 
@@ -6951,7 +6986,7 @@ Example:
         ],
         "is_active": true,
         "url": "https://example.com/example-url-13",
-        "email": "user10@example.com",
+        "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -7016,7 +7051,7 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
         ],
         "is_active": true,
         "url": "https://example.com/example-url-13",
-        "email": "user10@example.com",
+        "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -7119,10 +7154,10 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_34",
+            "id": "example_id_35",
             "event": "document_ready",
             "activity_id": 456,
-            "endpoint_id": "example_id_35",
+            "endpoint_id": "example_id_36",
             "endpoint": "https://example.com/example-url-14",
             "payload": null,
             "delivered": true,
@@ -7181,10 +7216,10 @@ Manually retry a webhook delivery for a specific entry, without waiting for auto
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_34",
+        "id": "example_id_35",
         "event": "document_ready",
         "activity_id": 456,
-        "endpoint_id": "example_id_35",
+        "endpoint_id": "example_id_36",
         "endpoint": "https://example.com/example-url-14",
         "payload": null,
         "delivered": true,
@@ -7261,10 +7296,10 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 {
     "data": [
         {
-            "id": "example_id_35",
+            "id": "example_id_36",
             "name": "ERP",
             "url": "https://example.com/example-url-15",
-            "email": "user11@example.com",
+            "email": "user12@example.com",
             "events": [
                 "document_ready",
                 "signer_signed_document"
@@ -7330,7 +7365,7 @@ Example:
 ```json
 {
     "url": "https://example.com/example-url-15",
-    "email": "user11@example.com",
+    "email": "user12@example.com",
     "events": [
         "document_ready",
         "signer_signed_document"
@@ -7348,10 +7383,10 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_35",
+        "id": "example_id_36",
         "name": "ERP",
         "url": "https://example.com/example-url-15",
-        "email": "user11@example.com",
+        "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
@@ -7428,10 +7463,10 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 ```json
 {
     "data": {
-        "id": "example_id_35",
+        "id": "example_id_36",
         "name": "ERP",
         "url": "https://example.com/example-url-15",
-        "email": "user11@example.com",
+        "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
@@ -7507,7 +7542,7 @@ Example:
 ```json
 {
     "url": "https://example.com/example-url-15",
-    "email": "user11@example.com",
+    "email": "user12@example.com",
     "events": [
         "document_ready"
     ],
@@ -7524,10 +7559,10 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_35",
+        "id": "example_id_36",
         "name": "ERP",
         "url": "https://example.com/example-url-15",
-        "email": "user11@example.com",
+        "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"

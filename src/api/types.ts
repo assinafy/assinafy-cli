@@ -947,27 +947,22 @@ export interface IPublicDocumentInfo {
 	created_by?: string;
 }
 
-/** Channel accepted by the `send-token` endpoint. */
-export type SendTokenChannel = 'email' | 'whatsapp' | (string & {});
+/** Channel accepted by the `send-token` endpoint. Only `email` is supported. */
+export type SendTokenChannel = 'email';
 
-/**
- * Response from `PUT /public/documents/{id}/send-token`.
- *
- * The published body is `{ email }`; the live legacy form may echo the
- * alternate `recipient` + `channel` fields that the SDK also supports.
- */
+/** `data` of `PUT /public/documents/{id}/send-token`. */
 export interface ISendTokenResponse {
-	/** Present for the published `{ email }` request form. */
-	status?: number;
-	/** Present for the published `{ email }` request form. */
-	message?: string;
-	/** Present for the live-compatible `{ recipient, channel }` request form. */
-	document?: IPublicDocumentInfo;
-	/** Present for the live-compatible `{ recipient, channel }` request form. */
-	channel?: SendTokenChannel;
-	/** Present for the live-compatible `{ recipient, channel }` request form. */
-	recipient?: string;
-	[key: string]: unknown;
+	/** Compact document; sandbox returns `page_count` as a numeric string. */
+	document: {
+		resource: 'document';
+		id: string;
+		name: string;
+		page_count: number | string;
+		created_by: string;
+	};
+	channel: SendTokenChannel;
+	/** The signer email the token was sent to. */
+	recipient: string;
 }
 
 /** Authentication: login response (also returned by social login). */
@@ -1256,6 +1251,16 @@ export type IOAuthTokenPayload = {
 } & (
 	| { grant_type: 'authorization_code'; code: string; redirect_uri: string; code_verifier: string }
 	| { grant_type: 'refresh_token'; refresh_token: string }
+	| {
+			/** RFC 8693; Assinafy internal-service confidential clients only (others get `invalid_client`). */
+			grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange';
+			client_secret: string;
+			/** Required for this grant: this API's own resource identifier. */
+			resource: string;
+			subject_token: string;
+			subject_token_type: 'urn:ietf:params:oauth:token-type:access_token';
+			requested_token_type?: 'urn:ietf:params:oauth:token-type:access_token';
+	  }
 );
 
 /** Flat OAuth response. Persist rotated tokens atomically before making further requests. */

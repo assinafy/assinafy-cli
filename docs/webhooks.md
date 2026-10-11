@@ -8,19 +8,23 @@ Usage: assinafy webhooks [options] [command]
 Manage webhook endpoints, the primary subscription, and delivery history
 
 Options:
-  -h, --help            display help for command
+  -h, --help                   display help for command
 
 Commands:
-  endpoints             Manage webhook endpoints and their signing secrets
-  register [options]    Register (or replace) the account's oldest webhook
-                        endpoint
-  get                   Show the account's oldest webhook endpoint
-  inactivate            Inactivate the account's oldest webhook endpoint without
-                        deleting it
-  event-types           List supported webhook event types
-  dispatches [options]  List webhook delivery history
-  retry <dispatchId>    Retry delivery of a specific dispatch
-  help [command]        display help for command
+  endpoints                    Manage webhook endpoints and their signing
+                               secrets
+  register [options]           Register (or replace) the account's oldest
+                               webhook endpoint
+  get                          Show the account's oldest webhook endpoint
+  inactivate                   Inactivate the account's oldest webhook endpoint
+                               without deleting it
+  event-types                  List supported webhook event types
+  dispatches [options]         List webhook delivery history
+  retry <dispatchId>           Retry delivery of a specific dispatch
+  verify [options] <bodyFile>  Verify a signed delivery (Standard Webhooks)
+                               against ASSINAFY_WEBHOOK_SECRET or the profile
+                               secret
+  help [command]               display help for command
 ```
 
 ### `assinafy webhooks endpoints`
@@ -240,4 +244,23 @@ Arguments:
 
 Options:
   -h, --help  display help for command
+```
+
+### `assinafy webhooks verify`
+
+```text
+Usage: assinafy webhooks verify [options] <bodyFile>
+
+Verify a signed delivery (Standard Webhooks) against ASSINAFY_WEBHOOK_SECRET or
+the profile secret
+
+Arguments:
+  bodyFile               Raw request body exactly as received
+
+Options:
+  --id <value>           webhook-id header
+  --timestamp <seconds>  webhook-timestamp header
+  --signature <value>    webhook-signature header
+  --tolerance <seconds>  Accepted clock difference in seconds (default: "300")
+  -h, --help             display help for command
 ```

@@ -396,35 +396,28 @@ const publicCommand = new Command('public')
 	});
 
 const sendTokenCommand = new Command('send-token')
-	.description('Send a 6-digit verification token to a signer')
+	.description('Email a one-time access token to a signer of a pending document')
 	.argument('<id>', 'Document ID')
 	.addOption(
-		new Option(
-			'--email <email>',
-			'Email address (compatibility overload for older deployments)',
-		).conflicts(['recipient', 'channel']),
+		new Option('--recipient <email>', 'Email of a signer who has not signed yet').conflicts(
+			'email',
+		),
 	)
+	.addOption(new Option('--email <email>', 'Alias of --recipient').conflicts('recipient'))
 	.addOption(
-		new Option(
-			'--recipient <value>',
-			'Email address or phone number (production payload)',
-		).conflicts('email'),
-	)
-	.addOption(
-		new Option('--channel <channel>', 'email or whatsapp').default('email').conflicts('email'),
+		new Option('--channel <channel>', 'Delivery channel').choices(['email']).default('email'),
 	)
 	.action(async (id, opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
-			if (!opts.email && !opts.recipient) {
-				throw new CliError('Pass --email <email> or --recipient <value>.');
-			}
-			const recipient = opts.email ? { email: opts.email } : (opts.recipient as string);
-			const channel = parseSendTokenChannel(opts.channel);
+			const recipient = opts.recipient ?? opts.email;
+			if (!recipient) throw new CliError('Pass --recipient <email>.');
 			const result = await withSpinner('Sending token', config, () =>
-				client.documents.sendToken(id, recipient, channel),
+				client.documents.sendToken(id, recipient),
 			);
-			printSuccess(`Token sent to ${opts.email ?? opts.recipient}`, config);
-			printData(result, config);
+			printSuccess(`Token sent to ${recipient}`, config);
+			printData(result, config, (r) =>
+				renderKeyValue({ document: r.document.id, channel: r.channel, recipient: r.recipient }),
+			);
 		});
 	});
 
@@ -463,11 +456,6 @@ const waitCommand = new Command('wait')
 			printData(doc, config, (d) => renderKeyValue({ id: d.id, status: d.status }));
 		});
 	});
-
-function parseSendTokenChannel(value: string): 'email' | 'whatsapp' {
-	if (value === 'email' || value === 'whatsapp') return value;
-	throw new CliError('--channel must be email or whatsapp');
-}
 
 export const documentsCommand = new Command('documents')
 	.description('Upload, list, download, and manage documents')

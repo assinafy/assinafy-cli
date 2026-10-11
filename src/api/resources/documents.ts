@@ -344,7 +344,7 @@ export class DocumentResource extends BaseResource {
 	): Promise<IDocumentDetailsResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
-		validateTemplateSigners(signers, { requireId: true, singleNotification: true });
+		validateTemplateSigners(signers, { requireId: true });
 		if (options.expires_at !== undefined) requireIso8601(options.expires_at, 'expires_at');
 		if (
 			options.editor_fields !== undefined &&
@@ -374,7 +374,7 @@ export class DocumentResource extends BaseResource {
 	): Promise<IEstimateCostResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
-		validateTemplateSigners(signers, { requireId: false, singleNotification: false });
+		validateTemplateSigners(signers, { requireId: false });
 		return this.call('Failed to estimate cost from template', () =>
 			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents/estimate-cost`, { signers }),
 		);
@@ -414,9 +414,10 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/**
-	 * `PUT /public/documents/{document_id}/send-token` — send the 6-digit
-	 * verification token to the signer's email / WhatsApp. Pass `{ email }` for
-	 * the published OpenAPI body or a string plus channel for the live legacy body.
+	 * `PUT /public/documents/{document_id}/send-token` — email a one-time access
+	 * token to a signer who has not signed a pending document yet. The API sends
+	 * `{ channel: 'email', recipient }`; only the `email` channel is accepted.
+	 * The `{ email }` form is kept for existing callers and sends the same body.
 	 */
 	async sendToken(
 		documentId: string,
@@ -424,25 +425,13 @@ export class DocumentResource extends BaseResource {
 		channel: SendTokenChannel = 'email',
 	): Promise<ISendTokenResponse> {
 		const id = this.requireId(documentId, 'Document ID');
-		if (typeof recipient === 'object') {
-			requireEmail(recipient?.email);
-			return this.call('Failed to send signing token', () =>
-				this.http.put(
-					`/public/documents/${id}/send-token`,
-					{ email: recipient.email },
-					publicRequestConfig(),
-				),
-			);
-		}
-		if (!recipient) throw new ValidationError('recipient is required');
-		if (channel !== 'email' && channel !== 'whatsapp') {
-			throw new ValidationError('channel must be email or whatsapp');
-		}
-		if (channel === 'email') requireEmail(recipient);
+		const email = typeof recipient === 'object' ? recipient?.email : recipient;
+		if (channel !== 'email') throw new ValidationError('channel must be email');
+		requireEmail(email);
 		return this.call('Failed to send signing token', () =>
 			this.http.put(
 				`/public/documents/${id}/send-token`,
-				{ recipient, channel },
+				{ channel, recipient: email },
 				publicRequestConfig(),
 			),
 		);
@@ -471,10 +460,7 @@ export class DocumentResource extends BaseResource {
 	}
 }
 
-function validateTemplateSigners(
-	signers: unknown,
-	options: { requireId: boolean; singleNotification: boolean },
-): void {
+function validateTemplateSigners(signers: unknown, options: { requireId: boolean }): void {
 	if (!Array.isArray(signers)) throw new ValidationError('signers must be an array');
 	for (const value of signers) {
 		if (!value || typeof value !== 'object') {
@@ -499,13 +485,6 @@ function validateTemplateSigners(
 		validateSignerOptions(signer);
 		if (options.requireId && signer.step !== undefined && Number(signer.step) < 1) {
 			throw new ValidationError('template signer step must be a positive integer');
-		}
-		if (
-			options.singleNotification &&
-			Array.isArray(signer.notification_methods) &&
-			signer.notification_methods.length > 1
-		) {
-			throw new ValidationError('template signers accept at most one notification method');
 		}
 	}
 	if (options.requireId) {

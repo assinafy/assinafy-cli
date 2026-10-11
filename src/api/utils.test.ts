@@ -10,6 +10,7 @@ import {
 	signerAccessConfig,
 	stripEmpty,
 	toSdkError,
+	validateSignerOptions,
 } from './utils';
 
 describe('handleAssinafyResponse', () => {
@@ -127,5 +128,29 @@ describe('toSdkError', () => {
 		expect(exposed).not.toContain('header-secret');
 		expect(exposed).not.toContain('body-secret');
 		expect(exposed).not.toContain('query-secret');
+	});
+});
+
+describe('validateSignerOptions', () => {
+	it('enforces one notification method compatible with the verification method', () => {
+		expect(() =>
+			validateSignerOptions({ verification_method: 'Email', notification_methods: ['Email'] }),
+		).not.toThrow();
+		expect(() =>
+			validateSignerOptions({
+				verification_method: 'DigitalCertificate',
+				notification_methods: ['Whatsapp'],
+			}),
+		).not.toThrow();
+		expect(() => validateSignerOptions({ notification_methods: [] })).not.toThrow();
+		expect(() => validateSignerOptions({ notification_methods: ['Email', 'Whatsapp'] })).toThrow(
+			'exactly one method',
+		);
+		expect(() =>
+			validateSignerOptions({ verification_method: 'Whatsapp', notification_methods: ['Email'] }),
+		).toThrow('Whatsapp verification requires the Whatsapp notification method');
+		expect(() =>
+			validateSignerOptions({ verification_method: 'Email', notification_methods: ['Whatsapp'] }),
+		).toThrow('Email verification requires the Email notification method');
 	});
 });

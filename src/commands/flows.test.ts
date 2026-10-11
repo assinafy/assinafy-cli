@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -407,4 +408,62 @@ it('creates signed webhook endpoints with the default event set', async () => {
 		{ url: 'https://example.com/hook', email: 'ops@example.com', signing_enabled: true },
 		'example-account',
 	);
+});
+
+it('verifies a signed webhook delivery file with the configured secret', async () => {
+	const secret = Buffer.from('example-webhook-secret').toString('base64');
+	vi.stubEnv('ASSINAFY_WEBHOOK_SECRET', `whsec_${secret}`);
+	const body = '{"event":"document_ready"}';
+	const bodyFile = path.join(directory, 'body.json');
+	writeFileSync(bodyFile, body);
+	const timestamp = String(Math.floor(Date.now() / 1000));
+	const signature = createHmac('sha256', Buffer.from(secret, 'base64'))
+		.update(`msg_1.${timestamp}.${body}`)
+		.digest('base64');
+	const args = ['--id', 'msg_1', '--timestamp', timestamp];
+	const program = () => new Command().option('--json').addCommand(webhooksCommand);
+	await program().parseAsync(
+		['--json', 'webhooks', 'verify', bodyFile, ...args, '--signature', `v1,${signature}`],
+		{ from: 'user' },
+	);
+	expect(JSON.parse(stdout)).toEqual({ valid: true, id: 'msg_1' });
+	expect(process.exitCode).toBe(0);
+	await program().parseAsync(
+		['--json', 'webhooks', 'verify', bodyFile, ...args, '--signature', 'v1,invalid'],
+		{ from: 'user' },
+	);
+	expect(process.exitCode).toBe(1);
+	expect(stderr).toContain('Invalid webhook signature');
+	expect(stderr).not.toContain(secret);
+});
+
+it('sends signing tokens with the email-only production body', async () => {
+	const send = vi.spyOn(DocumentResource.prototype, 'sendToken').mockResolvedValue({
+		document: {
+			resource: 'document',
+			id: 'example-document',
+			name: 'example.pdf',
+			page_count: 1,
+			created_by: 'Example User',
+		},
+		channel: 'email',
+		recipient: 'signer@example.com',
+	});
+	const program = new Command().option('--json').addCommand(documentsCommand);
+	await program.parseAsync(
+		['--json', 'documents', 'send-token', 'example-document', '--email', 'signer@example.com'],
+		{ from: 'user' },
+	);
+	expect(send).toHaveBeenCalledWith('example-document', 'signer@example.com');
+	expect(JSON.parse(stdout)).toMatchObject({ channel: 'email', recipient: 'signer@example.com' });
+});
+
+it('lists signer documents with owner credentials when no access code is given', async () => {
+	vi.stubEnv('ASSINAFY_SIGNER_ACCESS_CODE', undefined);
+	const create = vi.spyOn(cliClient, 'createClient');
+	const list = vi.spyOn(SignerDocumentsResource.prototype, 'list').mockResolvedValue({ data: [] });
+	const program = new Command().option('--json').addCommand(signerCommand);
+	await program.parseAsync(['--json', 'signer', 'documents', 'example-signer'], { from: 'user' });
+	expect(list).toHaveBeenCalledWith('example-signer', undefined, expect.any(Object));
+	expect(create.mock.calls[0]?.[1]).toBeUndefined();
 });

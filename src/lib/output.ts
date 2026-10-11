@@ -90,6 +90,14 @@ export function printError(err: unknown, config: OutputConfig): void {
 		if (normalized.statusCode) {
 			writeErr(pc.dim(`  (HTTP ${normalized.statusCode})`));
 		}
+		if (normalized.statusCode === 429) {
+			const wait = normalized.retryAfter ?? normalized.rateLimit?.reset;
+			writeErr(
+				pc.dim(
+					`  (rate limit reached${wait === undefined ? '' : `; retry after ${sanitizeTerminalText(String(wait))} s`})`,
+				),
+			);
+		}
 		const challenge = normalized.wwwAuthenticate ?? '';
 		const scope =
 			challenge.includes('insufficient_scope') && /\bscope="([^"]+)"/.exec(challenge)?.[1];

@@ -310,11 +310,11 @@ assinafy signer sign "$DOCUMENT_ID" example_assignment --entries '[
 ]' --json
 ```
 
-Os IDs e valores de campos vêm do assignment apresentado ao signatário. Para verificação por e-mail, `documents send-token <id> --recipient <email> --channel email` envia o código; para WhatsApp, use `--recipient <telefone> --channel whatsapp`. Ambos usam `signer verify-code`; `verify-email` continua disponível como alias. Configure `ASSINAFY_VERIFICATION_CODE` para manter o OTP fora dos argumentos e preservar zeros iniciais. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
+Os IDs e valores de campos vêm do assignment apresentado ao signatário. Na verificação por e-mail ou WhatsApp, o código chega na própria mensagem do convite. Para enviar um novo token de acesso por e-mail a um signatário que ainda não assinou um documento pendente, use `documents send-token <id> --recipient <email>` (somente o canal `email`; o corpo enviado é `{ "channel": "email", "recipient": "signer@example.com" }` e a resposta traz `document`, `channel` e `recipient`). Os dois métodos usam `signer verify-code`; `verify-email` continua disponível como alias. Configure `ASSINAFY_VERIFICATION_CODE` para manter o OTP fora dos argumentos e preservar zeros iniciais. `decline` e `decline-multiple` exigem motivo não vazio com até 2.000 caracteres. As operações em lote usam `sign-multiple` e `decline-multiple`.
 
 Para certificados A1/A3, use a página de assinatura Assinafy ou integre o Web PKI com o SDK. Após apresentar o documento e aceitar os termos, `signer certificate-start --json` retorna `{ "token": "..." }`. O navegador assina essa operação no dispositivo do signatário. Defina `ASSINAFY_CERTIFICATE_TOKEN` com o mesmo token e execute `signer certificate-complete --json`, que retorna `{ "signerName": "..." }`. A chave privada e a senha/PIN permanecem no dispositivo. Aguarde o documento ficar `certificated` e baixe `--artifact pades` ou `bundle`; o comando comum `sign` não substitui esse fluxo.
 
-O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. Em produção, `send-token` usa `--recipient` e `--channel`; `--email` mantém o formato publicado para deployments que o aceitam.
+O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. `--email` é um alias de `--recipient` em `send-token`. `signer documents <signerId>` e `signer search <signerId> <texto>` também funcionam sem `--access-code`, usando a chave de API ou o token do workspace ao qual o signatário pertence.
 
 Verificação, confirmação de dados e envio da imagem de assinatura podem retornar `[]` em caso de sucesso. Consulte `signer self` para obter o perfil atualizado e confirme o progresso e os artefatos certificados após assinar. Os exemplos completos de requisição e resposta estão na [referência do SDK para signatários](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
 
@@ -337,6 +337,8 @@ assinafy webhooks endpoints create   --url https://example.com/hooks/assinafy   
 assinafy webhooks endpoints list
 assinafy webhooks endpoints secret "$ENDPOINT_ID"        # segredo whsec_ para o receptor
 assinafy webhooks dispatches --endpoint "$ENDPOINT_ID" --delivered false --json
+# confere uma entrega salva com ASSINAFY_WEBHOOK_SECRET (sai com código 1 se inválida)
+assinafy webhooks verify corpo.json --id "$WEBHOOK_ID" --timestamp "$WEBHOOK_TIMESTAMP" --signature "$WEBHOOK_SIGNATURE"
 ```
 
 Sem `--events`, o endpoint recebe `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document` e `document_processing_failed`. `endpoints update <id>` altera apenas as opções informadas (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); desativar a assinatura descarta o segredo. `endpoints rotate-secret <id>` gera um novo segredo e invalida o anterior imediatamente. `endpoints delete <id>` remove o endpoint e libera a vaga. URLs repetidas no mesmo workspace retornam `400`; criar acima do limite do plano retorna `403`. A leitura e a rotação do segredo não estão disponíveis para aplicativos OAuth.
@@ -425,7 +427,7 @@ A listagem acima solicita uma página. Continue até `meta.last_page` quando pre
 }
 ```
 
-No SDK, `ValidationError` indica entrada inválida; `ApiError` carrega `statusCode`, `responseData`, `wwwAuthenticate` e `retryAfter`; `NetworkError` indica falha de transporte; `PartialWorkflowError` preserva IDs existentes e a causa original. O SDK exige HTTPS, rejeita redirecionamentos e não inclui configurações Axios com credenciais nos erros. O uso de HTTP sem TLS é restrito a loopback com opt-in explícito no SDK.
+No SDK, `ValidationError` indica entrada inválida; `ApiError` carrega `statusCode`, `responseData`, `wwwAuthenticate`, `retryAfter` e `rateLimit` (`X-Rate-Limit-Limit`, `-Remaining`, `-Reset`); em `429`, aguarde os segundos de `Retry-After` antes de repetir — o SDK não repete chamadas automaticamente; `NetworkError` indica falha de transporte; `PartialWorkflowError` preserva IDs existentes e a causa original. O SDK exige HTTPS, rejeita redirecionamentos e não inclui configurações Axios com credenciais nos erros. O uso de HTTP sem TLS é restrito a loopback com opt-in explícito no SDK.
 
 ## Referência de comandos
 

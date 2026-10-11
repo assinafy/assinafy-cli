@@ -57,7 +57,8 @@ Arguments:
   signerId              Signer ID
 
 Options:
-  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --access-code <code>  Signer access code (omit to use your API key or token)
+                        (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --page <n>            Page number to fetch
   --per-page <n>        Items per page
   --search <query>      Filter by a search query
@@ -77,7 +78,8 @@ Arguments:
   query                 Search text
 
 Options:
-  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --access-code <code>  Signer access code (omit to use your API key or token)
+                        (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
 

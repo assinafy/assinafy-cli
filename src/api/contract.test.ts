@@ -241,9 +241,9 @@ const cases: Case[] = [
 	],
 	[
 		'PUT /v1/public/documents/{documentId}/send-token',
-		(c) => c.documents.sendToken(id, { email }),
-		{ email },
-		'status',
+		(c) => c.documents.sendToken(id, email),
+		{ channel: 'email', recipient: email },
+		undefined,
 		'public',
 	],
 	['GET /v1/accounts/{accountId}/signers', (c) => c.signers.list(), undefined, 'list'],

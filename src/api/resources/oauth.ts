@@ -163,7 +163,7 @@ export class OAuthResource extends BaseResource {
 	}
 
 	/**
-	 * `POST /oauth/token` — code exchange or refresh; returns the flat OAuth JSON body.
+	 * `POST /oauth/token` — code exchange, refresh, or RFC 8693 token exchange; returns the flat OAuth JSON body.
 	 * A refresh must return a new `refresh_token`; otherwise this throws `ValidationError`.
 	 */
 	async token(payload: IOAuthTokenPayload): Promise<IOAuthTokenResponse> {
@@ -183,8 +183,23 @@ export class OAuthResource extends BaseResource {
 			}
 		} else if (payload.grant_type === 'refresh_token') {
 			required(payload.refresh_token, 'refresh_token');
+		} else if (payload.grant_type === TOKEN_EXCHANGE) {
+			required(payload.client_secret, 'client_secret');
+			httpsUrl(required(payload.resource, 'resource'), 'resource');
+			required(payload.subject_token, 'subject_token');
+			for (const field of ['subject_token_type', 'requested_token_type'] as const) {
+				const value = payload[field];
+				if (
+					(value !== undefined || field === 'subject_token_type') &&
+					value !== ACCESS_TOKEN_TYPE
+				) {
+					throw new ValidationError(`${field} must be ${ACCESS_TOKEN_TYPE}`);
+				}
+			}
 		} else {
-			throw new ValidationError('grant_type must be authorization_code or refresh_token');
+			throw new ValidationError(
+				`grant_type must be authorization_code, refresh_token or ${TOKEN_EXCHANGE}`,
+			);
 		}
 		const tokens = await this.call<IOAuthTokenResponse>('OAuth token request failed', () =>
 			this.http.post('/oauth/token', payload, formRequestConfig()),
@@ -225,6 +240,9 @@ export class OAuthResource extends BaseResource {
 		return this.call('Failed to fetch OAuth userinfo', () => this.http.get('/oauth/userinfo'));
 	}
 }
+
+const TOKEN_EXCHANGE = 'urn:ietf:params:oauth:grant-type:token-exchange';
+const ACCESS_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token';
 
 function required(value: unknown, name: string): string {
 	if (typeof value !== 'string' || !value.trim()) throw new ValidationError(`${name} is required`);

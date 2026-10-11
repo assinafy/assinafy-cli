@@ -244,7 +244,7 @@ assinafy signer sign <documentId> <assignmentId> --entries '[
 ]'
 ```
 
-Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code. `documents send-token <documentId> --recipient <email> --channel email` sends it by email; use `--recipient <phone> --channel whatsapp` for WhatsApp. Both use `signer verify-code`; `verify-email` remains an alias. Set `ASSINAFY_VERIFICATION_CODE` to keep the OTP out of command arguments and preserve leading zeroes. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
+Where email or WhatsApp verification is configured, the signer also confirms a 6-digit code. The code arrives in the invitation message itself. To email a fresh access token to a signer who has not signed a pending document yet, run `documents send-token <documentId> --recipient <email>` (email channel only; it sends `{ "channel": "email", "recipient": "signer@example.com" }` and returns `document`, `channel`, and `recipient`; `--email` is an alias). Both channels use `signer verify-code`; `verify-email` remains an alias. Set `ASSINAFY_VERIFICATION_CODE` to keep the OTP out of command arguments and preserve leading zeroes. `signer decline` (or `decline-multiple`) rejects with a reason, and `sign-multiple` completes several documents in one call.
 
 For A1/A3 certificates, use Assinafy's hosted signing page or integrate Web PKI with the SDK. After document review and terms acceptance, `signer certificate-start --json` returns `{ "token": "..." }`. Have the browser sign that operation on the signer's device, then set `ASSINAFY_CERTIFICATE_TOKEN` to the same token and run `signer certificate-complete --json`; it returns `{ "signerName": "..." }`. Private keys and passwords/PINs stay on the device. Wait for `certificated` status and download `--artifact pades` or `bundle`. The ordinary `sign` command does not perform this handshake. These two production routes use the signing application's payloads and are not yet OpenAPI paths.
 
@@ -283,6 +283,8 @@ assinafy webhooks endpoints delete <endpointId>
 
 assinafy webhooks dispatches --endpoint <endpointId> --delivered false
 assinafy webhooks retry <dispatchId>                # redeliver one event
+# check a saved delivery with ASSINAFY_WEBHOOK_SECRET (exit code 1 when invalid)
+assinafy webhooks verify body.json --id <webhook-id> --timestamp <webhook-timestamp> --signature <webhook-signature>
 ```
 
 Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. `endpoints update` changes only the flags given (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); disabling signing discards the secret. `rotate-secret` invalidates the previous secret immediately. A duplicate URL within the workspace returns `400`; creating past the plan limit returns `403`. Secret read and rotation are not available to OAuth applications. `retry` re-sends only to that delivery's endpoint, and only while it is active.
@@ -437,7 +439,7 @@ assinafy send contract.pdf \
 | `documents verify <hash>` | Verify by signature hash (public) |
 | `documents statuses` | List every document status and whether it is deletable |
 | `documents public <id>` | Public unauthenticated lookup |
-| `documents send-token <id> --recipient <email> --channel email` | Send a verification token in production |
+| `documents send-token <id> --recipient <email>` | Email a one-time access token to a pending signer (email channel only) |
 | `documents progress <id>` | Signing progress |
 | `documents wait <id> [--timeout] [--interval]` | Poll until ready, failed, or timed out |
 
@@ -537,7 +539,7 @@ await client.documents.waitUntilReady(document.id);
 
 CommonJS uses `require('@assinafy/cli/api')`. JSON `data` envelopes are unwrapped, paginated calls resolve to `{ data, meta }` built from the `X-Pagination-*` headers, downloads resolve to a `Buffer`, and status-only responses keep their documented object.
 
-Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCode`, `responseData`, `wwwAuthenticate`, and `retryAfter`) for HTTP failures, `NetworkError` for transport failures, and `PartialWorkflowError` when `uploadAndRequestSignatures` fails after creating resources — it exposes the `documentId` and `signerIds` that already exist so you can inspect and resume. Never automatically delete these signers: they may have been reused from other documents. For example:
+Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCode`, `responseData`, `wwwAuthenticate`, `retryAfter`, and `rateLimit` from the `X-Rate-Limit-*` headers; on `429`, wait `Retry-After` seconds — the SDK never retries automatically) for HTTP failures, `NetworkError` for transport failures, and `PartialWorkflowError` when `uploadAndRequestSignatures` fails after creating resources — it exposes the `documentId` and `signerIds` that already exist so you can inspect and resume. Never automatically delete these signers: they may have been reused from other documents. For example:
 
 ```ts
 try {
@@ -597,7 +599,8 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 - The production OpenAPI publishes 106 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
 - The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
 - Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 106 OpenAPI operations.
-- Both the published and legacy `send-token` payloads are supported for compatible deployments.
+- `send-token` sends the email-only body `{ "channel": "email", "recipient": "..." }`; WhatsApp and the older `{ "email" }` body are rejected by the API with `400`.
+- `signer documents` and `signer search` accept the workspace API key or token when `--access-code` is omitted.
 - Webhook signatures follow Standard Webhooks; `WebhookVerifier.verifyDelivery` implements the published scheme. The older `verify(body, signature)` method is deprecated and does not match Assinafy deliveries.
 
 ## License

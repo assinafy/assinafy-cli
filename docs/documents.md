@@ -30,7 +30,7 @@ Commands:
   verify <hash>                                  Verify a document by its signature hash
   statuses                                       List every possible document status
   public <id>                                    Public (unauthenticated) lookup of basic document info
-  send-token [options] <id>                      Send a 6-digit verification token to a signer
+  send-token [options] <id>                      Email a one-time access token to a signer of a pending document
   progress <id>                                  Show signing progress for a document
   wait [options] <id>                            Poll a document until it is ready (or fails / times out)
   help [command]                                 display help for command
@@ -339,16 +339,15 @@ Options:
 ```text
 Usage: assinafy documents send-token [options] <id>
 
-Send a 6-digit verification token to a signer
+Email a one-time access token to a signer of a pending document
 
 Arguments:
   id                   Document ID
 
 Options:
-  --email <email>      Email address (compatibility overload for older
-                       deployments)
-  --recipient <value>  Email address or phone number (production payload)
-  --channel <channel>  email or whatsapp (default: "email")
+  --recipient <email>  Email of a signer who has not signed yet
+  --email <email>      Alias of --recipient
+  --channel <channel>  Delivery channel (choices: "email", default: "email")
   -h, --help           display help for command
 ```
 

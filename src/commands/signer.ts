@@ -6,7 +6,7 @@ import { parseJsonArray, splitList } from '../lib/json';
 import { addDownloadOptions, addListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams } from '../lib/pagination';
-import { runWithPublicClient } from '../lib/run';
+import { runWithClient, runWithPublicClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
 
@@ -14,6 +14,15 @@ const accessCodeOption = () =>
 	new Option('--access-code <code>', 'Signer access code')
 		.env('ASSINAFY_SIGNER_ACCESS_CODE')
 		.makeOptionMandatory();
+
+/** Signer document listing accepts the access code or, when omitted, owner credentials. */
+const optionalAccessCodeOption = () =>
+	new Option('--access-code <code>', 'Signer access code (omit to use your API key or token)').env(
+		'ASSINAFY_SIGNER_ACCESS_CODE',
+	);
+
+const runSignerOrOwner = (accessCode: string | undefined) =>
+	accessCode === undefined ? runWithClient : runWithPublicClient;
 
 const documentCommand = new Command('document')
 	.description("Fetch the signer's current document")
@@ -32,9 +41,9 @@ const documentsCommand = addListOptions(
 	new Command('documents')
 		.description("List the signer's documents")
 		.argument('<signerId>', 'Signer ID')
-		.addOption(accessCodeOption()),
+		.addOption(optionalAccessCodeOption()),
 ).action(async (signerId, opts, command) => {
-	await runWithPublicClient(command, async ({ client, config }) => {
+	await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 		const result = await withSpinner('Fetching documents', config, () =>
 			client.signerDocuments.list(signerId, opts.accessCode, listParams(opts)),
 		);
@@ -52,9 +61,9 @@ const searchCommand = new Command('search')
 	.description("Search the signer's documents")
 	.argument('<signerId>', 'Signer ID')
 	.argument('<query>', 'Search text')
-	.addOption(accessCodeOption())
+	.addOption(optionalAccessCodeOption())
 	.action(async (signerId, query, opts, command) => {
-		await runWithPublicClient(command, async ({ client, config }) => {
+		await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 			const result = await withSpinner('Searching documents', config, () =>
 				client.signerDocuments.search(signerId, query, opts.accessCode),
 			);

@@ -47,6 +47,32 @@ describe('normalizeError', () => {
 		}
 	});
 
+	it('exposes rate-limit headers from a 429 response', () => {
+		const error = ApiError.fromResponse(
+			429,
+			{ status: 429, message: 'Too Many Requests', data: null },
+			{
+				'retry-after': '17',
+				'x-rate-limit-limit': '60',
+				'x-rate-limit-remaining': '0',
+				'x-rate-limit-reset': '17',
+			},
+		);
+		expect(error.rateLimit).toEqual({ limit: 60, remaining: 0, reset: 17 });
+		expect(normalizeError(error)).toMatchObject({
+			statusCode: 429,
+			retryAfter: '17',
+			rateLimit: { limit: 60, remaining: 0, reset: 17 },
+		});
+		expect(ApiError.fromResponse(500, null, {}).rateLimit).toBeUndefined();
+		expect(
+			ApiError.fromResponse(401, {
+				error: 'invalid_client',
+				error_description: 'Client authentication failed.',
+			}).message,
+		).toBe('invalid_client: Client authentication failed.');
+	});
+
 	it('keeps the underlying status and exposes the resources a partial workflow left behind', () => {
 		const n = normalizeError(
 			new PartialWorkflowError(

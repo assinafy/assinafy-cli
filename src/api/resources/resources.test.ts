@@ -213,22 +213,15 @@ describe('DocumentResource', () => {
 		}
 	});
 
-	it('supports both the published and live-compatible public token payloads', async () => {
+	it('sends the production send-token body for both call forms', async () => {
 		const calls: CapturedCall[] = [];
 		const docs = new DocumentResource(mockHttp(calls));
 		await docs.sendToken('doc1', { email: 'signer@example.com' });
-		await docs.sendToken('doc1', '+5548999990000', 'whatsapp');
+		await docs.sendToken('doc1', 'signer@example.com');
+		const body = { channel: 'email', recipient: 'signer@example.com' };
 		expect(calls).toMatchObject([
-			{
-				method: 'PUT',
-				url: '/public/documents/doc1/send-token',
-				body: { email: 'signer@example.com' },
-			},
-			{
-				method: 'PUT',
-				url: '/public/documents/doc1/send-token',
-				body: { recipient: '+5548999990000', channel: 'whatsapp' },
-			},
+			{ method: 'PUT', url: '/public/documents/doc1/send-token', body },
+			{ method: 'PUT', url: '/public/documents/doc1/send-token', body },
 		]);
 	});
 
@@ -241,22 +234,30 @@ describe('DocumentResource', () => {
 		await expect(docs.sendToken('doc1', 'invalid', 'email')).rejects.toThrow(
 			'Invalid email address',
 		);
-		await expect(docs.sendToken('doc1', 'recipient', 'sms' as 'email')).rejects.toThrow(
-			'channel must be email or whatsapp',
+		await expect(docs.sendToken('doc1', '+5511999999999', 'whatsapp' as 'email')).rejects.toThrow(
+			'channel must be email',
 		);
 		expect(calls).toHaveLength(0);
 	});
 
-	it('preserves the published status-only send-token response', async () => {
+	it('returns the send-token document, channel, and recipient', async () => {
+		const data = {
+			document: {
+				resource: 'document',
+				id: 'doc1',
+				name: 'Contract.pdf',
+				page_count: 3,
+				created_by: 'Example User',
+			},
+			channel: 'email',
+			recipient: 'signer@example.com',
+		};
 		const http = {
 			...mockHttp(),
-			put: async () => ({ status: 200, data: { status: 200, message: '' } }),
+			put: async () => ({ status: 200, data: { status: 200, message: '', data } }),
 		} as unknown as AxiosInstance;
 		const docs = new DocumentResource(http);
-		await expect(docs.sendToken('doc1', { email: 'signer@example.com' })).resolves.toEqual({
-			status: 200,
-			message: '',
-		});
+		await expect(docs.sendToken('doc1', 'signer@example.com')).resolves.toEqual(data);
 	});
 
 	it('keeps the document display name separate from the source PDF file name', async () => {
@@ -369,7 +370,7 @@ describe('DocumentResource', () => {
 					notification_methods: ['Email', 'Whatsapp'],
 				},
 			]),
-		).rejects.toThrow(/at most one/);
+		).rejects.toThrow(/exactly one method/);
 		await expect(
 			docs.createFromTemplate('template1', [
 				{ role_id: 'role1', id: 'signer1', step: 1 },
@@ -1069,6 +1070,21 @@ describe('SignerDocumentsResource', () => {
 				},
 			},
 		]);
+	});
+
+	it('uses owner credentials for signer document list and search without an access code', async () => {
+		const calls: CapturedCall[] = [];
+		const signerDocs = new SignerDocumentsResource(mockHttp(calls));
+		await signerDocs.list('signer1', undefined, { page: 2 });
+		await signerDocs.search('signer1', 'contract');
+		await expect(signerDocs.search('signer1', 'contract', '')).rejects.toThrow(ValidationError);
+		expect(calls).toHaveLength(2);
+		for (const call of calls) {
+			expect(call.config?.params).not.toHaveProperty('signer-access-code');
+			expect(call.config?.headers).toBeUndefined();
+		}
+		expect(calls[0]?.config?.params).toEqual({ page: 2 });
+		expect(calls[1]?.config?.params).toEqual({ search: 'contract' });
 	});
 
 	it('preserves signer acknowledgement data without assuming a status body', async () => {

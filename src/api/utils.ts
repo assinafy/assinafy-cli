@@ -202,6 +202,20 @@ export function validateSignerOptions(input: {
 			`notification_methods must contain only: ${NOTIFICATION_METHODS.join(', ')}`,
 		);
 	}
+	const notifications = (input.notification_methods ?? []) as string[];
+	if (notifications.length > 1) {
+		throw new ValidationError('notification_methods accepts exactly one method per signer');
+	}
+	const [notification] = notifications;
+	if (
+		notification !== undefined &&
+		(input.verification_method === 'Email' || input.verification_method === 'Whatsapp') &&
+		notification !== input.verification_method
+	) {
+		throw new ValidationError(
+			`${input.verification_method} verification requires the ${input.verification_method} notification method`,
+		);
+	}
 	if (input.step !== undefined && !Number.isInteger(input.step)) {
 		throw new ValidationError('step must be an integer');
 	}

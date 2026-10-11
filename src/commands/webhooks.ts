@@ -1,17 +1,19 @@
 import { Command, Option, type OptionValues } from '@commander-js/extra-typings';
-import type {
-	IWebhookDispatchListParams,
-	IWebhookEndpoint,
-	IWebhookEndpointUpdatePayload,
+import {
+	type IWebhookDispatchListParams,
+	type IWebhookEndpoint,
+	type IWebhookEndpointUpdatePayload,
+	WebhookVerifier,
 } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
+import { readBinary } from '../lib/files';
 import { parseInteger, splitList } from '../lib/json';
 import { addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
-import { runWithClient } from '../lib/run';
+import { runAction, runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
 
@@ -320,6 +322,39 @@ const endpointsRotateSecretCommand = new Command('rotate-secret')
 		});
 	});
 
+export const verifyCommand = new Command('verify')
+	.description(
+		'Verify a signed delivery (Standard Webhooks) against ASSINAFY_WEBHOOK_SECRET or the profile secret',
+	)
+	.argument('<bodyFile>', 'Raw request body exactly as received')
+	.requiredOption('--id <value>', 'webhook-id header')
+	.requiredOption('--timestamp <seconds>', 'webhook-timestamp header')
+	.requiredOption('--signature <value>', 'webhook-signature header')
+	.option('--tolerance <seconds>', 'Accepted clock difference in seconds', '300')
+	.action(async (bodyFile, opts, command) => {
+		await runAction(command, async ({ config }) => {
+			if (!config.webhookSecret) {
+				throw new CliError(
+					'No webhook secret found. Set ASSINAFY_WEBHOOK_SECRET or `assinafy config set --webhook-secret`.',
+				);
+			}
+			const valid = new WebhookVerifier(config.webhookSecret).verifyDelivery(
+				readBinary(bodyFile),
+				{
+					'webhook-id': opts.id,
+					'webhook-timestamp': opts.timestamp,
+					'webhook-signature': opts.signature,
+				},
+				{ toleranceSeconds: parseInteger(opts.tolerance, '--tolerance', { min: 0 }) },
+			);
+			if (!valid) {
+				throw new CliError('Invalid webhook signature or timestamp outside the tolerance window.');
+			}
+			printSuccess('Webhook signature is valid', config);
+			printData({ valid, id: opts.id }, config, () => 'valid');
+		});
+	});
+
 const endpointsCommand = new Command('endpoints')
 	.description('Manage webhook endpoints and their signing secrets')
 	.addCommand(endpointsListCommand)
@@ -338,4 +373,5 @@ export const webhooksCommand = new Command('webhooks')
 	.addCommand(inactivateCommand)
 	.addCommand(eventTypesCommand)
 	.addCommand(dispatchesCommand)
-	.addCommand(retryCommand);
+	.addCommand(retryCommand)
+	.addCommand(verifyCommand);

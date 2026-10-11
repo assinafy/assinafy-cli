@@ -16,6 +16,7 @@ import type {
 	IVerifySignerCodePayload,
 } from '../types.js';
 import {
+	cleanParams,
 	publicRequestConfig,
 	requireDocumentArtifactName,
 	requireSignerImageType,
@@ -38,33 +39,42 @@ export class SignerDocumentsResource extends BaseResource {
 		);
 	}
 
-	/** `GET /signers/{signer_id}/documents?signer-access-code=…` */
+	/**
+	 * `GET /signers/{signer_id}/documents` — with a signer access code, or with
+	 * the client's owner credentials when the code is omitted (the signer must
+	 * belong to that workspace).
+	 */
 	async list(
 		signerId: string,
-		signerAccessCode: string,
+		signerAccessCode?: string,
 		params: ISignerDocumentListParams = {},
 	): Promise<IDocumentListResponse> {
 		const sid = this.requireId(signerId, 'Signer ID');
-		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		const config = this.signerOrOwnerConfig(signerAccessCode, { ...params });
 		return this.callList<IDocumentListItem>('Failed to list signer documents', () =>
-			this.http.get(
-				`/signers/${sid}/documents`,
-				signerAccessConfig(code, params as unknown as Record<string, unknown>),
-			),
+			this.http.get(`/signers/${sid}/documents`, config),
 		);
 	}
 
-	/** `GET /signers/{signer_id}/documents/search?signer-access-code=…&search=…` */
+	/** `GET /signers/{signer_id}/documents/search?search=…` — access code or owner credentials. */
 	async search(
 		signerId: string,
 		search: string,
-		signerAccessCode: string,
+		signerAccessCode?: string,
 	): Promise<IDocumentListResponse> {
 		const sid = this.requireId(signerId, 'Signer ID');
-		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		const config = this.signerOrOwnerConfig(signerAccessCode, { search });
 		return this.callList<IDocumentListItem>('Failed to search signer documents', () =>
-			this.http.get(`/signers/${sid}/documents/search`, signerAccessConfig(code, { search })),
+			this.http.get(`/signers/${sid}/documents/search`, config),
 		);
+	}
+
+	private signerOrOwnerConfig(
+		signerAccessCode: string | undefined,
+		params: Record<string, unknown>,
+	) {
+		if (signerAccessCode === undefined) return { params: cleanParams(params) };
+		return signerAccessConfig(this.requireId(signerAccessCode, 'signer-access-code'), params);
 	}
 
 	/**

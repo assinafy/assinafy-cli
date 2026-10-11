@@ -234,6 +234,33 @@ describe('OAuth flow', () => {
 		expect(requests[0]!.headers.get('X-Api-Key')).toBeUndefined();
 	});
 
+	it('sends the RFC 8693 token-exchange grant and validates its required fields', async () => {
+		const { client, requests } = setup('owner-bearer');
+		const exchange = {
+			grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+			client_id: 'example-service',
+			client_secret: 'example-secret',
+			resource,
+			subject_token: 'example-subject',
+			subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+		} as const;
+		await expect(client.oauth.token(exchange)).resolves.toEqual(tokens);
+		expect(Object.fromEntries(new URLSearchParams(requests[0]?.data))).toEqual(exchange);
+		expect(requests[0]?.headers.get('Authorization')).toBeUndefined();
+		for (const invalid of [
+			{ ...exchange, client_secret: '' },
+			{ ...exchange, resource: 'http://api.example.com' },
+			{ ...exchange, subject_token: '' },
+			{ ...exchange, subject_token_type: 'other' },
+			{ ...exchange, requested_token_type: 'other' },
+		]) {
+			await expect(client.oauth.token(invalid as IOAuthTokenPayload)).rejects.toThrow(
+				ValidationError,
+			);
+		}
+		expect(requests).toHaveLength(1);
+	});
+
 	it('rejects mismatched and ambiguous callbacks before submitting a code', async () => {
 		const { client, requests } = setup();
 		const request = await authorize(client);

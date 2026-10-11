@@ -21,5 +21,5 @@ Version 2 publishes the Node.js SDK at `@assinafy/cli/api` and requires Node.js
   access code adds an identity preflight before downloading.
 
 Legacy signer aliases (`phone`, `cpf`, and assignment `signer_ids`/`signerIds`),
-both public `sendToken` request forms, and existing CLI functionality remain
+both `sendToken` call forms (each sends the email-only production body), and existing CLI functionality remain
 available. See the [SDK reference](./sdk-reference.md) for exact method signatures.

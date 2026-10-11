@@ -99,10 +99,7 @@ describe('mutating option safety', () => {
 		expect(optionConflicts(assignmentsCommand, 'reset-expiration', '--clear')).toContain(
 			'expiresAt',
 		);
-		expect(optionConflicts(documentsCommand, 'send-token', '--email')).toEqual([
-			'recipient',
-			'channel',
-		]);
+		expect(optionConflicts(documentsCommand, 'send-token', '--email')).toEqual(['recipient']);
 		expect(optionConflicts(documentsCommand, 'send-token', '--recipient')).toContain('email');
 	});
 

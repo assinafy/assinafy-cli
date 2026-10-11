@@ -57,7 +57,11 @@ for (let offset = 0; offset < operations.length; offset += 10) {
 					);
 				}
 				const markdown = normalizeResponseStatuses((await rendered.text()).trim());
-				return { ...operation, markdown: lowerHeadings(formMediaType(operation, markdown)) };
+				const { requestBody } = spec.paths[operation.path][operation.method.toLowerCase()];
+				return {
+					...operation,
+					markdown: lowerHeadings(formMediaType(operation, typeUnions(requestBody, markdown))),
+				};
 			}),
 		)),
 	);
@@ -99,6 +103,24 @@ function formMediaType(operation, markdown) {
 		json,
 		`The [OAuth Integration Guide](${docsUrl}) specifies form encoding, which the SDK and CLI send; the server also accepts JSON.\n\nFields (\`application/x-www-form-urlencoded\`):`,
 	);
+}
+
+// The renderer prints `"type": ["string", "null"]` fields as `Array`; show the union instead.
+function typeUnions(requestBody, markdown) {
+	const unions = new Map();
+	const visit = (node) => {
+		if (!node || typeof node !== 'object') return;
+		for (const [name, schema] of Object.entries(node.properties ?? {})) {
+			if (Array.isArray(schema?.type)) unions.set(name, schema.type.join(' | '));
+		}
+		for (const child of Object.values(node)) visit(child);
+	};
+	visit(requestBody);
+	let result = markdown;
+	for (const [name, union] of unions) {
+		result = result.replaceAll(`- \`${name}\` (Array`, `- \`${name}\` (${union}`);
+	}
+	return result;
 }
 
 function lowerHeadings(markdown) {
