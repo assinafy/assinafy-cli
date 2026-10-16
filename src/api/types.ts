@@ -5,6 +5,7 @@ export type DocumentStatus =
 	| 'metadata_processing'
 	| 'metadata_ready'
 	| 'pending_signature'
+	| 'pending_identity_review'
 	| 'expired'
 	| 'certificating'
 	| 'certificated'
@@ -28,6 +29,7 @@ export type AssignmentVerificationMethod =
 	| 'Email'
 	| 'Whatsapp'
 	| 'DigitalCertificate'
+	| 'IdDocumentFaceMatchBasic'
 	| (string & {});
 
 /** Notification methods accepted by assignment signer entries. */
@@ -91,6 +93,8 @@ export interface ICreateSignerPayload {
 	whatsapp_phone_number?: string;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
+	/** CPF or numeric/alphanumeric CNPJ; forwarded unchanged for server normalization. */
+	government_id?: string;
 	/** Compatibility extension for a Brazilian CPF; non-digits are stripped. */
 	cpf?: string;
 	/** Compatibility extension for integration-defined signer metadata. */
@@ -104,7 +108,7 @@ export interface IUpdateSignerPayload {
 	whatsapp_phone_number?: string;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
-	/** CPF/CNPJ. Non-digits are stripped and sent as the official `government_id` field. */
+	/** CPF or numeric/alphanumeric CNPJ; forwarded unchanged for server normalization. */
 	government_id?: string;
 	/** Backwards-compatible alias for `government_id`. */
 	cpf?: string;
@@ -132,6 +136,74 @@ export interface ISignerSelf extends ISigner {
 	has_signature: boolean;
 	has_initial: boolean;
 	is_signature_reusable: boolean;
+	verification_method?: AssignmentVerificationMethod;
+}
+
+/** Identity-document provider session states. */
+export type IdentityVerificationStatus =
+	| 'Pending'
+	| 'InReview'
+	| 'Approved'
+	| 'Declined'
+	| 'Expired'
+	| 'Abandoned';
+
+/** Signer-facing state from `GET /signers/identity-verification`. */
+export interface IIdentityVerificationState {
+	can_start: boolean;
+	status: IdentityVerificationStatus | null;
+	/** Private capture link; preserve its fragment and never log it. */
+	url: string | null;
+	expires_at: string | null;
+	completed_at: string | null;
+}
+
+/** Explicit signer consent required before opening a biometric provider session. */
+export interface IStartIdentityVerificationPayload {
+	consent: true;
+}
+
+/** Hosted session from `POST /signers/identity-verification`. */
+export interface IIdentityVerificationSession {
+	id: string;
+	/** Private capture link; open as-is, including any fragment. */
+	url: string;
+	expires_at: string | null;
+}
+
+/** Evidence names available only while an identity review is open. */
+export type IdentityVerificationImageName =
+	| 'document_front'
+	| 'document_back'
+	| 'document_pdf'
+	| 'face';
+
+/** Account review of an `IdDocumentFaceMatchBasic` verification. */
+export interface ISignerIdentityReview {
+	id: string;
+	status: IdentityVerificationStatus;
+	provider: 'AssinafyVerify';
+	verification_method: 'IdDocumentFaceMatchBasic';
+	reason_codes: Array<{ code: string; description: string }>;
+	evidence_available: boolean;
+	expected: { name: string | null; cpf: string | null } | null;
+	document: { type: string | null; name: string | null; cpf: string | null } | null;
+	matches: { cpf: boolean | null; name: number | null; birth_date: boolean | null } | null;
+	checks: Array<{ name: string; result: string; score: number | null; reasons: string[] }>;
+	images: IdentityVerificationImageName[];
+	ruleset_version: string | null;
+	evidence_sha256: string | null;
+	reviewed_by: { id: string; name: string } | null;
+	reviewed_at: string | null;
+	review_note: string | null;
+	completed_at: string | null;
+}
+
+/** Approval releases certification; rejection cancels the document and notifies its recipients. */
+export interface IIdentityReviewPayload {
+	decision: 'Approved' | 'Rejected';
+	/** At most 2,000 Unicode characters; recorded privately and sent to the provider. */
+	note?: string | null;
 }
 
 /** Signer data returned after accepting the platform terms. */
@@ -278,6 +350,7 @@ export interface IAssignmentSigner extends ISigner {
 	step?: number | null;
 	notified?: boolean | null;
 	completed?: boolean | null;
+	identity_verification_status?: IdentityVerificationStatus | null;
 	notification_history?: IAssignmentSignerNotification[];
 }
 
@@ -401,6 +474,11 @@ export type WebhookEventType =
 	| 'signer_created'
 	| 'signer_email_verified'
 	| 'signer_whatsapp_verified'
+	| 'signer_identity_verified'
+	| 'signer_identity_verification_failed'
+	| 'signer_identity_review_required'
+	| 'signer_identity_review_approved'
+	| 'signer_identity_review_rejected'
 	| 'signer_data_confirmed'
 	| 'signer_viewed_document'
 	| 'signer_signed_document'
@@ -712,6 +790,12 @@ export interface IWebhookEndpoint {
 	updated_at: string;
 }
 
+/** Endpoint creation includes its signing secret only when signing is enabled. */
+export interface IWebhookEndpointCreateResponse extends IWebhookEndpoint {
+	/** Save securely on creation; OAuth applications cannot read or rotate it later. */
+	secret?: string;
+}
+
 /** `POST /accounts/{accountId}/webhooks/endpoints` body. */
 export interface IWebhookEndpointCreatePayload {
 	url: string;
@@ -782,6 +866,8 @@ export interface IUploadAndRequestSignaturesSigner {
 	whatsapp_phone_number?: string;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
+	/** CPF or numeric/alphanumeric CNPJ; existing email matches are reused without updating it. */
+	government_id?: string;
 	/** Compatibility extension for a Brazilian CPF; non-digits are stripped. */
 	cpf?: string;
 	/** Compatibility extension for integration-defined signer metadata. */

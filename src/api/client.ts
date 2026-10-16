@@ -245,6 +245,7 @@ export class AssinafyClient {
 			const phone = signer.whatsapp_phone_number ?? signer.phone;
 			if (phone !== undefined) payload.whatsapp_phone_number = phone;
 			if (signer.cpf !== undefined) payload.cpf = signer.cpf;
+			if (signer.government_id !== undefined) payload.government_id = signer.government_id;
 			if (signer.metadata !== undefined) payload.metadata = signer.metadata;
 			validateCreateSignerPayload(payload);
 			return { signer, payload, phone };

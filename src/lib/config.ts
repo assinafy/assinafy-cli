@@ -127,6 +127,7 @@ export function readConfigFile(options: { strict?: boolean } = {}): ConfigFile {
 						}
 					}
 				}
+				Object.setPrototypeOf(parsed.profiles, null);
 			}
 			return parsed;
 		}

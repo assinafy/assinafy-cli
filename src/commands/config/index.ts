@@ -38,7 +38,7 @@ const setCommand = new Command('set')
 
 			const file = readConfigFile({ strict: true });
 			const profileName = activeProfileName(getGlobals(command), file);
-			const profiles = file.profiles ?? {};
+			const profiles: Record<string, ProfileConfig> = file.profiles ?? Object.create(null);
 			const profile: ProfileConfig = { ...profiles[profileName] };
 
 			let changed = false;

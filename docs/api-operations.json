@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "c4913641cd4881b515b5b7ad1a180c393c321d97fd74fff73080618c8b130ecf",
+  "hash": "da98836f863bccd621c104499c96621e67f12016538398c3496859db5f049b75",
   "operations": [
     {
       "method": "GET",
@@ -128,6 +128,30 @@
       "tag": "Assignments",
       "summary": "Reset assignment expiration",
       "operationId": "50427eb689bff8f44a0c7301da693297",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification",
+      "tag": "Assignments",
+      "summary": "Signer identity review",
+      "operationId": "57564ca662b156a4778077042664f256",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/images/{name}",
+      "tag": "Assignments",
+      "summary": "Signer identity review image",
+      "operationId": "ae3f769d26bad957378464473835afb2",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/review",
+      "tag": "Assignments",
+      "summary": "Decide signer identity review",
+      "operationId": "f289acdd56b407dc925f0464b0564e1a",
       "hasRequestBody": true
     },
     {
@@ -500,6 +524,22 @@
     },
     {
       "method": "GET",
+      "path": "/v1/signers/identity-verification",
+      "tag": "Signing",
+      "summary": "Identity document verification status",
+      "operationId": "4a0c6db3f140fa5b1686cf20a39aa351",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/signers/identity-verification",
+      "tag": "Signing",
+      "summary": "Start identity document verification",
+      "operationId": "bc5dd80e6d879e2d4cf4a648ba7a42c3",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
       "path": "/v1/signers/{signerId}/document",
       "tag": "Signing",
       "summary": "Get signer's document",
@@ -793,6 +833,14 @@
       "summary": "Create webhook endpoint",
       "operationId": "6c80dc654eb285c39c8c25d8df17ff15",
       "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints",
+      "tag": "Webhooks",
+      "summary": "Delete webhook endpoint by URL",
+      "operationId": "d7837c50de5d44def983cc8d4687557d",
+      "hasRequestBody": false
     },
     {
       "method": "GET",

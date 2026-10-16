@@ -1,7 +1,7 @@
 import { Command, Option, type OptionValues } from '@commander-js/extra-typings';
 import {
 	type IWebhookDispatchListParams,
-	type IWebhookEndpoint,
+	type IWebhookEndpointCreateResponse,
 	type IWebhookEndpointUpdatePayload,
 	WebhookVerifier,
 } from '../api';
@@ -145,7 +145,7 @@ const retryCommand = new Command('retry')
 		});
 	});
 
-const renderEndpoint = (e: IWebhookEndpoint) =>
+const renderEndpoint = (e: IWebhookEndpointCreateResponse) =>
 	renderKeyValue({
 		id: e.id,
 		name: e.name,
@@ -154,6 +154,7 @@ const renderEndpoint = (e: IWebhookEndpoint) =>
 		is_active: e.is_active,
 		signing_enabled: e.signing_enabled,
 		events: e.events,
+		secret: e.secret,
 	});
 
 /** Shared endpoint field options; booleans stay undefined unless a flag is given. */
@@ -196,11 +197,12 @@ function endpointPayload(opts: {
 const endpointsListCommand = new Command('list')
 	.alias('ls')
 	.description('List webhook endpoints, oldest first')
-	.action(async (_opts, command) => {
+	.option('--url <url>', 'Only the endpoint registered with exactly this URL')
+	.action(async (opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const rows = await withSpinner('Fetching endpoints', config, () =>
-				client.webhooks.listEndpoints(accountId),
+				client.webhooks.listEndpoints(accountId, { url: opts.url }),
 			);
 			printData(rows, config, (list) =>
 				renderTable(list, [
@@ -285,6 +287,23 @@ const endpointsDeleteCommand = new Command('delete')
 		});
 	});
 
+const endpointsDeleteByUrlCommand = new Command('delete-by-url')
+	.description('Delete the webhook endpoint with exactly this registered URL')
+	.requiredOption('--url <url>', 'Registered endpoint URL')
+	.option('-y, --yes', 'Skip the confirmation prompt')
+	.action(async (opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const accountId = requireAccountId(config);
+			if (!(await confirmDestructive(`Delete webhook endpoint ${opts.url}?`, Boolean(opts.yes))))
+				return;
+			const result = await withSpinner('Deleting endpoint', config, () =>
+				client.webhooks.deleteEndpointByUrl(opts.url, accountId),
+			);
+			printSuccess('Webhook endpoint deleted', config);
+			printData(result, config);
+		});
+	});
+
 const endpointsSecretCommand = new Command('secret')
 	.description(
 		'Print the endpoint signing secret (signing must be enabled; not available via OAuth)',
@@ -362,6 +381,7 @@ const endpointsCommand = new Command('endpoints')
 	.addCommand(endpointsGetCommand)
 	.addCommand(endpointsUpdateCommand)
 	.addCommand(endpointsDeleteCommand)
+	.addCommand(endpointsDeleteByUrlCommand)
 	.addCommand(endpointsSecretCommand)
 	.addCommand(endpointsRotateSecretCommand);
 

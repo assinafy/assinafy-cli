@@ -2,10 +2,12 @@ import { Command, Option } from '@commander-js/extra-typings';
 import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
+import { saveDownload } from '../lib/files';
 import { parseJsonArray, splitList } from '../lib/json';
 import { addSignerRefOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
+import { confirmDestructive } from '../lib/prompts';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
 import { renderKeyValue, renderTable } from '../lib/table';
@@ -198,6 +200,83 @@ const whatsappCommand = new Command('whatsapp-notifications')
 		});
 	});
 
+const identityVerificationCommand = new Command('identity-verification')
+	.description('Fetch a signer identity review and its evidence summary')
+	.argument('<documentId>', 'Document ID')
+	.argument('<assignmentId>', 'Assignment ID')
+	.argument('<signerId>', 'Signer ID')
+	.action(async (documentId, assignmentId, signerId, _opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Fetching identity review', config, () =>
+				client.assignments.getIdentityVerification(documentId, assignmentId, signerId),
+			);
+			printData(result, config);
+		});
+	});
+
+const identityImageCommand = new Command('identity-image')
+	.description('Download identity review evidence while the review is open')
+	.argument('<documentId>', 'Document ID')
+	.argument('<assignmentId>', 'Assignment ID')
+	.argument('<signerId>', 'Signer ID')
+	.addOption(
+		new Option('--name <name>', 'Evidence image name')
+			.choices(['document_front', 'document_back', 'document_pdf', 'face'] as const)
+			.makeOptionMandatory(),
+	)
+	.requiredOption('-o, --output <path>', 'Output path for JPEG/PNG evidence or the document PDF')
+	.option('--force', 'Overwrite the output file if it already exists')
+	.action(async (documentId, assignmentId, signerId, opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			await saveDownload(config, {
+				message: 'Downloading identity evidence',
+				download: () =>
+					client.assignments.downloadIdentityVerificationImage(
+						documentId,
+						assignmentId,
+						signerId,
+						opts.name,
+					),
+				output: opts.output,
+				defaultName: opts.output,
+				force: opts.force,
+			});
+		});
+	});
+
+const reviewIdentityCommand = new Command('review-identity')
+	.description('Approve certification or reject and cancel the document after identity review')
+	.argument('<documentId>', 'Document ID')
+	.argument('<assignmentId>', 'Assignment ID')
+	.argument('<signerId>', 'Signer ID')
+	.addOption(
+		new Option('--decision <decision>', 'Review decision')
+			.choices(['Approved', 'Rejected'] as const)
+			.makeOptionMandatory(),
+	)
+	.option('--note <note>', 'Private review note (at most 2000 characters)')
+	.option('-y, --yes', 'Skip the confirmation prompt')
+	.action(async (documentId, assignmentId, signerId, opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			if (
+				!(await confirmDestructive(
+					opts.decision === 'Rejected'
+						? `Reject this identity review, cancel document ${documentId}, and notify its recipients?`
+						: `Approve this identity review and release certification for ${documentId}?`,
+					Boolean(opts.yes),
+				))
+			)
+				return;
+			const result = await withSpinner('Deciding identity review', config, () =>
+				client.assignments.reviewIdentityVerification(documentId, assignmentId, signerId, {
+					decision: opts.decision,
+					note: opts.note,
+				}),
+			);
+			printData(result, config);
+		});
+	});
+
 export const assignmentsCommand = new Command('assignments')
 	.description('Create and manage signing assignments')
 	.addCommand(listCommand)
@@ -206,4 +285,7 @@ export const assignmentsCommand = new Command('assignments')
 	.addCommand(resetExpirationCommand)
 	.addCommand(resendCommand)
 	.addCommand(estimateResendCostCommand)
-	.addCommand(whatsappCommand);
+	.addCommand(whatsappCommand)
+	.addCommand(identityVerificationCommand)
+	.addCommand(identityImageCommand)
+	.addCommand(reviewIdentityCommand);

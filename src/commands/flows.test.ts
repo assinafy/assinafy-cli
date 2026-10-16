@@ -5,18 +5,23 @@ import path from 'node:path';
 import { Command } from '@commander-js/extra-typings';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, type IDocumentUploadResponse, OAuthResource } from '../api';
+import { AssignmentResource } from '../api/resources/assignments';
 import { AuthenticationResource } from '../api/resources/authentication';
 import { DocumentResource } from '../api/resources/documents';
 import { SignerDocumentsResource } from '../api/resources/signer-documents';
+import { SignerResource } from '../api/resources/signers';
 import { WebhookResource } from '../api/resources/webhooks';
 import * as cliClient from '../lib/client';
 import { readConfigFile } from '../lib/config';
 import * as browserOAuth from '../lib/oauth-browser';
+import { assignmentsCommand } from './assignments';
 import { authCommand } from './auth';
 import { configCommand } from './config';
 import { documentsCommand } from './documents';
+import { loginCommand } from './login';
 import { oauthCommand } from './oauth';
 import { signerCommand } from './signer';
+import { signersCommand } from './signers';
 import { webhooksCommand } from './webhooks';
 
 let directory: string;
@@ -57,6 +62,36 @@ it('replaces a saved owner key when switching the profile to OAuth', async () =>
 		await program.parseAsync(['--json', ...args, 'config', 'set'], { from: 'user' });
 	}
 	expect(readConfigFile().profiles?.default).toEqual({ token: 'example-oauth-token' });
+});
+
+it.each(['config', 'login'])('saves a profile named __proto__ through %s', async (name) => {
+	const program = new Command()
+		.option('--json')
+		.option('--profile <name>')
+		.option('--api-key <key>')
+		.option('--account-id <id>')
+		.addCommand(configCommand)
+		.addCommand(loginCommand);
+	await program.parseAsync(
+		[
+			'--json',
+			'--profile',
+			'__proto__',
+			'--api-key',
+			'example-key',
+			'--account-id',
+			'example-account',
+			...(name === 'config' ? ['config', 'set'] : ['login']),
+		],
+		{ from: 'user' },
+	);
+	const file = readConfigFile();
+	expect(Object.hasOwn(file.profiles!, '__proto__')).toBe(true);
+	const profileName = '__proto__';
+	expect(file.profiles?.[profileName]).toEqual({
+		api_key: 'example-key',
+		account_id: 'example-account',
+	});
 });
 
 beforeEach(() => {
@@ -124,6 +159,170 @@ it('passes certificate operation tokens through the CLI without owner credential
 	expect(complete).toHaveBeenCalledWith('example-code', 'example-token');
 	expect(JSON.parse(stdout)).toEqual({ signerName: 'Example Signer' });
 	expect(stderr).toBe('');
+});
+
+it('requires signer consent before opening a biometric capture session', async () => {
+	vi.stubEnv('ASSINAFY_API_KEY', undefined);
+	vi.stubEnv('ASSINAFY_SIGNER_ACCESS_CODE', 'example-code');
+	const session = { id: 'session', url: 'https://example.com/capture#t=example', expires_at: null };
+	const start = vi
+		.spyOn(SignerDocumentsResource.prototype, 'startIdentityVerification')
+		.mockResolvedValue(session);
+	const status = vi
+		.spyOn(SignerDocumentsResource.prototype, 'getIdentityVerification')
+		.mockResolvedValue({
+			can_start: true,
+			status: null,
+			url: null,
+			expires_at: null,
+			completed_at: null,
+		});
+	const program = new Command().option('--json').addCommand(signerCommand);
+	await program.parseAsync(['--json', 'signer', 'identity-start'], { from: 'user' });
+	expect(start).not.toHaveBeenCalled();
+	expect(process.exitCode).toBe(1);
+	expect(JSON.parse(stderr).error.message).toContain('--consent');
+	stdout = '';
+	stderr = '';
+	process.exitCode = 0;
+	await program.parseAsync(['--json', 'signer', 'identity-start', '--consent'], { from: 'user' });
+	expect(start).toHaveBeenCalledWith('example-code', { consent: true });
+	expect(JSON.parse(stdout)).toEqual(session);
+	stdout = '';
+	await program.parseAsync(['--json', 'signer', 'identity-status'], { from: 'user' });
+	expect(status).toHaveBeenCalledWith('example-code');
+	expect(JSON.parse(stdout).can_start).toBe(true);
+});
+
+it('confirms identity review decisions and downloads evidence to the explicit output path', async () => {
+	const decide = vi
+		.spyOn(AssignmentResource.prototype, 'reviewIdentityVerification')
+		.mockResolvedValue({ status: 'Declined' } as never);
+	const image = vi
+		.spyOn(AssignmentResource.prototype, 'downloadIdentityVerificationImage')
+		.mockResolvedValue(Buffer.from('example-image'));
+	const program = new Command().option('--json').addCommand(assignmentsCommand);
+	const args = [
+		'--json',
+		'assignments',
+		'review-identity',
+		'doc',
+		'assignment',
+		'signer',
+		'--decision',
+		'Rejected',
+	];
+	await program.parseAsync(args, { from: 'user' });
+	expect(decide).not.toHaveBeenCalled();
+	expect(process.exitCode).toBe(1);
+	process.exitCode = 0;
+	stderr = '';
+	await program.parseAsync([...args, '--yes', '--note', 'Example note'], { from: 'user' });
+	expect(decide).toHaveBeenCalledWith('doc', 'assignment', 'signer', {
+		decision: 'Rejected',
+		note: 'Example note',
+	});
+	stdout = '';
+	const output = path.join(directory, 'evidence.bin');
+	await program.parseAsync(
+		[
+			'--json',
+			'assignments',
+			'identity-image',
+			'doc',
+			'assignment',
+			'signer',
+			'--name',
+			'face',
+			'--output',
+			output,
+		],
+		{ from: 'user' },
+	);
+	expect(image).toHaveBeenCalledWith('doc', 'assignment', 'signer', 'face');
+	expect(JSON.parse(stdout).path).toBe(output);
+});
+
+it('forwards government IDs unchanged from signer create and update', async () => {
+	const create = vi
+		.spyOn(SignerResource.prototype, 'create')
+		.mockResolvedValue({ id: 'signer' } as never);
+	const update = vi
+		.spyOn(SignerResource.prototype, 'update')
+		.mockResolvedValue({ id: 'signer' } as never);
+	const program = new Command().option('--json').addCommand(signersCommand);
+	await program.parseAsync(
+		[
+			'--json',
+			'signers',
+			'create',
+			'--name',
+			'Example Signer',
+			'--government-id',
+			'AB.CDE.FGH/0001-00',
+		],
+		{ from: 'user' },
+	);
+	expect(create).toHaveBeenCalledWith(
+		{ full_name: 'Example Signer', government_id: 'AB.CDE.FGH/0001-00' },
+		'example-account',
+	);
+	await program.parseAsync(
+		['--json', 'signers', 'update', 'signer', '--government-id', 'AB.CDE.FGH/0001-00'],
+		{ from: 'user' },
+	);
+	expect(update).toHaveBeenCalledWith(
+		'signer',
+		{ government_id: 'AB.CDE.FGH/0001-00' },
+		'example-account',
+	);
+});
+
+it('prints the webhook creation secret in human output and supports exact URL lookup and deletion', async () => {
+	vi.spyOn(WebhookResource.prototype, 'createEndpoint').mockResolvedValue({
+		id: 'endpoint',
+		secret: 'whsec_ZXhhbXBsZS1zZWNyZXQ=',
+	} as never);
+	const list = vi.spyOn(WebhookResource.prototype, 'listEndpoints').mockResolvedValue([]);
+	const remove = vi.spyOn(WebhookResource.prototype, 'deleteEndpointByUrl').mockResolvedValue([]);
+	const program = new Command().option('--json').addCommand(webhooksCommand);
+	await program.parseAsync(
+		[
+			'webhooks',
+			'endpoints',
+			'create',
+			'--url',
+			'https://example.com/hook',
+			'--email',
+			'ops@example.com',
+			'--signing',
+		],
+		{ from: 'user' },
+	);
+	expect(stdout).toContain('whsec_ZXhhbXBsZS1zZWNyZXQ=');
+	await program.parseAsync(
+		['--json', 'webhooks', 'endpoints', 'list', '--url', 'https://example.com/hook'],
+		{ from: 'user' },
+	);
+	expect(list).toHaveBeenCalledWith('example-account', { url: 'https://example.com/hook' });
+	await program.parseAsync(
+		['--json', 'webhooks', 'endpoints', 'delete-by-url', '--url', 'https://example.com/hook'],
+		{ from: 'user' },
+	);
+	expect(remove).not.toHaveBeenCalled();
+	await program.parseAsync(
+		[
+			'--json',
+			'webhooks',
+			'endpoints',
+			'delete-by-url',
+			'--url',
+			'https://example.com/hook',
+			'--yes',
+		],
+		{ from: 'user' },
+	);
+	expect(remove).toHaveBeenCalledWith('https://example.com/hook', 'example-account');
 });
 
 it('prints the processed document after upload --wait', async () => {

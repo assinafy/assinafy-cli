@@ -86,6 +86,8 @@ describe('buildAssignmentPayload', () => {
 		['Whatsapp', 'Whatsapp'],
 		['DigitalCertificate', 'Email'],
 		['DigitalCertificate', 'Whatsapp'],
+		['IdDocumentFaceMatchBasic', 'Email'],
+		['IdDocumentFaceMatchBasic', 'Whatsapp'],
 	] as const)(
 		'preserves %s verification with %s delivery across assignment and template flows',
 		async (verification, notification) => {
@@ -401,6 +403,12 @@ describe('DocumentResource', () => {
 		).rejects.toBeInstanceOf(ApiError);
 	});
 
+	it('recognizes a document awaiting identity review as processed but not yet certificated', async () => {
+		const document = { id: 'doc', status: 'pending_identity_review' };
+		const http = { ...mockHttp(), get: async () => ok(document) } as unknown as AxiosInstance;
+		await expect(new DocumentResource(http).waitUntilReady('doc')).resolves.toEqual(document);
+	});
+
 	it('waitUntilReady keeps retrying transient 5xx errors until it times out', async () => {
 		const http = {
 			...mockHttp(),
@@ -574,6 +582,14 @@ describe('SignerResource', () => {
 			body: { government_id: '39053344705' },
 		});
 		expect(calls.at(-1)?.body).not.toHaveProperty('cpf');
+	});
+
+	it('preserves the published government_id on create and update, including alphanumeric CNPJ', async () => {
+		const government_id = 'AB.CDE.FGH/0001-00';
+		await signers.create({ full_name: 'Example Signer', government_id });
+		expect(calls.at(-1)?.body).toEqual({ full_name: 'Example Signer', government_id });
+		await signers.update('signer1', { government_id });
+		expect(calls.at(-1)?.body).toEqual({ government_id });
 	});
 
 	it('is idempotent by email: reuses an existing signer without a second POST', async () => {
@@ -841,6 +857,43 @@ describe('WebhookResource', () => {
 			url: '/accounts/acc/webhooks/endpoints/ep',
 		});
 		expect(calls[3]?.config).toMatchObject({ params: { endpoint_id: 'ep' } });
+	});
+
+	it('filters and deletes webhook endpoints by the exact registered URL', async () => {
+		const calls: CapturedCall[] = [];
+		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
+		const url = 'https://example.com/hook?tenant=example&token=example-secret';
+		await webhooks.listEndpoints(undefined, { url });
+		await webhooks.deleteEndpointByUrl(url);
+		expect(calls).toMatchObject([
+			{ method: 'GET', url: '/accounts/acc/webhooks/endpoints', config: { params: { url } } },
+			{ method: 'DELETE', url: '/accounts/acc/webhooks/endpoints', config: { params: { url } } },
+		]);
+		for (const value of ['', 'not-a-url', 'ftp://example.com/hook']) {
+			await expect(webhooks.deleteEndpointByUrl(value)).rejects.toThrow(ValidationError);
+			await expect(webhooks.listEndpoints(undefined, { url: value })).rejects.toThrow(
+				ValidationError,
+			);
+		}
+		expect(calls).toHaveLength(2);
+	});
+
+	it('returns the creation-time signing secret to OAuth applications', async () => {
+		const endpoint = { id: 'ep', secret: 'whsec_ZXhhbXBsZS1zZWNyZXQ=' };
+		const client = new AssinafyClient({ token: 'example-oauth-token', accountId: 'acc' });
+		client.getAxiosInstance().defaults.adapter = async (config) => ({
+			config,
+			status: 200,
+			statusText: 'OK',
+			headers: {},
+			data: { status: 200, data: endpoint },
+		});
+		const result = await client.webhooks.createEndpoint({
+			url: 'https://example.com/hook',
+			email: 'ops@example.com',
+			signing_enabled: true,
+		});
+		expect(result.secret).toBe(endpoint.secret);
 	});
 
 	it('rejects invalid webhook endpoint input before making a request', async () => {

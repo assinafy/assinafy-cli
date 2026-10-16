@@ -140,12 +140,12 @@ function normaliseSignerPayload(
 		whatsapp_phone_number: payload.whatsapp_phone_number ?? payload.phone,
 	};
 
-	const governmentId =
-		'government_id' in payload ? (payload.government_id ?? payload.cpf) : payload.cpf;
-	if (governmentId) {
+	if (payload.government_id !== undefined) {
+		normalised.government_id = payload.government_id;
+	} else if (payload.cpf) {
 		// Strip formatting; only forward a CPF when digits actually remain so a
 		// value like "---" doesn't get sent as an empty string.
-		const digits = governmentId.replace(/\D/g, '');
+		const digits = payload.cpf.replace(/\D/g, '');
 		if (digits) normalised[useGovernmentId ? 'government_id' : 'cpf'] = digits;
 	}
 

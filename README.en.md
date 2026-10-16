@@ -4,7 +4,7 @@
 
 The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track activity history, and download certified documents — from a terminal, a shell script, or an application.
 
-The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 106 published API operations.
+The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 112 published API operations.
 
 This document reads top to bottom: install, authenticate, send your first signature request, then understand the model well enough to automate it. The [command reference](#command-reference) and [SDK](#nodejs-sdk) sections near the end are lookup tables you can jump to once the flow makes sense.
 
@@ -215,6 +215,8 @@ Email verification uses `["Email"]` notifications; WhatsApp uses `["Whatsapp"]`.
 
 In production, `notification_methods: []` defaults to `['Email']` and sends an invitation. Select the intended channel explicitly; an empty array does not disable notifications.
 
+Biometric verification uses `IdDocumentFaceMatchBasic`, either notification channel, a valid CPF in `government_id`, and the ID Document + Face Match workspace feature. Signer creation and updates accept `--government-id` for CPF or numeric/alphanumeric CNPJ and forward it unchanged for server normalization; the legacy `--cpf` alias retains digit-only normalization.
+
 To start from a saved template instead of a PDF:
 
 ```bash
@@ -249,6 +251,23 @@ Where email or WhatsApp verification is configured, the signer also confirms a 6
 For A1/A3 certificates, use Assinafy's hosted signing page or integrate Web PKI with the SDK. After document review and terms acceptance, `signer certificate-start --json` returns `{ "token": "..." }`. Have the browser sign that operation on the signer's device, then set `ASSINAFY_CERTIFICATE_TOKEN` to the same token and run `signer certificate-complete --json`; it returns `{ "signerName": "..." }`. Private keys and passwords/PINs stay on the device. Wait for `certificated` status and download `--artifact pades` or `bundle`. The ordinary `sign` command does not perform this handshake. These two production routes use the signing application's payloads and are not yet OpenAPI paths.
 
 Before estimating or creating a certificate assignment, set the signer's CPF/CNPJ with `signers.update(signerId, { government_id })`, or `assinafy signers update <signerId> --cpf '<signer-CPF-or-CNPJ>'`. The update command sends `government_id`. Creating a signer by email may reuse an existing record without updating it. Each certificate signer needs a matching certificate and an individual signing step.
+
+For biometrics, create or explicitly update the signer with a valid CPF, estimate cost and create an `IdDocumentFaceMatchBasic` assignment. Present the document, terms and biometric-processing consent, then use the signer's private access code:
+
+```bash
+assinafy signer identity-status --json
+assinafy signer identity-start --consent --json
+```
+
+Open the returned `url` unchanged, including any `#t=` fragment, and read status after capture. This is a private bearer link; keep it out of logs and browser storage. Start only when `can_start` is true. Only an `Expired` session can be replaced; `Declined` or `Abandoned` require a new document and assignment. `Approved` and `InReview` let the signer continue with data confirmation and signing. Review holds certification: after everyone signs, the document stays `pending_identity_review` until the account decides.
+
+```bash
+assinafy assignments identity-verification <documentId> <assignmentId> <signerId> --json
+assinafy assignments identity-image <documentId> <assignmentId> <signerId> --name face --output evidence.bin
+assinafy assignments review-identity <documentId> <assignmentId> <signerId> --decision Approved --note 'Reviewed by the team'
+```
+
+Evidence images are available only while the review is open. Approval releases certification after all signatures and reviews finish; `--decision Rejected` cancels the document and notifies signers and copy receivers. Decisions require confirmation or `--yes`; the private note allows at most 2,000 characters. See [complete biometric payloads and states](docs/sdk-reference.md#biometric-identity-verification).
 
 Verification, data confirmation, and signature upload may return `[]` on success. Fetch `signer self` for the updated profile and check document progress and certified artifacts after signing. Full request and response examples are in the [signer SDK reference](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
 
@@ -288,6 +307,8 @@ assinafy webhooks verify body.json --id <webhook-id> --timestamp <webhook-timest
 ```
 
 Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. `endpoints update` changes only the flags given (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); disabling signing discards the secret. `rotate-secret` invalidates the previous secret immediately. A duplicate URL within the workspace returns `400`; creating past the plan limit returns `403`. Secret read and rotation are not available to OAuth applications. `retry` re-sends only to that delivery's endpoint, and only while it is active.
+
+Creating a signed endpoint returns `secret` once, including through OAuth; store it securely. The CLI prints it in human and JSON output. OAuth applications that lose it must delete and recreate the endpoint. `endpoints list --url <url>` filters by the exact registered URL; `endpoints delete-by-url --url <url>` deletes by that URL and requires confirmation or `--yes`.
 
 `webhooks register`, `webhooks get`, and `webhooks inactivate` remain and act on the workspace's oldest endpoint.
 
@@ -596,9 +617,9 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 
 ## Contract boundaries
 
-- The production OpenAPI publishes 106 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
+- The production OpenAPI publishes 112 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
 - The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
-- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 106 OpenAPI operations.
+- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 112 OpenAPI operations.
 - `send-token` sends the email-only body `{ "channel": "email", "recipient": "..." }`; WhatsApp and the older `{ "email" }` body are rejected by the API with `400`.
 - `signer documents` and `signer search` accept the workspace API key or token when `--access-code` is omitted.
 - Webhook signatures follow Standard Webhooks; `WebhookVerifier.verifyDelivery` implements the published scheme. The older `verify(body, signature)` method is deprecated and does not match Assinafy deliveries.

@@ -45,6 +45,7 @@ const DOCUMENT_SORTS = ['name', '-name', 'updated_at', '-updated_at'] as const;
 const READY_STATUSES: ReadonlySet<DocumentStatus | string> = new Set([
 	'metadata_ready',
 	'pending_signature',
+	'pending_identity_review',
 	'certificated',
 ]);
 

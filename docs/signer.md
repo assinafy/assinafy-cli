@@ -16,6 +16,8 @@ Commands:
   search [options] <signerId> <query>                    Search the signer's documents
   download [options] <signerId> <documentId> <artifact>  Download a signer document artifact
   self [options]                                         Fetch the signer's own profile
+  identity-status [options]                              Fetch biometric verification status and the private capture URL
+  identity-start [options]                               Open a biometric verification session with the signer’s explicit consent
   accept-terms [options]                                 Accept the platform terms as the signer
   verify-code|verify-email [options]                     Verify an email or WhatsApp OTP for a signer
   certificate-start [options]                            Start an ICP-Brasil A1/A3 signature and return the Web PKI token
@@ -113,6 +115,31 @@ Fetch the signer's own profile
 
 Options:
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  -h, --help            display help for command
+```
+
+### `assinafy signer identity-status`
+
+```text
+Usage: assinafy signer identity-status [options]
+
+Fetch biometric verification status and the private capture URL
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  -h, --help            display help for command
+```
+
+### `assinafy signer identity-start`
+
+```text
+Usage: assinafy signer identity-start [options]
+
+Open a biometric verification session with the signer’s explicit consent
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --consent             The signer explicitly consents to biometric processing
   -h, --help            display help for command
 ```
 

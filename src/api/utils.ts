@@ -21,6 +21,7 @@ const VERIFICATION_METHODS: readonly AssignmentVerificationMethod[] = [
 	'Email',
 	'Whatsapp',
 	'DigitalCertificate',
+	'IdDocumentFaceMatchBasic',
 ];
 const NOTIFICATION_METHODS: readonly AssignmentNotificationMethod[] = ['Email', 'Whatsapp'];
 

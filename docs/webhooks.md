@@ -38,7 +38,7 @@ Options:
   -h, --help                            display help for command
 
 Commands:
-  list|ls                               List webhook endpoints, oldest first
+  list|ls [options]                     List webhook endpoints, oldest first
   create [options]                      Register a webhook endpoint (1 per
                                         account, up to 3 on paid plans)
   get <endpointId>                      Show one webhook endpoint
@@ -46,6 +46,8 @@ Commands:
                                         endpoint
   delete|rm [options] <endpointId>      Delete a webhook endpoint and free its
                                         slot
+  delete-by-url [options]               Delete the webhook endpoint with exactly
+                                        this registered URL
   secret <endpointId>                   Print the endpoint signing secret
                                         (signing must be enabled; not available
                                         via OAuth)
@@ -62,7 +64,8 @@ Usage: assinafy webhooks endpoints list|ls [options]
 List webhook endpoints, oldest first
 
 Options:
-  -h, --help  display help for command
+  --url <url>  Only the endpoint registered with exactly this URL
+  -h, --help   display help for command
 ```
 
 #### `assinafy webhooks endpoints create`
@@ -133,6 +136,19 @@ Arguments:
 Options:
   -y, --yes   Skip the confirmation prompt
   -h, --help  display help for command
+```
+
+#### `assinafy webhooks endpoints delete-by-url`
+
+```text
+Usage: assinafy webhooks endpoints delete-by-url [options]
+
+Delete the webhook endpoint with exactly this registered URL
+
+Options:
+  --url <url>  Registered endpoint URL
+  -y, --yes    Skip the confirmation prompt
+  -h, --help   display help for command
 ```
 
 #### `assinafy webhooks endpoints secret`

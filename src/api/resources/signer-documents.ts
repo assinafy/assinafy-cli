@@ -7,11 +7,14 @@ import type {
 	IDocumentListItem,
 	IDocumentListResponse,
 	IEmptyResult,
+	IIdentityVerificationSession,
+	IIdentityVerificationState,
 	ISigner,
 	ISignerDocumentListParams,
 	ISignerSelf,
 	ISignerTermsAcceptance,
 	ISignFieldEntry,
+	IStartIdentityVerificationPayload,
 	IStatusResponse,
 	IVerifySignerCodePayload,
 } from '../types.js';
@@ -25,9 +28,9 @@ import {
 import { BaseResource } from './base.js';
 
 /**
- * Signer-side endpoints. Except for the public artifact download, calls here
- * are authenticated by `signer-access-code` (the one-time link sent to the
- * signer), not by the workspace API key.
+ * Signer-side endpoints use `signer-access-code` from the private signing link.
+ * Explicit `listAsOwner`/`searchAsOwner` use workspace credentials, and artifact
+ * downloads are public with an optional signer-identity preflight.
  */
 export class SignerDocumentsResource extends BaseResource {
 	/** `GET /signers/{signer_id}/document?signer-access-code=…` */
@@ -165,6 +168,28 @@ export class SignerDocumentsResource extends BaseResource {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to fetch signer profile', () =>
 			this.http.get('/signers/self', signerAccessConfig(code)),
+		);
+	}
+
+	/** `GET /signers/identity-verification` — session status, capture URL and restart eligibility. */
+	async getIdentityVerification(signerAccessCode: string): Promise<IIdentityVerificationState> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.call('Failed to fetch identity verification', () =>
+			this.http.get('/signers/identity-verification', signerAccessConfig(code)),
+		);
+	}
+
+	/** `POST /signers/identity-verification` — open a hosted session after the signer's explicit consent. */
+	async startIdentityVerification(
+		signerAccessCode: string,
+		payload: IStartIdentityVerificationPayload,
+	): Promise<IIdentityVerificationSession> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		if (payload?.consent !== true) {
+			throw new ValidationError('Explicit biometric-processing consent is required');
+		}
+		return this.call('Failed to start identity verification', () =>
+			this.http.post('/signers/identity-verification', { consent: true }, signerAccessConfig(code)),
 		);
 	}
 

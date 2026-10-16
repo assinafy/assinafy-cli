@@ -152,40 +152,50 @@ describe('AssinafyClient.uploadAndRequestSignatures', () => {
 		expect(upload).not.toHaveBeenCalled();
 	});
 
-	it('forwards each signer assignment control after creating the signer', async () => {
-		const client = new AssinafyClient({ apiKey: 'test-key', accountId: 'acc' });
-		vi.spyOn(client.documents, 'upload').mockResolvedValue({ id: 'document1' } as never);
-		vi.spyOn(client.signers, 'create').mockResolvedValue({ id: 'signer1' } as never);
-		const createAssignment = vi
-			.spyOn(client.assignments, 'create')
-			.mockResolvedValue({ id: 'assignment1' } as never);
+	it.each(['Whatsapp', 'IdDocumentFaceMatchBasic'] as const)(
+		'forwards %s signer controls and government data after creation',
+		async (verification_method) => {
+			const client = new AssinafyClient({ apiKey: 'test-key', accountId: 'acc' });
+			vi.spyOn(client.documents, 'upload').mockResolvedValue({ id: 'document1' } as never);
+			const createSigner = vi
+				.spyOn(client.signers, 'create')
+				.mockResolvedValue({ id: 'signer1' } as never);
+			const createAssignment = vi
+				.spyOn(client.assignments, 'create')
+				.mockResolvedValue({ id: 'assignment1' } as never);
 
-		await client.uploadAndRequestSignatures({
-			source: { buffer: Buffer.from('%PDF-1.7'), fileName: 'contract.pdf' },
-			waitForReady: false,
-			signers: [
-				{
-					name: 'Ana Lima',
-					email: 'ana@example.com',
-					verification_method: 'Whatsapp',
-					notification_methods: ['Whatsapp'],
-					step: 1,
-				},
-			],
-		});
+			await client.uploadAndRequestSignatures({
+				source: { buffer: Buffer.from('%PDF-1.7'), fileName: 'contract.pdf' },
+				waitForReady: false,
+				signers: [
+					{
+						name: 'Ana Lima',
+						email: 'ana@example.com',
+						verification_method,
+						government_id: '00000000000',
+						notification_methods: ['Whatsapp'],
+						step: 1,
+					},
+				],
+			});
+			expect(createSigner).toHaveBeenCalledWith(
+				{ full_name: 'Ana Lima', email: 'ana@example.com', government_id: '00000000000' },
+				undefined,
+			);
 
-		expect(createAssignment).toHaveBeenCalledWith('document1', {
-			method: 'virtual',
-			signers: [
-				{
-					id: 'signer1',
-					verification_method: 'Whatsapp',
-					notification_methods: ['Whatsapp'],
-					step: 1,
-				},
-			],
-		});
-	});
+			expect(createAssignment).toHaveBeenCalledWith('document1', {
+				method: 'virtual',
+				signers: [
+					{
+						id: 'signer1',
+						verification_method,
+						notification_methods: ['Whatsapp'],
+						step: 1,
+					},
+				],
+			});
+		},
+	);
 
 	it('reports the created document and signers when the assignment fails', async () => {
 		const client = new AssinafyClient({ apiKey: 'test-key', accountId: 'acc' });

@@ -25,12 +25,10 @@ function readHeader(headers: WebhookHeaders, name: string): string | undefined {
 	if (typeof (headers as Headers).get === 'function') {
 		return (headers as Headers).get(name) ?? undefined;
 	}
-	for (const [key, value] of Object.entries(headers)) {
-		if (key.toLowerCase() !== name) continue;
-		if (Array.isArray(value)) return value.length === 1 ? value[0] : undefined;
-		return value;
-	}
-	return undefined;
+	const matches = Object.entries(headers).filter(([key]) => key.toLowerCase() === name);
+	if (matches.length !== 1) return undefined;
+	const value = matches[0]?.[1];
+	return Array.isArray(value) ? (value.length === 1 ? value[0] : undefined) : value;
 }
 
 /**
@@ -74,7 +72,15 @@ export class WebhookVerifier {
 
 		const tolerance = options.toleranceSeconds ?? 300;
 		const now = Math.floor((options.now ?? Date.now()) / 1000);
-		if (Math.abs(now - Number(timestamp)) > tolerance) return false;
+		if (
+			!Number.isFinite(tolerance) ||
+			tolerance < 0 ||
+			!Number.isSafeInteger(now) ||
+			now < 0 ||
+			!Number.isSafeInteger(Number(timestamp)) ||
+			Math.abs(now - Number(timestamp)) > tolerance
+		)
+			return false;
 
 		const secret = this.webhookSecret.startsWith('whsec_')
 			? this.webhookSecret.slice('whsec_'.length)
@@ -89,8 +95,8 @@ export class WebhookVerifier {
 		);
 
 		return signatures.split(' ').some((entry) => {
-			const [version, value] = entry.split(',', 2);
-			if (version !== 'v1' || !value) return false;
+			const [version, value, extra] = entry.split(',');
+			if (version !== 'v1' || !value || extra !== undefined) return false;
 			const provided = Buffer.from(value);
 			return provided.length === expected.length && timingSafeEqual(provided, expected);
 		});

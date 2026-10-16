@@ -1,6 +1,7 @@
 import { Command, Option } from '@commander-js/extra-typings';
 import type { ISignFieldEntry } from '../api';
 import { requireDocumentArtifactName, requireSignerImageType } from '../api/utils';
+import { CliError } from '../lib/errors';
 import { defaultArtifactFilename, readBinary, saveDownload } from '../lib/files';
 import { parseJsonArray, splitList } from '../lib/json';
 import { addDownloadOptions, addListOptions } from '../lib/options';
@@ -115,6 +116,32 @@ const selfCommand = new Command('self')
 				client.signerDocuments.self(opts.accessCode),
 			);
 			printData(profile, config);
+		});
+	});
+
+const identityStatusCommand = new Command('identity-status')
+	.description('Fetch biometric verification status and the private capture URL')
+	.addOption(accessCodeOption())
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			const result = await withSpinner('Fetching identity verification', config, () =>
+				client.signerDocuments.getIdentityVerification(opts.accessCode),
+			);
+			printData(result, config);
+		});
+	});
+
+const identityStartCommand = new Command('identity-start')
+	.description('Open a biometric verification session with the signer’s explicit consent')
+	.addOption(accessCodeOption())
+	.option('--consent', 'The signer explicitly consents to biometric processing')
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			if (!opts.consent) throw new CliError('The signer’s explicit --consent is required.');
+			const result = await withSpinner('Starting identity verification', config, () =>
+				client.signerDocuments.startIdentityVerification(opts.accessCode, { consent: true }),
+			);
+			printData(result, config);
 		});
 	});
 
@@ -343,6 +370,8 @@ export const signerCommand = new Command('signer')
 	.addCommand(searchCommand)
 	.addCommand(downloadCommand)
 	.addCommand(selfCommand)
+	.addCommand(identityStatusCommand)
+	.addCommand(identityStartCommand)
 	.addCommand(acceptTermsCommand)
 	.addCommand(verifyCodeCommand)
 	.addCommand(certificateStartCommand)

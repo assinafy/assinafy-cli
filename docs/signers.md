@@ -29,12 +29,13 @@ Usage: assinafy signers create [options]
 Create a signer (reuses an existing one with the same email)
 
 Options:
-  --name <name>      Signer full name
-  --email <email>    Email address
-  --phone <number>   WhatsApp phone number (E.164)
-  --cpf <cpf>        Brazilian tax ID (CPF); non-digits are stripped
-  --metadata <json>  JSON object of metadata
-  -h, --help         display help for command
+  --name <name>         Signer full name
+  --email <email>       Email address
+  --phone <number>      WhatsApp phone number (E.164)
+  --cpf <cpf>           Brazilian tax ID (CPF); non-digits are stripped
+  --government-id <id>  CPF or numeric/alphanumeric CNPJ
+  --metadata <json>     JSON object of metadata
+  -h, --help            display help for command
 ```
 
 ### `assinafy signers list`
@@ -74,14 +75,15 @@ Usage: assinafy signers update [options] <id>
 Update a signer
 
 Arguments:
-  id                Signer ID
+  id                    Signer ID
 
 Options:
-  --name <name>     Signer full name
-  --email <email>   Email address
-  --phone <number>  WhatsApp phone number (E.164)
-  --cpf <cpf>       Brazilian tax ID (CPF/CNPJ), sent as government_id
-  -h, --help        display help for command
+  --name <name>         Signer full name
+  --email <email>       Email address
+  --phone <number>      WhatsApp phone number (E.164)
+  --cpf <cpf>           Brazilian tax ID (CPF/CNPJ), sent as government_id
+  --government-id <id>  CPF or numeric/alphanumeric CNPJ
+  -h, --help            display help for command
 ```
 
 ### `assinafy signers delete`

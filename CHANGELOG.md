@@ -6,6 +6,20 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-16
+
+### Added
+
+- Biometric `IdDocumentFaceMatchBasic` assignment and template verification, signer consent/session operations, and account identity review and evidence downloads in the SDK and CLI.
+- Signer creation accepts `government_id`; `--government-id` supports CPF and numeric/alphanumeric CNPJ on create and update.
+- Webhook endpoint listing can filter by exact URL, and endpoints can be deleted by URL. Signed endpoint creation exposes its returned `secret`, including to OAuth applications.
+
+### Fixed
+
+- Explicit `government_id` values retain letters and formatting for server normalization.
+- Webhook verification rejects duplicate headers, malformed signature entries and invalid replay-window options.
+- Profile names such as `__proto__` are stored and resolved as ordinary names.
+
 ## [2.5.3] - 2026-10-11
 
 ### Changed

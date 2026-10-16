@@ -117,6 +117,13 @@ try {
 		path.join(consumer, 'index.ts'),
 		`import { type AssinafyClient, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload } from '@assinafy/cli/api';
 declare const client: AssinafyClient;
+const biometric = client.signerDocuments.startIdentityVerification('example-code', { consent: true });
+const identityStatus = client.signerDocuments.getIdentityVerification('example-code');
+const identityReview = client.assignments.reviewIdentityVerification('document1', 'assignment1', 'signer1', { decision: 'Approved', note: null });
+const identityImage: Promise<Buffer> = client.assignments.downloadIdentityVerificationImage('document1', 'assignment1', 'signer1', 'face');
+const signer = client.signers.create({ full_name: 'Example Signer', government_id: 'AB.CDE.FGH/0001-00' });
+const webhookSecret: Promise<string | undefined> = client.webhooks.createEndpoint({ url: 'https://example.com/hook', email: 'ops@example.com', signing_enabled: true }).then(endpoint => endpoint.secret);
+void [biometric, identityStatus, identityReview, identityImage, signer, webhookSecret, client.webhooks.listEndpoints(undefined, { url: 'https://example.com/hook' }), client.webhooks.deleteEndpointByUrl('https://example.com/hook')];
 const response: Promise<ISendTokenResponse> = client.documents.sendToken('document1', { email: 'signer@example.com' });
 const request: Promise<IOAuthAuthorizationRequest> = client.oauth.authorize({ clientId: 'example-app', redirectUri: 'https://example.com/callback', scopes: ['documents:read'] });
 const tokens: Promise<IOAuthTokenResponse> = client.oauth.token({ grant_type: 'refresh_token', client_id: 'example-app', refresh_token: 'example-refresh' });

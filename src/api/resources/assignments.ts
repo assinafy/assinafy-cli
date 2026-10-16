@@ -4,9 +4,12 @@ import type {
 	IAssignmentListParams,
 	ICreateAssignmentPayload,
 	ICreateAssignmentResponse,
+	IdentityVerificationImageName,
 	IEstimateCostResponse,
+	IIdentityReviewPayload,
 	IResendCostEstimate,
 	IResendEmailResponse,
+	ISignerIdentityReview,
 	IWhatsAppNotification,
 	PaginatedResult,
 	SignerReference,
@@ -130,6 +133,70 @@ function normaliseSignerRef(
 }
 
 export class AssignmentResource extends BaseResource {
+	/** Fetch an account review and available evidence for a signer's identity verification. */
+	async getIdentityVerification(
+		documentId: string,
+		assignmentId: string,
+		signerId: string,
+	): Promise<ISignerIdentityReview> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		return this.call('Failed to fetch signer identity review', () =>
+			this.http.get(
+				`/documents/${docId}/assignments/${asgId}/signers/${sid}/identity-verification`,
+			),
+		);
+	}
+
+	/** Download JPEG/PNG evidence or the document PDF, available only while the review is open. */
+	async downloadIdentityVerificationImage(
+		documentId: string,
+		assignmentId: string,
+		signerId: string,
+		name: IdentityVerificationImageName,
+	): Promise<Buffer> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		if (!['document_front', 'document_back', 'document_pdf', 'face'].includes(name)) {
+			throw new ValidationError('Unknown identity verification image name');
+		}
+		return this.callBinary('Failed to download identity review image', () =>
+			this.http.get<ArrayBuffer>(
+				`/documents/${docId}/assignments/${asgId}/signers/${sid}/identity-verification/images/${name}`,
+				{ responseType: 'arraybuffer' },
+			),
+		);
+	}
+
+	/** Approve certification or reject/cancel the document; the optional note is private to reviewers. */
+	async reviewIdentityVerification(
+		documentId: string,
+		assignmentId: string,
+		signerId: string,
+		payload: IIdentityReviewPayload,
+	): Promise<ISignerIdentityReview> {
+		const docId = this.requireId(documentId, 'Document ID');
+		const asgId = this.requireId(assignmentId, 'Assignment ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		if (!payload || !['Approved', 'Rejected'].includes(payload.decision)) {
+			throw new ValidationError('decision must be Approved or Rejected');
+		}
+		if (
+			payload.note != null &&
+			(typeof payload.note !== 'string' || [...payload.note].length > 2000)
+		) {
+			throw new ValidationError('note must contain at most 2000 characters');
+		}
+		return this.call('Failed to decide signer identity review', () =>
+			this.http.post(
+				`/documents/${docId}/assignments/${asgId}/signers/${sid}/identity-verification/review`,
+				{ decision: payload.decision, note: payload.note },
+			),
+		);
+	}
+
 	/**
 	 * List assignments across the account (`GET /assignments`).
 	 *

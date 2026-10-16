@@ -91,6 +91,22 @@ const cases: Case[] = [
 		{ expires_at: null },
 	],
 	[
+		'GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification',
+		(c) => c.assignments.getIdentityVerification(id, id, id),
+	],
+	[
+		'GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/images/{name}',
+		(c) => c.assignments.downloadIdentityVerificationImage(id, id, id, 'face'),
+		undefined,
+		'binary',
+	],
+	[
+		'POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/review',
+		(c) =>
+			c.assignments.reviewIdentityVerification(id, id, id, { decision: 'Approved', note: null }),
+		{ decision: 'Approved', note: null },
+	],
+	[
 		'POST /v1/login',
 		(c) => c.auth.login(email, 'example-secret'),
 		{ email, password: 'example-secret' },
@@ -265,6 +281,20 @@ const cases: Case[] = [
 		'array',
 	],
 	['GET /v1/signers/self', (c) => c.signerDocuments.self(code), undefined, undefined, 'signer'],
+	[
+		'GET /v1/signers/identity-verification',
+		(c) => c.signerDocuments.getIdentityVerification(code),
+		undefined,
+		undefined,
+		'signer',
+	],
+	[
+		'POST /v1/signers/identity-verification',
+		(c) => c.signerDocuments.startIdentityVerification(code, { consent: true }),
+		{ consent: true },
+		undefined,
+		'signer',
+	],
 	[
 		'GET /v1/signers/{signerId}/document',
 		(c) => c.signerDocuments.getCurrent(id, code),
@@ -476,6 +506,12 @@ const cases: Case[] = [
 		'array',
 	],
 	[
+		'DELETE /v1/accounts/{accountId}/webhooks/endpoints',
+		(c) => c.webhooks.deleteEndpointByUrl('https://example.com/hook'),
+		undefined,
+		'array',
+	],
+	[
 		'GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret',
 		(c) => c.webhooks.getEndpointSecret(id),
 	],
@@ -513,7 +549,13 @@ describe('published HTTP contracts', () => {
 			});
 			const [method, templatePath] = operation.split(' ') as [string, string];
 			const expectedPath = templatePath.replace(/\{([^}]+)\}/g, (_match, key) =>
-				key === 'artifactName' ? 'original' : key === 'signatureType' ? 'signature' : id,
+				key === 'artifactName'
+					? 'original'
+					: key === 'signatureType'
+						? 'signature'
+						: key === 'name'
+							? 'face'
+							: id,
 			);
 			const preflightsSignerDocument =
 				auth === 'signer' && /^(POST|PUT) \/v1\/documents\//.test(operation);
@@ -550,6 +592,9 @@ describe('published HTTP contracts', () => {
 					};
 				}
 				expect(url.pathname).toBe(expectedPath);
+				if (operation === 'DELETE /v1/accounts/{accountId}/webhooks/endpoints') {
+					expect(url.searchParams.get('url')).toBe('https://example.com/hook');
+				}
 				expect(config.method?.toUpperCase()).toBe(method);
 				if (body === 'multipart') {
 					expect(config.data).toBeInstanceOf(FormData);

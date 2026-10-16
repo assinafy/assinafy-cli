@@ -73,8 +73,9 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
     whatsapp_phone_number?: string;
     phone?: string;
     cpf?: string;
+    government_id?: string;
     metadata?: Record<string, unknown>;
-    verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate';
+    verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
     notification_methods?: Array<'Email' | 'Whatsapp'>;
     step?: number;
   }>;
@@ -170,6 +171,9 @@ Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline ta
 | `resendNotification(documentId, assignmentId, signerId)` | [`PUT …/signers/{signerId}/resend`](./api-reference.md#resend-signature-request) | `IResendEmailResponse` |
 | `estimateResendCost(documentId, assignmentId, signerId)` | [`POST …/estimate-resend-cost`](./api-reference.md#estimate-resend-cost) | `IResendCostEstimate` |
 | `listWhatsAppNotifications(documentId, assignmentId)` | [`GET …/whatsapp-notifications`](./api-reference.md#list-whatsapp-notifications) | `IWhatsAppNotification[]` |
+| `getIdentityVerification(documentId, assignmentId, signerId)` | [`GET …/signers/{signerId}/identity-verification`](./api-reference.md#signer-identity-review) | `ISignerIdentityReview` |
+| `downloadIdentityVerificationImage(documentId, assignmentId, signerId, name)` | [`GET …/identity-verification/images/{name}`](./api-reference.md#signer-identity-review-image) | `Buffer` (JPEG, PNG or PDF) |
+| `reviewIdentityVerification(documentId, assignmentId, signerId, payload)` | [`POST …/identity-verification/review`](./api-reference.md#decide-signer-identity-review) | `ISignerIdentityReview`; payload is `IIdentityReviewPayload` |
 
 Assignment payload:
 
@@ -179,7 +183,7 @@ Assignment payload:
   signers?: Array<string | {
     id?: string;
     signer_id?: string;
-    verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate';
+    verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
     notification_methods?: Array<'Email' | 'Whatsapp'>;
     step?: number;
   }>;
@@ -220,7 +224,7 @@ Production defaults `notification_methods: []` to `['Email']` and sends an invit
 | `delete(signerId, accountId?)` | [`DELETE /accounts/{accountId}/signers/{signerId}`](./api-reference.md#delete-signer) | `IEmptyResult` (`unknown[]`) |
 | `findByEmail(email, accountId?)` | SDK helper over `list({ search: email })` | `ISigner | null` |
 
-Create payload: `{ full_name: string; email?; whatsapp_phone_number?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; new integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. List params support published `search` and compatible `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
+Create payload: `{ full_name: string; email?; whatsapp_phone_number?; government_id?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `government_id` accepts CPF or numeric/alphanumeric CNPJ and is forwarded unchanged for server normalization. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; the `cpf` alias retains its digit-only normalization. New integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. Existing email matches are reused without updating their government ID; call `update` explicitly when needed. List params support published `search` and compatible `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
 
 ## Signer-side flows (`client.signerDocuments`)
 
@@ -240,6 +244,8 @@ These methods use the private `signer-access-code`, not the workspace API key, e
 | `acceptTerms(accessCode)` | [`PUT /signers/accept-terms`](./api-reference.md#accept-terms-signer) | `ISignerTermsAcceptance \| IStatusResponse` |
 | `verifyCode(payload: IVerifySignerCodePayload)` | [`POST /verify`](./api-reference.md#verify-signer-code-otp); email or WhatsApp OTP | `IEmptyResult \| IStatusResponse` |
 | `verifyEmail(payload: IVerifySignerCodePayload)` | Compatibility alias for `verifyCode` | `IEmptyResult \| IStatusResponse` |
+| `getIdentityVerification(accessCode)` | [`GET /signers/identity-verification`](./api-reference.md#identity-document-verification-status) | `IIdentityVerificationState` |
+| `startIdentityVerification(accessCode, payload)` | [`POST /signers/identity-verification`](./api-reference.md#start-identity-document-verification) | `IIdentityVerificationSession`; payload is `{ consent: true }` |
 | `startCertificate(accessCode)` | [`POST /signers/certificate/start`](#icp-brasil-a1a3-certificates) | `ICertificateStartResponse` (`{ token: string }`) |
 | `completeCertificate(accessCode, token)` | [`POST /signers/certificate/complete`](#icp-brasil-a1a3-certificates) | `ICertificateCompleteResponse` (`{ signerName: string }`) |
 | `confirmData(documentId, accessCode, payload)` | [`PUT /documents/{documentId}/signers/confirm-data`](./api-reference.md#confirm-signer-data) | `ISigner \| IEmptyResult` |
@@ -275,6 +281,7 @@ Assignment and template signer descriptors use the same combinations:
 | `Email` | `["Email"]` | Email address |
 | `Whatsapp` | `["Whatsapp"]` | `whatsapp_phone_number` and an eligible paid workspace |
 | `DigitalCertificate` (A1 or A3) | `["Email"]` or `["Whatsapp"]` | CPF/CNPJ in `government_id`, matching certificate, delivery contact, and the Digital Certificate workspace feature |
+| `IdDocumentFaceMatchBasic` | `["Email"]` or `["Whatsapp"]` | Valid CPF in `government_id`, delivery contact, the ID Document + Face Match feature, and explicit biometric consent |
 
 Choose one notification channel. With neither field specified, the API defaults to Email; with only one specified, it infers the other. Estimate cost before creating assignments, including those created from templates: WhatsApp notifications and certificate signatures consume credits. Each certificate signer must be alone in its signing step.
 
@@ -292,6 +299,69 @@ await client.signerDocuments.verifyCode({
 ```
 
 The token request body is `{ "channel": "email", "recipient": "signer@example.com" }` and the response data is `{ "document": { "resource": "document", "id": "example_document", "name": "Contract.pdf", "page_count": 3, "created_by": "Example User" }, "channel": "email", "recipient": "signer@example.com" }`. WhatsApp-verified signers receive their code in the WhatsApp invitation itself. Verification sends `{ "verification-code": "012345" }` with `?signer-access-code=example_access_code`; a successful envelope `{ "status": 200, "message": "", "data": [] }` resolves to `[]`. Invalid codes surface as `ApiError` with the server's status and message. `verifyEmail` remains a compatible alias. Continue with data confirmation and virtual/collect signing as described above.
+
+### Biometric identity verification
+
+Use `IdDocumentFaceMatchBasic` for government-ID photos, a photo of the signer holding the ID, and liveness. Create or explicitly update the signer with a valid CPF in `government_id`, estimate cost, and create the assignment with either notification channel. Assignment, template, estimate, and `uploadAndRequestSignatures` signer descriptors accept this method. The provider collects biometric data on its hosted page; these SDK endpoints do not upload biometric images.
+
+1. Read `signerDocuments.self(accessCode)` and its `verification_method`. Present the document, terms and biometric consent to the signer.
+2. Read `getIdentityVerification(accessCode)`. Start only when `can_start` is true and the signer consents, using `startIdentityVerification(accessCode, { consent: true })`.
+3. Open the returned `url` exactly as received, including any `#t=` fragment. It is a private bearer link: never log it or persist it in browser storage. Read status again after capture.
+4. `Pending` retains the existing capture link. Only `Expired` permits another session; `Declined` and `Abandoned` require a new document and assignment. Resending an invitation does not replace a live session; restarts do not charge a second per-signer fee.
+5. `Approved` and `InReview` let the signer continue to data confirmation and virtual/collect signing. `InReview` holds certification, not signing; when everyone has signed, the document remains `pending_identity_review` until the account decides.
+6. The account reads `assignments.getIdentityVerification(documentId, assignmentId, signerId)`. While `InReview`, `downloadIdentityVerificationImage(..., name)` accepts `document_front`, `document_back`, `document_pdf` or `face` from the review's `images`. It returns JPEG/PNG/PDF bytes; images return 404 after the review closes. Protect downloaded evidence under your retention policy.
+7. Submit `reviewIdentityVerification(..., { decision: 'Approved' | 'Rejected', note?: string | null })`. Notes allow at most 2,000 Unicode characters, are recorded and sent to the provider, and stay hidden from the signer. Approval allows certification after all signatures and reviews complete. Rejection cancels the document as `rejected_by_user` and notifies signers and copy receivers. Writes are never retried automatically.
+
+Signer requests and complete unwrapped responses:
+
+```http
+GET /v1/signers/identity-verification?signer-access-code=example_access_code
+```
+
+```json
+{ "can_start": true, "status": null, "url": null, "expires_at": null, "completed_at": null }
+```
+
+```http
+POST /v1/signers/identity-verification?signer-access-code=example_access_code
+Content-Type: application/json
+
+{ "consent": true }
+```
+
+```json
+{ "id": "example_verification", "url": "https://example.com/capture#t=example_secret", "expires_at": null }
+```
+
+`status` is `Pending`, `InReview`, `Approved`, `Declined`, `Expired`, `Abandoned` or `null`. `url` is the existing capture URL only while Pending, otherwise null; `expires_at` and `completed_at` are nullable timestamps. Missing consent, a live session, invalid access codes, or unavailable features surface through the shared `ValidationError`/`ApiError` contract. Both signer methods strip owner headers.
+
+Account GET/review responses resolve to this complete `ISignerIdentityReview` shape (all sensitive values below are synthetic):
+
+```json
+{
+  "id": "example_verification",
+  "status": "InReview",
+  "provider": "AssinafyVerify",
+  "verification_method": "IdDocumentFaceMatchBasic",
+  "reason_codes": [{ "code": "NAME_MISMATCH", "description": "Name differs" }],
+  "evidence_available": true,
+  "expected": { "name": "Example Signer", "cpf": "00000000000" },
+  "document": { "type": "CNH", "name": "Example Name", "cpf": "00000000000" },
+  "matches": { "cpf": true, "name": 0.52, "birth_date": null },
+  "checks": [{ "name": "name", "result": "review", "score": 0.52, "reasons": ["NAME_MISMATCH"] }],
+  "images": ["document_front", "document_back", "face"],
+  "ruleset_version": "example-rules",
+  "evidence_sha256": null,
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "review_note": null,
+  "completed_at": null
+}
+```
+
+`expected`, `document`, `matches`, `reviewed_by`, timestamps, ruleset and evidence hash can be null. `reviewed_by` becomes `{ id, name }` after a review. Unknown provider reason codes retain their descriptions. `evidence_available: false` means the provider has no summary or it has not been fetched; direct approvals expose evidence on the `signer_identity_verified` activity instead. The [published review operation](./api-reference.md#decide-signer-identity-review) gives full HTTP envelopes and error responses.
+
+CLI: `signer identity-status`, `signer identity-start --consent`, `assignments identity-verification <documentId> <assignmentId> <signerId>`, `assignments identity-image … --name face --output evidence.bin`, and `assignments review-identity … --decision Approved|Rejected [--note ...]`. Review decisions require confirmation or `--yes`; evidence downloads require an explicit output path and `--force` to overwrite.
 
 ### ICP-Brasil A1/A3 certificates
 
@@ -528,11 +598,12 @@ An account can register 1 webhook endpoint, or up to 3 on paid plans. Each endpo
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
-| `listEndpoints(accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#list-webhook-endpoints) | `IWebhookEndpoint[]`, oldest first |
-| `createEndpoint(payload, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#create-webhook-endpoint) | `IWebhookEndpointCreatePayload` → `IWebhookEndpoint` |
+| `listEndpoints(accountId?, params?)` | [`GET /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#list-webhook-endpoints), with optional `{ url: string }` exact-match filter | `IWebhookEndpoint[]`, oldest first |
+| `createEndpoint(payload, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#create-webhook-endpoint) | `IWebhookEndpointCreatePayload` → `IWebhookEndpointCreateResponse` (endpoint plus optional `secret`) |
 | `getEndpoint(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#get-webhook-endpoint) | `IWebhookEndpoint` |
 | `updateEndpoint(endpointId, payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#update-webhook-endpoint) | `IWebhookEndpointUpdatePayload` → `IWebhookEndpoint` |
 | `deleteEndpoint(endpointId, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#delete-webhook-endpoint) | `IEmptyResult` (`[]`) |
+| `deleteEndpointByUrl(url, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints?url=…`](./api-reference.md#delete-webhook-endpoint-by-url) | `IEmptyResult` (`[]`); exact registered URL required |
 | `getEndpointSecret(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`](./api-reference.md#get-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` (`{ secret }`) |
 | `rotateEndpointSecret(endpointId, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`](./api-reference.md#rotate-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` |
 | `register(payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#update-webhook-subscription) | `IWebhookSubscription` (oldest endpoint) |
@@ -552,9 +623,11 @@ const endpoint = await client.webhooks.createEndpoint({
   events: ['document_ready', 'signer_signed_document'],
   signing_enabled: true,
 });
-const { secret } = await client.webhooks.getEndpointSecret(endpoint.id);
+const { secret } = endpoint;
 // Store `secret` in your receiver's secret manager.
 ```
+
+When signing is enabled, endpoint creation returns `secret` once, including to OAuth applications. List/get responses omit it. OAuth applications cannot read or rotate it later: if lost, delete and recreate the endpoint. The CLI prints the creation secret in human and JSON output; store that output securely. `webhooks endpoints list --url <url>` and `delete-by-url --url <url> [--yes]` match the exact registered URL, including its query string. Deletion returns 404 if no endpoint matches. Existing endpoint-ID and subscription methods remain supported.
 
 Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted on `register` or `createEndpoint`, the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ endpoint_id?, event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch records include `endpoint_id`. Dispatch `search` is unsupported and rejected locally. Retrying re-sends only to that entry's endpoint and requires the endpoint to be active. There is no delete-subscription operation; delete a specific endpoint with `deleteEndpoint` or deactivate the oldest with `inactivate`.
 
@@ -613,7 +686,7 @@ Verify the raw bytes before parsing; re-serialized JSON does not match. The enve
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 106 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
-- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 106 OpenAPI operations; the API manifest contains only published paths.
+- Production OpenAPI currently publishes 112 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 112 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above. Both `sendToken` call forms send the email-only production body.
 - Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

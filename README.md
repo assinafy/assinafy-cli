@@ -2,7 +2,7 @@
 
 *Português · [Read in English](README.en.md)*
 
-A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 106 operações publicadas.
+A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 112 operações publicadas.
 
 Este guia segue o fluxo de uma integração: instalação, autenticação, envio, assinatura e armazenamento do resultado. A [referência do SDK](docs/sdk-reference.md) documenta cada método; a [referência HTTP](docs/api-reference.md) contém os parâmetros e os payloads completos de requisição e resposta publicados pela Assinafy.
 
@@ -253,6 +253,7 @@ Thumbnails e páginas individuais são JPEG. Downloads não sobrescrevem arquivo
 | `Email` | Verificação por código enviado por e-mail. |
 | `Whatsapp` | Verificação por WhatsApp; notificações dependem dos recursos e créditos da conta. |
 | `DigitalCertificate` | Assinatura com certificado ICP-Brasil A1/A3 e fluxo Web PKI. |
+| `IdDocumentFaceMatchBasic` | Verificação biométrica com documento, foto segurando o documento e prova de vida; exige CPF válido e o recurso ID Document + Face Match. |
 
 Use os endpoints de estimativa para obter os valores atuais. Verificação e notificação seguem combinações definidas pela API. Para selecionar explicitamente métodos e ordem:
 
@@ -271,7 +272,7 @@ Antes de estimar ou criar um assignment com certificado, atualize o CPF/CNPJ do 
 assinafy signers update "$SIGNER_ID" --cpf '<CPF-ou-CNPJ-do-signatário>' --json
 ```
 
-Verificação `Email` usa notificação `["Email"]`; `Whatsapp` usa `["Whatsapp"]`. `DigitalCertificate` permite um desses dois canais. Escolha apenas um canal por signatário; os mesmos campos são aceitos em documentos gerados de templates.
+Verificação `Email` usa notificação `["Email"]`; `Whatsapp` usa `["Whatsapp"]`. `DigitalCertificate` e `IdDocumentFaceMatchBasic` permitem um desses dois canais. Escolha apenas um canal por signatário; os mesmos campos são aceitos em documentos gerados de templates. `signers create` e `signers update` aceitam `--government-id` para CPF ou CNPJ numérico/alfanumérico, preservando o valor para normalização pelo servidor; `--cpf` mantém a compatibilidade e remove caracteres não numéricos.
 
 Em produção, `notification_methods: []` assume `['Email']` e envia o convite. Para escolher o canal, informe-o explicitamente; o array vazio não desativa notificações.
 
@@ -314,6 +315,23 @@ Os IDs e valores de campos vêm do assignment apresentado ao signatário. Na ver
 
 Para certificados A1/A3, use a página de assinatura Assinafy ou integre o Web PKI com o SDK. Após apresentar o documento e aceitar os termos, `signer certificate-start --json` retorna `{ "token": "..." }`. O navegador assina essa operação no dispositivo do signatário. Defina `ASSINAFY_CERTIFICATE_TOKEN` com o mesmo token e execute `signer certificate-complete --json`, que retorna `{ "signerName": "..." }`. A chave privada e a senha/PIN permanecem no dispositivo. Aguarde o documento ficar `certificated` e baixe `--artifact pades` ou `bundle`; o comando comum `sign` não substitui esse fluxo.
 
+Para biometria, cadastre ou atualize o CPF válido em `government_id`, estime o custo e crie o assignment com `verification_method: "IdDocumentFaceMatchBasic"`. A pessoa precisa consentir com o processamento biométrico antes de iniciar:
+
+```bash
+assinafy signer identity-status --json
+assinafy signer identity-start --consent --json
+```
+
+Abra a `url` retornada exatamente como recebida, incluindo o fragmento `#t=`, e consulte o status após a captura. É um link privado: mantenha-o fora de logs e do armazenamento do navegador. Só inicie outra sessão quando `can_start` for verdadeiro; uma sessão `Expired` pode ser substituída, enquanto `Declined` ou `Abandoned` exigem novo documento e assignment. Em `Approved` ou `InReview`, a pessoa continua com confirmação de dados e assinatura. `InReview` segura a certificação: após todas as assinaturas, o documento fica `pending_identity_review` até a decisão da conta.
+
+```bash
+assinafy assignments identity-verification "$DOCUMENT_ID" example_assignment example_signer --json
+assinafy assignments identity-image "$DOCUMENT_ID" example_assignment example_signer --name face --output evidencia.bin
+assinafy assignments review-identity "$DOCUMENT_ID" example_assignment example_signer --decision Approved --note 'Conferido pela equipe'
+```
+
+As imagens ficam disponíveis somente durante a revisão. Aprovar libera a certificação quando todas as assinaturas e revisões terminarem; `--decision Rejected` cancela o documento e notifica signatários e destinatários de cópia. A decisão pede confirmação ou `--yes`; a nota privada aceita até 2.000 caracteres. Veja os [payloads completos e estados](docs/sdk-reference.md#biometric-identity-verification).
+
 O SDK remove credenciais do proprietário das chamadas públicas e do signatário. O download público de artefato do signatário aceita opcionalmente um código para uma verificação prévia de identidade. `--email` é um alias de `--recipient` em `send-token`. `signer documents <signerId>` e `signer search <signerId> <texto>` também funcionam sem `--access-code`, usando a chave de API ou o token do workspace ao qual o signatário pertence.
 
 Verificação, confirmação de dados e envio da imagem de assinatura podem retornar `[]` em caso de sucesso. Consulte `signer self` para obter o perfil atualizado e confirme o progresso e os artefatos certificados após assinar. Os exemplos completos de requisição e resposta estão na [referência do SDK para signatários](docs/sdk-reference.md#signer-side-flows-clientsignerdocuments).
@@ -342,6 +360,8 @@ assinafy webhooks verify corpo.json --id "$WEBHOOK_ID" --timestamp "$WEBHOOK_TIM
 ```
 
 Sem `--events`, o endpoint recebe `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document` e `document_processing_failed`. `endpoints update <id>` altera apenas as opções informadas (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); desativar a assinatura descarta o segredo. `endpoints rotate-secret <id>` gera um novo segredo e invalida o anterior imediatamente. `endpoints delete <id>` remove o endpoint e libera a vaga. URLs repetidas no mesmo workspace retornam `400`; criar acima do limite do plano retorna `403`. A leitura e a rotação do segredo não estão disponíveis para aplicativos OAuth.
+
+Com `--signing`, a criação retorna `secret` uma vez, inclusive via OAuth; armazene-o com segurança. A CLI o mostra em texto e em JSON. Aplicativos OAuth que perderem esse segredo precisam excluir e recriar o endpoint. `endpoints list --url <url>` filtra pela URL exata; `endpoints delete-by-url --url <url>` remove por essa mesma URL e pede confirmação ou `--yes`.
 
 `webhooks register`, `webhooks get` e `webhooks inactivate` continuam disponíveis e atuam sobre o endpoint mais antigo do workspace.
 

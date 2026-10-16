@@ -79,6 +79,16 @@ describe('config file round-trip', () => {
 		expect(readConfigFile()).toEqual({});
 	});
 
+	it('looks up only stored profile names and keeps special names as ordinary keys', () => {
+		writeConfigFile({ profiles: {} });
+		const profiles = readConfigFile().profiles!;
+		expect(profiles.toString).toBeUndefined();
+		const profileName = '__proto__';
+		profiles[profileName] = { token: 'example-token' };
+		writeConfigFile({ profiles });
+		expect(readConfigFile().profiles?.[profileName]).toEqual({ token: 'example-token' });
+	});
+
 	it('returns an empty object when the file is malformed', () => {
 		writeConfigFile({ profiles: { default: {} } });
 		writeFileSync(configPath(), 'not json');

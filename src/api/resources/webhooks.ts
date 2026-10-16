@@ -5,6 +5,7 @@ import type {
 	IWebhookDispatchListParams,
 	IWebhookEndpoint,
 	IWebhookEndpointCreatePayload,
+	IWebhookEndpointCreateResponse,
 	IWebhookEndpointSecret,
 	IWebhookEndpointUpdatePayload,
 	IWebhookEventTypeInfo,
@@ -102,11 +103,15 @@ export class WebhookResource extends BaseResource {
 		);
 	}
 
-	/** `GET /accounts/{accountId}/webhooks/endpoints` — list webhook endpoints, oldest first. */
-	async listEndpoints(accountId?: string): Promise<IWebhookEndpoint[]> {
+	/** List webhook endpoints, oldest first; `url` matches the registered value exactly. */
+	async listEndpoints(
+		accountId?: string,
+		params: { url?: string } = {},
+	): Promise<IWebhookEndpoint[]> {
 		const id = this.accountId(accountId);
+		validateWebhookFields(params);
 		return this.call('Failed to list webhook endpoints', () =>
-			this.http.get(`/accounts/${id}/webhooks/endpoints`),
+			this.http.get(`/accounts/${id}/webhooks/endpoints`, { params: cleanParams({ ...params }) }),
 		);
 	}
 
@@ -114,12 +119,13 @@ export class WebhookResource extends BaseResource {
 	 * `POST /accounts/{accountId}/webhooks/endpoints` — register another
 	 * endpoint. Accounts allow 1 endpoint, or up to 3 on paid plans (`403` past
 	 * the limit); URLs must be unique per workspace. Omitted `events` uses the
-	 * same default set as {@link register}.
+	 * same default set as {@link register}. Signed creation returns `secret`
+	 * once, including to OAuth applications; save it securely.
 	 */
 	async createEndpoint(
 		payload: IWebhookEndpointCreatePayload,
 		accountId?: string,
-	): Promise<IWebhookEndpoint> {
+	): Promise<IWebhookEndpointCreateResponse> {
 		if (!payload.url) throw new ValidationError('Webhook URL is required');
 		validateWebhookFields({ ...payload, email: payload.email ?? '' });
 		const id = this.accountId(accountId);
@@ -166,6 +172,16 @@ export class WebhookResource extends BaseResource {
 		const eid = this.requireId(endpointId, 'Endpoint ID');
 		return this.call('Failed to delete webhook endpoint', () =>
 			this.http.delete(`/accounts/${id}/webhooks/endpoints/${eid}`),
+		);
+	}
+
+	/** Delete the endpoint whose URL exactly matches `url`; returns 404 when none matches. */
+	async deleteEndpointByUrl(url: string, accountId?: string): Promise<IEmptyResult> {
+		if (!url) throw new ValidationError('Webhook URL is required');
+		validateWebhookFields({ url });
+		const id = this.accountId(accountId);
+		return this.call('Failed to delete webhook endpoint by URL', () =>
+			this.http.delete(`/accounts/${id}/webhooks/endpoints`, { params: { url } }),
 		);
 	}
 

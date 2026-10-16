@@ -1,4 +1,4 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type { ICreateSignerPayload, IUpdateSignerPayload } from '../api';
 import { requireAccountId } from '../lib/client';
 import { parseJsonObject } from '../lib/json';
@@ -26,6 +26,9 @@ const createCommand = new Command('create')
 	.option('--email <email>', 'Email address')
 	.option('--phone <number>', 'WhatsApp phone number (E.164)')
 	.option('--cpf <cpf>', 'Brazilian tax ID (CPF); non-digits are stripped')
+	.addOption(
+		new Option('--government-id <id>', 'CPF or numeric/alphanumeric CNPJ').conflicts('cpf'),
+	)
 	.option('--metadata <json>', 'JSON object of metadata')
 	.action(async (opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
@@ -34,6 +37,7 @@ const createCommand = new Command('create')
 			if (opts.email) payload.email = opts.email;
 			if (opts.phone) payload.whatsapp_phone_number = opts.phone;
 			if (opts.cpf) payload.cpf = opts.cpf;
+			if (opts.governmentId !== undefined) payload.government_id = opts.governmentId;
 			const metadata = parseJsonObject(opts.metadata, '--metadata');
 			if (metadata) payload.metadata = metadata;
 			const signer = await withSpinner('Creating signer', config, () =>
@@ -87,6 +91,9 @@ const updateCommand = new Command('update')
 	.option('--email <email>', 'Email address')
 	.option('--phone <number>', 'WhatsApp phone number (E.164)')
 	.option('--cpf <cpf>', 'Brazilian tax ID (CPF/CNPJ), sent as government_id')
+	.addOption(
+		new Option('--government-id <id>', 'CPF or numeric/alphanumeric CNPJ').conflicts('cpf'),
+	)
 	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
@@ -95,6 +102,7 @@ const updateCommand = new Command('update')
 			if (opts.email) payload.email = opts.email;
 			if (opts.phone) payload.whatsapp_phone_number = opts.phone;
 			if (opts.cpf) payload.cpf = opts.cpf;
+			if (opts.governmentId !== undefined) payload.government_id = opts.governmentId;
 			const signer = await withSpinner('Updating signer', config, () =>
 				client.signers.update(id, payload, accountId),
 			);

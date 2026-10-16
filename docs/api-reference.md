@@ -6,8 +6,8 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
-- Operations: 106
-- Contract SHA-256: `c4913641cd4881b515b5b7ad1a180c393c321d97fd74fff73080618c8b130ecf`
+- Operations: 112
+- Contract SHA-256: `da98836f863bccd621c104499c96621e67f12016538398c3496859db5f049b75`
 
 ## Accounts
 
@@ -1023,6 +1023,7 @@ The supported document statuses and whether a document in each status can be del
 | `certificated` | no | The document is certificated. |
 | `rejected_by_signer` | yes | A signer declined signing the document. |
 | `pending_signature` | yes | The document is waiting for signatures. |
+| `pending_identity_review` | yes | Every signer has signed; the document waits for the account to review a signer's identity before it is certificated. Deleting it cancels it and notifies the signers. |
 | `rejected_by_user` | yes | The signature process was cancelled by a user. |
 | `failed` | yes | The document processing has failed. |
 
@@ -2023,6 +2024,7 @@ List the assignments belonging to the authenticated user's current account.
                     ],
                     "step": 1,
                     "notified": null,
+                    "identity_verification_status": "InReview",
                     "completed": null,
                     "notification_history": null,
                     "resource": "signer",
@@ -2822,6 +2824,7 @@ Example:
                 ],
                 "step": 1,
                 "notified": null,
+                "identity_verification_status": "InReview",
                 "completed": null,
                 "notification_history": null,
                 "resource": "signer",
@@ -2906,6 +2909,240 @@ Example:
 }
 ```
 
+### Signer identity review
+
+`GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification`
+
+The signer's identity-document verification as the account's reviewer sees it. When the provider sends a verification to review, the account decides it with **Decide signer identity review**. The signer can still view and sign meanwhile; the review holds the document's certification instead (status `pending_identity_review` once every signer has signed).
+Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_available` is false when the provider keeps none or it could not be fetched yet. While the review is open, `images` lists the evidence images the reviewer can open with **Signer identity review image**. A verification the provider approved directly, without a review, shows no evidence here (`evidence_available` is false); its evidence is on the `signer_identity_verified` activity.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — Identity review
+
+```json
+{
+    "data": {
+        "id": "example_id_26",
+        "status": "InReview",
+        "provider": "AssinafyVerify",
+        "verification_method": "IdDocumentFaceMatchBasic",
+        "reason_codes": [
+            {
+                "code": "NAME_MISMATCH",
+                "description": "Nome no documento difere do cadastrado (similaridade 52%)"
+            }
+        ],
+        "evidence_available": true,
+        "expected": null,
+        "document": null,
+        "matches": null,
+        "checks": [
+            {
+                "name": "name",
+                "result": "review",
+                "score": 0.5217,
+                "reasons": [
+                    "NAME_MISMATCH"
+                ]
+            }
+        ],
+        "images": [
+            "document_front",
+            "document_back",
+            "face"
+        ],
+        "ruleset_version": "2026-10-12.2",
+        "evidence_sha256": "9f2c0d6e4b1a8c3f5e7d9b0a2c4e6f8a1b3d5f7091e2c4a6b8d0f2e4a6c8e0b2",
+        "reviewed_by": null,
+        "reviewed_at": "2026-10-13T21:05:00Z",
+        "review_note": "Conferido por videochamada.",
+        "completed_at": "2026-10-13T21:05:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — Assignment, signer or verification not found.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Signer identity review image
+
+`GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/images/{name}`
+
+One evidence image of a signer identity verification that is `InReview`, for the account's reviewer: the document photos (or the digital document PDF) and the face photo. Fetched from the verification provider on each request and never stored by Assinafy. Available only while the review is open; once it is decided, every image returns 404. `name` must be one of the review's `images`.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+| `name` | path | string | yes | The image, as listed in the review's `images`. |
+
+#### Responses
+
+##### 200 — The image bytes (`image/jpeg`, `image/png`) or the document PDF (`application/pdf`). Sent with `Cache-Control: no-store`.
+
+##### 404 — Assignment, signer or verification not found, the review is not open, or there is no such image.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Decide signer identity review
+
+`POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/review`
+
+Approves or rejects a signer whose identity verification is `InReview`, while the document is `pending_signature` or `pending_identity_review`. Approved: once every signer has signed and no other signer is under review, the document is certificated; the certificate states the approval by review and every difference found. Rejected: the document is cancelled (`rejected_by_user`, with the reviewer as the user) and every signer and copy receiver gets the cancellation notice; the note is never shown to them. The signer gets no message about the decision itself. The decision is also reported to the verification provider.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `decision` (string, required)
+- `note` (string | null) — Optional. Recorded in the activity log and sent to the provider; never shown to the signer.
+
+Example:
+
+```json
+{
+    "decision": "Approved",
+    "note": "Conferido por videochamada."
+}
+```
+
+#### Responses
+
+##### 200 — Decided
+
+```json
+{
+    "data": {
+        "id": "example_id_26",
+        "status": "InReview",
+        "provider": "AssinafyVerify",
+        "verification_method": "IdDocumentFaceMatchBasic",
+        "reason_codes": [
+            {
+                "code": "NAME_MISMATCH",
+                "description": "Nome no documento difere do cadastrado (similaridade 52%)"
+            }
+        ],
+        "evidence_available": true,
+        "expected": null,
+        "document": null,
+        "matches": null,
+        "checks": [
+            {
+                "name": "name",
+                "result": "review",
+                "score": 0.5217,
+                "reasons": [
+                    "NAME_MISMATCH"
+                ]
+            }
+        ],
+        "images": [
+            "document_front",
+            "document_back",
+            "face"
+        ],
+        "ruleset_version": "2026-10-12.2",
+        "evidence_sha256": "9f2c0d6e4b1a8c3f5e7d9b0a2c4e6f8a1b3d5f7091e2c4a6b8d0f2e4a6c8e0b2",
+        "reviewed_by": null,
+        "reviewed_at": "2026-10-13T21:05:00Z",
+        "review_note": "Conferido por videochamada.",
+        "completed_at": "2026-10-13T21:05:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Invalid decision, the verification is not `InReview`, or the document is no longer awaiting signatures.
+
+##### 404 — Assignment, signer or verification not found.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
 ### List WhatsApp notifications
 
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/whatsapp-notifications`
@@ -2938,7 +3175,7 @@ List all WhatsApp notification messages sent for an assignment. The response inc
                 }
             ],
             "phone_number": "+5500000000000",
-            "signer_id": "example_id_26"
+            "signer_id": "example_id_27"
         }
     ],
     "status": 200,
@@ -3001,7 +3238,7 @@ Example:
     "data": {
         "access_token": "example_credential",
         "user": {
-            "id": "example_id_27",
+            "id": "example_id_28",
             "name": "John Smith",
             "email": "user8@example.com",
             "telephone": "+5500000000000",
@@ -3257,7 +3494,7 @@ Example:
     "data": {
         "access_token": "example_credential",
         "user": {
-            "id": "example_id_27",
+            "id": "example_id_28",
             "name": "John Smith",
             "email": "user8@example.com",
             "telephone": "+5500000000000",
@@ -3323,7 +3560,7 @@ The authenticated user's enrolled two-factor methods and how many recovery codes
     "data": {
         "methods": [
             {
-                "id": "example_id_28",
+                "id": "example_id_29",
                 "type": "Totp",
                 "label": "My phone",
                 "confirmed_at": "2026-09-09T14:21:03Z",
@@ -3386,7 +3623,7 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_28",
+        "id": "example_id_29",
         "secret": "example_secret",
         "provisioning_uri": "https://example.com/example-url-11"
     },
@@ -3436,7 +3673,7 @@ Example:
 
 ```json
 {
-    "id": "example_id_28",
+    "id": "example_id_29",
     "code": "123456",
     "password": "example_secret",
     "reauth_code": "string"
@@ -3688,7 +3925,7 @@ Example:
     "data": {
         "access_token": "example_credential",
         "user": {
-            "id": "example_id_27",
+            "id": "example_id_28",
             "name": "John Smith",
             "email": "user8@example.com",
             "telephone": "+5500000000000",
@@ -4391,7 +4628,7 @@ Example:
 ```json
 [
     {
-        "field_id": "example_id_29",
+        "field_id": "example_id_30",
         "value": "1111111111111"
     }
 ]
@@ -4405,7 +4642,7 @@ Example:
 {
     "data": [
         {
-            "field_id": "example_id_29",
+            "field_id": "example_id_30",
             "type": "cpf",
             "success": false,
             "error_message": "Invalid CPF."
@@ -4712,7 +4949,7 @@ Returns the profile of the user owning the access token.
 ```json
 {
     "data": {
-        "id": "example_id_27",
+        "id": "example_id_28",
         "name": "John Smith",
         "email": "user8@example.com",
         "telephone": "+5500000000000",
@@ -4917,7 +5154,7 @@ Claims about the user who authorized this token. Requires the openid scope; name
 
 ```json
 {
-    "sub": "example_id_30",
+    "sub": "example_id_31",
     "name": "Maria Silva",
     "email": null,
     "email_verified": null
@@ -5117,7 +5354,7 @@ Example:
     "data": {
         "document": {
             "resource": "document",
-            "id": "example_id_31",
+            "id": "example_id_32",
             "name": "Contract.pdf",
             "page_count": 3,
             "created_by": "Jane Doe"
@@ -5164,7 +5401,7 @@ Example:
 
 `GET /v1/signers/self`
 
-Return the signer identified by the signer access code, including the `has_signature`/`has_initial`/`is_signature_reusable` flags.
+Return the signer identified by the signer access code, including the `has_signature`/`has_initial`/`is_signature_reusable` flags and the `verification_method` of this signature request. Available before verification, so the signing page can pick the right first step.
 
 **Authentication:** signer access code (`access_code` query parameter).
 
@@ -5178,6 +5415,7 @@ Return the signer identified by the signer access code, including the `has_signa
         "has_signature": true,
         "has_initial": false,
         "is_signature_reusable": false,
+        "verification_method": "Email",
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
@@ -5190,6 +5428,118 @@ Return the signer identified by the signer access code, including the `has_signa
     "message": ""
 }
 ```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Identity document verification status
+
+`GET /v1/signers/identity-verification`
+
+Current state of the signer's identity document verification. Backfills a pending decision from the provider. Uses the signer access code.
+
+**One live session per signer:** `can_start` is true before a provider session exists, and again once that session is Expired -- the capture link lapsed before anything was submitted, so the signer may open a new one. Once a session is Pending, In Review, Approved, Declined or Abandoned it is false. A signer who reaches Declined or Abandoned cannot restart here; the account must start a whole new process (new document, new assignment).
+
+**In review:** the signer continues -- views, confirms their data and signs -- while the account reviews the result. The document is certificated only after the account approves every signer under review; if it rejects one, the document is cancelled and every signer receives the cancellation notice.
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Responses
+
+##### 200 — Verification state
+
+```json
+{
+    "data": {
+        "can_start": false,
+        "status": "Pending",
+        "url": "https://example.com/example-url-13",
+        "expires_at": "2026-10-07T21:18:47Z",
+        "completed_at": "2026-08-10T20:32:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Start identity document verification
+
+`POST /v1/signers/identity-verification`
+
+Records the signer's biometric-processing consent and opens a provider session. Returns the hosted verification URL to redirect to. Uses the signer access code.
+
+**One live session per signer:** this succeeds when no session exists yet, or when the last one Expired (the capture link lapsed before anything was submitted); the expired session is replaced by a new one. Otherwise -- Pending, In Review, Approved, Declined or Abandoned -- it returns `400`. A resend never destroys or replaces a live provider session, and the account is billed once per signer at assignment creation, never again on a restart. Recovering from a Declined or Abandoned verification means the account must start a whole new process (new document, new assignment).
+
+**Authentication:** signer access code (`access_code` query parameter).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `consent` (boolean, required) — Must be true. Explicit consent to biometric processing.
+
+Example:
+
+```json
+{
+    "consent": true
+}
+```
+
+#### Responses
+
+##### 200 — Session created
+
+```json
+{
+    "data": {
+        "id": "example_id_20",
+        "url": "https://example.com/example-url-13",
+        "expires_at": "2026-10-07T21:18:47Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Consent missing, or this signer already has a verification session that is not Expired.
 
 ##### 401 — Missing or invalid credentials.
 
@@ -5529,8 +5879,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_32",
-        "example_id_33"
+        "example_id_33",
+        "example_id_34"
     ]
 }
 ```
@@ -5587,8 +5937,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_32",
-        "example_id_33"
+        "example_id_33",
+        "example_id_34"
     ],
     "decline_reason": "Unfavorable terms."
 }
@@ -5709,7 +6059,7 @@ Fields (`application/json`):
 
 - `full_name` (string)
 - `email` (string)
-- `government_id` (string)
+- `government_id` (string) — Signer's CPF/CNPJ; digits only on save.
 
 Example:
 
@@ -6187,7 +6537,7 @@ Fields (`application/json`):
 - `full_name` (string, required)
 - `email` (string)
 - `whatsapp_phone_number` (string) — E.164; normalized on save.
-- `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save.
+- `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save. Required before the signer can use a verification method that identifies them by CPF.
 
 Example:
 
@@ -6804,7 +7154,7 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_34",
+            "id": "example_id_35",
             "name": "template.pdf",
             "document_name": null,
             "message": null,
@@ -6907,7 +7257,7 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-13",
+        "url": "https://example.com/example-url-14",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -6968,7 +7318,7 @@ Example:
         "document_prepared"
     ],
     "is_active": true,
-    "url": "https://example.com/example-url-13",
+    "url": "https://example.com/example-url-14",
     "email": "user11@example.com"
 }
 ```
@@ -6985,7 +7335,7 @@ Example:
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-13",
+        "url": "https://example.com/example-url-14",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7050,7 +7400,7 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-13",
+        "url": "https://example.com/example-url-14",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7154,11 +7504,11 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_35",
+            "id": "example_id_36",
             "event": "document_ready",
             "activity_id": 456,
-            "endpoint_id": "example_id_36",
-            "endpoint": "https://example.com/example-url-14",
+            "endpoint_id": "example_id_37",
+            "endpoint": "https://example.com/example-url-15",
             "payload": null,
             "delivered": true,
             "http_status": 200,
@@ -7216,11 +7566,11 @@ Manually retry a webhook delivery for a specific entry, without waiting for auto
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_35",
+        "id": "example_id_36",
         "event": "document_ready",
         "activity_id": 456,
-        "endpoint_id": "example_id_36",
-        "endpoint": "https://example.com/example-url-14",
+        "endpoint_id": "example_id_37",
+        "endpoint": "https://example.com/example-url-15",
         "payload": null,
         "delivered": true,
         "http_status": 200,
@@ -7287,6 +7637,7 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
+| `url` | query | string | no | Only the endpoint registered with exactly this URL. |
 
 #### Responses
 
@@ -7296,9 +7647,9 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 {
     "data": [
         {
-            "id": "example_id_36",
+            "id": "example_id_37",
             "name": "ERP",
-            "url": "https://example.com/example-url-15",
+            "url": "https://example.com/example-url-16",
             "email": "user12@example.com",
             "events": [
                 "document_ready",
@@ -7339,7 +7690,7 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 
 `POST /v1/accounts/{accountId}/webhooks/endpoints`
 
-Register a URL to receive the account's webhook events. An account can have 1 endpoint, or up to 3 on paid plans; creating one past the limit returns `403`. Each endpoint of a workspace must have a different `url` (`400` otherwise). When `signing_enabled` is `true`, a signing secret is generated: read it with **Get webhook endpoint signing secret**. Requires the `webhooks:write` OAuth scope.
+Register a URL to receive the account's webhook events. An account can have 1 endpoint, or up to 3 on paid plans; creating one past the limit returns `403`. Each endpoint of a workspace must have a different `url` (`400` otherwise). When `signing_enabled` is `true`, a signing secret is generated and returned once, as `secret` in this response — store it, since it is never shown in list or view responses. It can be read again later with **Get webhook endpoint signing secret**, except by OAuth applications: an OAuth application that loses the secret must delete the endpoint and create a new one. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7364,7 +7715,7 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-15",
+    "url": "https://example.com/example-url-16",
     "email": "user12@example.com",
     "events": [
         "document_ready",
@@ -7383,9 +7734,10 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_36",
+        "secret": "example_secret",
+        "id": "example_id_37",
         "name": "ERP",
-        "url": "https://example.com/example-url-15",
+        "url": "https://example.com/example-url-16",
         "email": "user12@example.com",
         "events": [
             "document_ready",
@@ -7441,6 +7793,73 @@ Example:
 }
 ```
 
+### Delete webhook endpoint by URL
+
+`DELETE /v1/accounts/{accountId}/webhooks/endpoints`
+
+Stop delivering events to the endpoint registered with `url` and free its slot, for integrations that keep the URL they registered rather than the endpoint ID. The URL must match exactly as it was registered. Returns `404` when no endpoint of the workspace uses it. Requires the `webhooks:write` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `url` | query | string | yes | The endpoint's URL. |
+
+#### Responses
+
+##### 200 — Endpoint deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
 ### Get webhook endpoint
 
 `GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}`
@@ -7463,9 +7882,9 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 ```json
 {
     "data": {
-        "id": "example_id_36",
+        "id": "example_id_37",
         "name": "ERP",
-        "url": "https://example.com/example-url-15",
+        "url": "https://example.com/example-url-16",
         "email": "user12@example.com",
         "events": [
             "document_ready",
@@ -7541,7 +7960,7 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-15",
+    "url": "https://example.com/example-url-16",
     "email": "user12@example.com",
     "events": [
         "document_ready"
@@ -7559,9 +7978,9 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_36",
+        "id": "example_id_37",
         "name": "ERP",
-        "url": "https://example.com/example-url-15",
+        "url": "https://example.com/example-url-16",
         "email": "user12@example.com",
         "events": [
             "document_ready",
@@ -7678,7 +8097,7 @@ Stop delivering events to an endpoint and free its slot. Requires the `webhooks:
 
 `GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`
 
-Return the secret used to sign deliveries to this endpoint (see **Webhook Payloads → Verifying signatures**). Returns `400` when signing is disabled. Not available to OAuth applications.
+Return the secret used to sign deliveries to this endpoint (see **Webhook Payloads → Verifying signatures**). Returns `400` when signing is disabled. Not available to OAuth applications, which receive the secret in the **Create webhook endpoint** response instead.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7747,7 +8166,7 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 
 `POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`
 
-Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Not available to OAuth applications.
+Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Not available to OAuth applications, which delete the endpoint and create a new one instead.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 

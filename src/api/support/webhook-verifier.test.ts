@@ -75,6 +75,21 @@ describe('WebhookVerifier.verifyDelivery', () => {
 		).toBe(false);
 		expect(new WebhookVerifier().verifyDelivery(SW_BODY, swHeaders(), at)).toBe(false);
 	});
+
+	it('rejects differently cased duplicates and malformed signature entries', () => {
+		expect(v.verifyDelivery(SW_BODY, { ...swHeaders(), 'Webhook-Id': 'other' }, at)).toBe(false);
+		expect(v.verifyDelivery(SW_BODY, swHeaders(`${SW_SIGNATURE},extra`), at)).toBe(false);
+	});
+
+	it.each([Number.NaN, Number.POSITIVE_INFINITY, -1])(
+		'rejects invalid replay-window options %s',
+		(value) => {
+			expect(v.verifyDelivery(SW_BODY, swHeaders(), { now: value })).toBe(false);
+			expect(v.verifyDelivery(SW_BODY, swHeaders(), { ...at, toleranceSeconds: value })).toBe(
+				false,
+			);
+		},
+	);
 });
 
 describe('WebhookVerifier.verify', () => {

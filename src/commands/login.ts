@@ -28,7 +28,7 @@ export const loginCommand = new Command('login')
 				merged.accountId ?? (await promptText('Default account/workspace ID (optional)'));
 
 			const profileName = activeProfileName(getGlobals(command), file);
-			const profiles = file.profiles ?? {};
+			const profiles: Record<string, ProfileConfig> = file.profiles ?? Object.create(null);
 			const profile: ProfileConfig = { ...profiles[profileName], api_key: apiKey };
 			if (accountId) profile.account_id = accountId;
 			if (merged.baseUrl) profile.base_url = merged.baseUrl;

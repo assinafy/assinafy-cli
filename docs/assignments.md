@@ -8,17 +8,20 @@ Usage: assinafy assignments [options] [command]
 Create and manage signing assignments
 
 Options:
-  -h, --help                                                   display help for command
+  -h, --help                                                        display help for command
 
 Commands:
-  list [options]                                               List assignments across the account
-  create [options] <documentId>                                Create a signing assignment for a document
-  estimate-cost [options] <documentId>                         Estimate the credit cost of an assignment
-  reset-expiration [options] <documentId> <assignmentId>       Update an assignment expiration date
-  resend <documentId> <assignmentId> <signerId>                Resend the signing notification to a signer
-  estimate-resend-cost <documentId> <assignmentId> <signerId>  Estimate the cost of resending a signer notification
-  whatsapp-notifications <documentId> <assignmentId>           List WhatsApp notifications sent for an assignment
-  help [command]                                               display help for command
+  list [options]                                                    List assignments across the account
+  create [options] <documentId>                                     Create a signing assignment for a document
+  estimate-cost [options] <documentId>                              Estimate the credit cost of an assignment
+  reset-expiration [options] <documentId> <assignmentId>            Update an assignment expiration date
+  resend <documentId> <assignmentId> <signerId>                     Resend the signing notification to a signer
+  estimate-resend-cost <documentId> <assignmentId> <signerId>       Estimate the cost of resending a signer notification
+  whatsapp-notifications <documentId> <assignmentId>                List WhatsApp notifications sent for an assignment
+  identity-verification <documentId> <assignmentId> <signerId>      Fetch a signer identity review and its evidence summary
+  identity-image [options] <documentId> <assignmentId> <signerId>   Download identity review evidence while the review is open
+  review-identity [options] <documentId> <assignmentId> <signerId>  Approve certification or reject and cancel the document after identity review
+  help [command]                                                    display help for command
 ```
 
 ### `assinafy assignments list`
@@ -144,4 +147,59 @@ Arguments:
 
 Options:
   -h, --help    display help for command
+```
+
+### `assinafy assignments identity-verification`
+
+```text
+Usage: assinafy assignments identity-verification [options] <documentId> <assignmentId> <signerId>
+
+Fetch a signer identity review and its evidence summary
+
+Arguments:
+  documentId    Document ID
+  assignmentId  Assignment ID
+  signerId      Signer ID
+
+Options:
+  -h, --help    display help for command
+```
+
+### `assinafy assignments identity-image`
+
+```text
+Usage: assinafy assignments identity-image [options] <documentId> <assignmentId> <signerId>
+
+Download identity review evidence while the review is open
+
+Arguments:
+  documentId           Document ID
+  assignmentId         Assignment ID
+  signerId             Signer ID
+
+Options:
+  --name <name>        Evidence image name (choices: "document_front",
+                       "document_back", "document_pdf", "face")
+  -o, --output <path>  Output path for JPEG/PNG evidence or the document PDF
+  --force              Overwrite the output file if it already exists
+  -h, --help           display help for command
+```
+
+### `assinafy assignments review-identity`
+
+```text
+Usage: assinafy assignments review-identity [options] <documentId> <assignmentId> <signerId>
+
+Approve certification or reject and cancel the document after identity review
+
+Arguments:
+  documentId             Document ID
+  assignmentId           Assignment ID
+  signerId               Signer ID
+
+Options:
+  --decision <decision>  Review decision (choices: "Approved", "Rejected")
+  --note <note>          Private review note (at most 2000 characters)
+  -y, --yes              Skip the confirmation prompt
+  -h, --help             display help for command
 ```
