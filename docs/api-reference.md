@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
 - Operations: 112
-- Contract SHA-256: `da98836f863bccd621c104499c96621e67f12016538398c3496859db5f049b75`
+- Contract SHA-256: `9bab4f24766a343c80c7176478c7b573ad1f1bf9ff83e82e105bf38b3d166df9`
 
 ## Accounts
 
@@ -2554,8 +2554,16 @@ Per-unit costs (in credits) used to build the estimate:
 | Email notification | 0 credits |
 | WhatsApp notification | 0.45 credits |
 | Digital certificate signature (per signer) | 0.5 credits |
+| Identity document verification (per signer) | depends on the plan, see the table below |
 
-Verification methods are not priced separately — every line in the `breakdown` is a notification or a signature. A `Whatsapp`-verified signer therefore shows up as a WhatsApp notification, because that channel is mandatory for that verification method. A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code.
+| Plan | Price per signer |
+|------|------------------|
+| Free | 1.5 credits |
+| Standard | 1 credit |
+| Pro | 0.5 credits |
+| Other plans and enterprise contracts | 0.25 credits |
+
+`Email` and `Whatsapp` verification are not priced separately — their only line in the `breakdown` is their notification. A `Whatsapp`-verified signer therefore shows up as a WhatsApp notification, because that channel is mandatory for that verification method. A `DigitalCertificate` signer adds the digital-certificate signature cost **on top of** its notification cost; it appears in the `breakdown` under the `SignatureDigitalCertificate` code. An `IdDocumentFaceMatchBasic` signer likewise adds your plan's verification price on top of its notification, under the `VerificationIdDocumentFaceMatchBasic` code.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 

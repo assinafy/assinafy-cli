@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "da98836f863bccd621c104499c96621e67f12016538398c3496859db5f049b75",
+  "hash": "9bab4f24766a343c80c7176478c7b573ad1f1bf9ff83e82e105bf38b3d166df9",
   "operations": [
     {
       "method": "GET",
