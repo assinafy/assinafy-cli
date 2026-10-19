@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { ApiError, AssinafyError, NetworkError, ValidationError } from './errors.js';
 import type {
+	AssignmentMethod,
 	AssignmentNotificationMethod,
 	AssignmentVerificationMethod,
 	DocumentArtifactName,
@@ -219,6 +220,21 @@ export function validateSignerOptions(input: {
 	}
 	if (input.step !== undefined && !Number.isInteger(input.step)) {
 		throw new ValidationError('step must be an integer');
+	}
+}
+
+/** Certificate signing completes a virtual item and cannot complete placed fields. */
+export function validateDigitalCertificateMethod(
+	method: AssignmentMethod,
+	signers: readonly { verification_method?: unknown }[],
+): void {
+	if (
+		method !== 'virtual' &&
+		signers.some((signer) => signer.verification_method === 'DigitalCertificate')
+	) {
+		throw new ValidationError('DigitalCertificate signers require method: virtual', {
+			code: 'digital_certificate_requires_virtual',
+		});
 	}
 }
 

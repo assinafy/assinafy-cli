@@ -19,6 +19,7 @@ import {
 	requireIso8601,
 	requireSort,
 	stripEmpty,
+	validateDigitalCertificateMethod,
 	validateSignerOptions,
 	validateSigningSteps,
 } from '../utils.js';
@@ -51,17 +52,18 @@ export function buildAssignmentPayload(
 			signers: payload.signers ?? payload.signer_ids ?? payload.signerIds,
 		});
 	}
-	if (payload.method === 'collect' && !Array.isArray(payload.entries)) {
+	const method = payload.method ?? 'virtual';
+	const normalisedSigners = signers.map((ref) => normaliseSignerRef(ref, options));
+	validateDigitalCertificateMethod(method, normalisedSigners);
+	if (method === 'collect' && !Array.isArray(payload.entries)) {
 		throw new ValidationError('entries are required for collect assignments');
 	}
-
-	const normalisedSigners = signers.map((ref) => normaliseSignerRef(ref, options));
 	if (!options.skipDigitalCertificateStepValidation) {
 		validateSigningSteps(normalisedSigners);
 	}
 
 	return stripEmpty({
-		method: payload.method ?? 'virtual',
+		method,
 		signers: normalisedSigners,
 		message: payload.message,
 		expires_at:

@@ -22,6 +22,7 @@ import type {
 	ISigningProgress,
 	ITag,
 	ITemplateCostSigner,
+	ITemplateDetailsResponse,
 	ITemplateSigner,
 	SendTokenChannel,
 } from '../types.js';
@@ -33,6 +34,7 @@ import {
 	requireEmail,
 	requireIso8601,
 	requireSort,
+	validateDigitalCertificateMethod,
 	validateSignerOptions,
 	validateSigningSteps,
 } from '../utils.js';
@@ -360,6 +362,7 @@ export class DocumentResource extends BaseResource {
 		) {
 			throw new ValidationError('tags must contain non-empty tag names');
 		}
+		await this.validateCertificateTemplateMethod(tmplId, accId, signers);
 		const body: Record<string, unknown> = { ...options, signers };
 		this.logger.info('Creating document from template', { templateId: tmplId, accountId: accId });
 		return this.call('Failed to create document from template', () =>
@@ -376,6 +379,7 @@ export class DocumentResource extends BaseResource {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
 		validateTemplateSigners(signers, { requireId: false });
+		await this.validateCertificateTemplateMethod(tmplId, accId, signers);
 		return this.call('Failed to estimate cost from template', () =>
 			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents/estimate-cost`, { signers }),
 		);
@@ -458,6 +462,19 @@ export class DocumentResource extends BaseResource {
 		const pending = Math.max(total - signed, 0);
 		const percentage = total > 0 ? Math.round((signed / total) * 10_000) / 100 : 0;
 		return { signed, total, pending, percentage };
+	}
+
+	private async validateCertificateTemplateMethod(
+		templateId: string,
+		accountId: string,
+		signers: readonly { verification_method?: unknown }[],
+	): Promise<void> {
+		if (!signers.some((signer) => signer.verification_method === 'DigitalCertificate')) return;
+		const template = await this.call<ITemplateDetailsResponse>('Failed to fetch template', () =>
+			this.http.get(`/accounts/${accountId}/templates/${templateId}`),
+		);
+		const method = template.pages?.some((page) => page.fields.length > 0) ? 'collect' : 'virtual';
+		validateDigitalCertificateMethod(method, signers);
 	}
 }
 

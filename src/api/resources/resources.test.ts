@@ -104,8 +104,12 @@ describe('buildAssignmentPayload', () => {
 			await assignments.estimateCost('doc1', { signers: [signer] });
 			await documents.createFromTemplate('template1', [{ ...signer, role_id: 'role1', step: 1 }]);
 			await documents.estimateCostFromTemplate('template1', [{ ...signer, role_id: 'role1' }]);
-			expect(calls).toHaveLength(4);
-			for (const call of calls) expect(call.body).toMatchObject({ signers: [signer] });
+			const posts = calls.filter(({ method }) => method === 'POST');
+			expect(posts).toHaveLength(4);
+			for (const call of posts) expect(call.body).toMatchObject({ signers: [signer] });
+			expect(calls.filter(({ method }) => method === 'GET')).toHaveLength(
+				verification === 'DigitalCertificate' ? 2 : 0,
+			);
 		},
 	);
 
@@ -184,6 +188,13 @@ describe('buildAssignmentPayload', () => {
 		expect(() => buildAssignmentPayload({ method: 'collect', signers: ['a'] })).toThrow(
 			/entries are required/,
 		);
+		expect(() =>
+			buildAssignmentPayload({
+				method: 'collect',
+				signers: [{ id: 'a', verification_method: 'DigitalCertificate' }],
+				entries: [],
+			}),
+		).toThrow('DigitalCertificate signers require method: virtual');
 	});
 });
 
@@ -388,6 +399,31 @@ describe('DocumentResource', () => {
 			]),
 		).rejects.toThrow(/verification_method/);
 		expect(calls).toHaveLength(1);
+	});
+
+	it('rejects certificate signers on templates with placed fields before charging', async () => {
+		const calls: CapturedCall[] = [];
+		const http = {
+			...mockHttp(calls),
+			get: async (url: string) => {
+				calls.push({ method: 'GET', url });
+				return ok({ pages: [{ fields: [{ id: 'placed-field' }] }] });
+			},
+		} as unknown as AxiosInstance;
+		const docs = new DocumentResource(http, 'acc');
+		const create = docs.createFromTemplate('template1', [
+			{ role_id: 'role1', id: 'signer1', verification_method: 'DigitalCertificate' },
+		]);
+		await expect(create).rejects.toMatchObject({
+			errors: { code: 'digital_certificate_requires_virtual' },
+		});
+		const estimate = docs.estimateCostFromTemplate('template1', [
+			{ role_id: 'role1', verification_method: 'DigitalCertificate' },
+		]);
+		await expect(estimate).rejects.toMatchObject({
+			errors: { code: 'digital_certificate_requires_virtual' },
+		});
+		expect(calls.map(({ method }) => method)).toEqual(['GET', 'GET']);
 	});
 
 	it('waitUntilReady surfaces a 4xx error immediately instead of masking it as a timeout', async () => {
@@ -1436,24 +1472,26 @@ describe('AssignmentResource', () => {
 		expect(calls).toHaveLength(0);
 	});
 
-	it('sends signers alongside entries for a collect estimate', async () => {
+	it('rejects certificate signers in collect create and estimate calls', async () => {
 		const calls: CapturedCall[] = [];
 		const assignments = new AssignmentResource(mockHttp(calls), 'acc');
-		await assignments.estimateCost('doc1', {
+		const create = assignments.create('doc1', {
+			method: 'collect',
+			signers: [{ id: 'signer1', verification_method: 'DigitalCertificate' }],
+			entries: [],
+		});
+		await expect(create).rejects.toMatchObject({
+			errors: { code: 'digital_certificate_requires_virtual' },
+		});
+		const estimate = assignments.estimateCost('doc1', {
 			method: 'collect',
 			signers: [{ verification_method: 'DigitalCertificate' }],
 			entries: [],
 		});
-		// collect is priced per signer too, so the channels must reach the API.
-		expect(calls[0]).toMatchObject({
-			method: 'POST',
-			url: '/documents/doc1/assignments/estimate-cost',
-			body: {
-				method: 'collect',
-				signers: [{ verification_method: 'DigitalCertificate' }],
-				entries: [],
-			},
+		await expect(estimate).rejects.toMatchObject({
+			errors: { code: 'digital_certificate_requires_virtual' },
 		});
+		expect(calls).toHaveLength(0);
 	});
 
 	it('refuses a collect estimate with no signers', async () => {

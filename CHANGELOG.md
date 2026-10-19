@@ -6,6 +6,12 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-10-19
+
+### Fixed
+
+- Reject `DigitalCertificate` signers in collect assignments and templates with placed fields before cost estimation or creation, because certificate signing can complete only virtual items.
+
 ## [2.6.0] - 2026-10-16
 
 ### Added
