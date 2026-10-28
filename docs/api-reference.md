@@ -6,8 +6,8 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
-- Operations: 112
-- Contract SHA-256: `9bab4f24766a343c80c7176478c7b573ad1f1bf9ff83e82e105bf38b3d166df9`
+- Operations: 118
+- Contract SHA-256: `3672991376b65f82cd6dec0102dadd0cfe97045fd85dcab568cd0414a84cd050`
 
 ## Accounts
 
@@ -42,6 +42,9 @@ Retrieve a workspace account the user belongs to.
             "owner"
         ],
         "is_delete_allowed": true,
+        "limits": {
+            "webhook_endpoints": 1
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -126,6 +129,9 @@ Example:
             "owner"
         ],
         "is_delete_allowed": true,
+        "limits": {
+            "webhook_endpoints": 1
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -495,6 +501,9 @@ Called with an OAuth application token, this returns exactly one workspace: the 
                 "owner"
             ],
             "is_delete_allowed": true,
+            "limits": {
+                "webhook_endpoints": 1
+            },
             "created_at": "2026-06-03T03:54:16Z"
         }
     ],
@@ -564,6 +573,9 @@ Example:
             "owner"
         ],
         "is_delete_allowed": true,
+        "limits": {
+            "webhook_endpoints": 1
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -605,7 +617,7 @@ Example:
 
 `GET /v1/accounts/{accountId}/stats`
 
-Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled.
+Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled. Requires the `account:read` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -682,7 +694,7 @@ Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) re
 
 `GET /v1/documents/{documentId}/activities`
 
-List the activities recorded for a document. Each entry carries an event-specific `payload` snapshot (keys vary per event) and the request `origin` (`ip`, `user-agent`).
+List the activities recorded for a document, newest first (`sort=id` for oldest first). Paged: 20 per page by default; the `X-Pagination-Total-Count`, `X-Pagination-Page-Count`, `X-Pagination-Current-Page` and `X-Pagination-Per-Page` headers describe the full list, and a page past the end returns an empty `data`. Each entry carries an event-specific `payload` snapshot (keys vary per event) and the request `origin` (`ip`, `user-agent`).
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -691,6 +703,9 @@ List the activities recorded for a document. Each entry carries an event-specifi
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `documentId` | path | string | yes | Document ID. |
+| `sort` | query | string | no | `-id` (default, newest first) or `id`. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
 
 #### Responses
 
@@ -737,7 +752,7 @@ List the activities recorded for a document. Each entry carries an event-specifi
 
 `GET /v1/accounts/{accountId}/documents`
 
-List documents of the workspace.
+List documents of the workspace, most recently updated first. Every row includes its `assignment` and `pages`; an `expand` parameter is ignored. For a lighter list without them, use `GET /v1/accounts/{accountId}/documents/search`.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -750,7 +765,7 @@ List documents of the workspace.
 | `method` | query | string | no | Signature method filter. |
 | `search` | query | string | no | Partial match on document.name, signer.full_name, signer.email. |
 | `tags` | query | string | no | Comma-separated tag IDs; returns documents having ALL listed tags. |
-| `sort` | query | string | no | Sort by `name` or `updated_at`. |
+| `sort` | query | string | no | `name` or `updated_at`, ascending; prefix with `-` for descending (`-updated_at`, the default). Other values are ignored. |
 | `page` | query | integer | no | Page number. |
 | `per-page` | query | integer | no | Records per page (max 100). |
 
@@ -773,6 +788,8 @@ List documents of the workspace.
             },
             "is_closed": false,
             "signing_url": "https://example.com/example-url-3",
+            "verification_code": "example_secret",
+            "verification_url": "https://example.com/example-url-4",
             "decline_reason": null,
             "declined_by": null,
             "tags": [
@@ -788,9 +805,10 @@ List documents of the workspace.
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-4"
+                    "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
         }
@@ -866,6 +884,8 @@ Example:
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -881,9 +901,10 @@ Example:
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -937,6 +958,7 @@ Search documents of the workspace, returning a compact representation (no expand
 | `accountId` | path | string | yes | Workspace account ID. |
 | `search` | query | string | no | Search term. |
 | `status` | query | string | no |  |
+| `sort` | query | string | no | `name` or `updated_at`, ascending; prefix with `-` for descending (`-updated_at`, the default). Other values are ignored. |
 | `page` | query | integer | no | Page number. |
 | `per-page` | query | integer | no | Records per page (max 100). |
 
@@ -959,6 +981,8 @@ Search documents of the workspace, returning a compact representation (no expand
             },
             "is_closed": false,
             "signing_url": "https://example.com/example-url-3",
+            "verification_code": "example_secret",
+            "verification_url": "https://example.com/example-url-4",
             "decline_reason": null,
             "declined_by": null,
             "tags": [
@@ -974,9 +998,10 @@ Search documents of the workspace, returning a compact representation (no expand
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-4"
+                    "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
         }
@@ -1070,7 +1095,7 @@ The supported document statuses and whether a document in each status can be del
 
 `GET /v1/documents/{documentId}`
 
-Get a document by its ID. `decline_reason` is only present when the access token belongs to the document's creator.
+Get a document by its ID. `decline_reason` is only present when the access token belongs to the document's creator. With a signer access code (`signer-access-code`), only documents the signer has been sent are found, and `assignment` holds only the signer's own items, without `signers`, `signing_urls`, `copy_receivers` or `summary`.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -1098,6 +1123,8 @@ Get a document by its ID. `decline_reason` is only present when the access token
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -1113,9 +1140,10 @@ Get a document by its ID. `decline_reason` is only present when the access token
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -1256,6 +1284,8 @@ Example:
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -1271,9 +1301,10 @@ Example:
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -1770,7 +1801,7 @@ Download the rendered image of a specific document page.
 
 `POST /v1/accounts/{accountId}/templates/{templateId}/documents`
 
-Generate a new document from a template, creating its assignment in the same call. Provide one signer entry per template role; the signers must already exist in the account.
+Generate a new document from a template. The request is checked (roles, fields, balance) before it returns, but the assignment is created in the background, so the response has `status: uploaded` and `assignment: null`. Follow the outcome on `GET /v1/documents/{documentId}` or through webhooks: when the send succeeds the status moves to `pending_signature` and `assignment_created` is sent; when it fails the status becomes `failed`, `document_processing_failed` is sent with the reason, and nothing is charged. When the template has fields, every signing role used must have at least one field; otherwise `400`. A template with placed signer fields sends a `collect` assignment, so it cannot take a `DigitalCertificate` signer (`400`); certificate signing needs a template without placed signer fields. Provide one signer entry per template role. An entry with `id` uses that existing signer; an entry with `email` reuses the account's signer with that email or creates one.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -1786,10 +1817,10 @@ Generate a new document from a template, creating its assignment in the same cal
 Fields (`application/json`):
 
 - `signers` (array, required) — One entry per template role.
-- `editor_fields` (array) — Editor field values to bake into the generated document.
+- `editor_fields` (array) — Values for the fields placed on the template's `Editor` role, baked into the generated document. The `Editor` role takes no `signers` entry: it is filled only through this list. Every field placed on it needs an entry with a non-empty `value` (`400` otherwise); when it has no fields, send nothing. In `signers`, every `Signer` role needs an entry (`400` otherwise), and a `CopyReceiver` role takes an entry only for someone who should receive the certified document; a copy receiver's `verification_method`, `notification_methods` and `step` are ignored.
 - `name` (string) — Title for the document. Defaults to the template name.
 - `message` (string) — Optional message sent to signers.
-- `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default. Must be at least one hour in the future.
+- `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default. Must be at least one hour in the future. A UTC offset in the value is honored (`2026-12-31T23:59:59-03:00` is `2027-01-01T02:59:59Z`); a value without one is read as UTC, and a date alone (`2026-12-31`) means 23:59 UTC that day.
 - `tags` (array) — Tag names to attach to the new document. Names that don't exist are auto-created. The template's default-document-tags are always applied; values here are merged on top (duplicates removed).
 
 Example:
@@ -1800,6 +1831,9 @@ Example:
         {
             "role_id": "example_id_10",
             "id": "example_id_11",
+            "email": "user1@example.com",
+            "name": "Maria Silva",
+            "whatsapp_phone_number": "+5500000000000",
             "verification_method": "Email",
             "notification_methods": [
                 "Email"
@@ -1840,6 +1874,8 @@ Example:
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -1855,9 +1891,10 @@ Example:
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -1941,10 +1978,10 @@ Example:
 {
     "data": {
         "documents": 1,
-        "credits": 0,
+        "credits": 0.9,
         "needs_extra_document": true,
         "extra_document_cost": 1,
-        "total_credits": 0,
+        "total_credits": 1.9,
         "breakdown": [
             {
                 "code": "NotificationWhatsapp",
@@ -1955,7 +1992,7 @@ Example:
             }
         ],
         "document_balance": 0,
-        "credit_balance": 0,
+        "credit_balance": 10,
         "has_sufficient_resources": true,
         "blocking_reason": null,
         "message": null
@@ -1991,7 +2028,7 @@ Example:
 
 `GET /v1/assignments`
 
-List the assignments belonging to the authenticated user's current account.
+List the workspace's assignments, oldest first. With an OAuth token the workspace is the token's; otherwise pass `accountId`. Each assignment carries its `document_id`.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -1999,6 +2036,8 @@ List the assignments belonging to the authenticated user's current account.
 
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
+| `accountId` | query | string | no | The workspace ID. Required unless the request uses an OAuth token. |
+| `sort` | query | string | no | `created_at` (default, oldest first), `expires_at` or `id`; prefix with `-` for descending (`-created_at`, newest first). Unknown values are ignored. |
 | `page` | query | integer | no | Page number. |
 | `per-page` | query | integer | no | Records per page (max 100). |
 
@@ -2012,7 +2051,9 @@ List the assignments belonging to the authenticated user's current account.
         {
             "resource": "assignment",
             "id": "example_id_13",
-            "sender_email": "user1@example.com",
+            "document_id": "example_id_3",
+            "created_at": "2026-06-03T03:54:16Z",
+            "sender_email": "user2@example.com",
             "method": "virtual",
             "expires_at": null,
             "message": null,
@@ -2030,7 +2071,7 @@ List the assignments belonging to the authenticated user's current account.
                     "resource": "signer",
                     "id": "example_id_14",
                     "full_name": "Example User",
-                    "email": "user2@example.com",
+                    "email": "user3@example.com",
                     "whatsapp_phone_number": "+5500000000000",
                     "government_id": "00000000000",
                     "has_accepted_terms": false
@@ -2060,7 +2101,7 @@ List the assignments belonging to the authenticated user's current account.
             "signing_urls": [
                 {
                     "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-5"
+                    "url": "https://example.com/example-url-6"
                 }
             ]
         }
@@ -2096,6 +2137,8 @@ List the assignments belonging to the authenticated user's current account.
 
 Request signatures on a document. Use `method: virtual` to sign without input fields, or `method: collect` to place input fields on specific pages.
 
+**Digital certificate signing works only on `virtual` assignments.** A `DigitalCertificate` signer cannot sign placed fields, so a `collect` assignment with one is refused with `400` before anything is charged.
+
 For **virtual**, the document may be in `uploaded`, `metadata_processing` or `metadata_ready`; it is promoted to `pending_signature` automatically once metadata processing completes. For **collect**, the document must be in `metadata_ready` (fields reference specific pages).
 
 `step` controls signing order: signers sharing a step sign in parallel, and the next step is notified only after the previous step completes. If supplied, every signer must supply it and values must be contiguous starting at 1.
@@ -2112,11 +2155,11 @@ For **virtual**, the document may be in `uploaded`, `metadata_processing` or `me
 
 Fields (`application/json`):
 
-- `method` (string, required)
+- `method` (string, required) — `virtual` signs without input fields; `collect` places input fields on pages. Signers with `DigitalCertificate` verification need `virtual` (`collect` returns `400`).
 - `signers` (array, required)
-- `entries` (array) — Required for `collect`: field placements per page.
+- `entries` (array) — Required for `collect`: field placements per page. In `collect`, every signer listed in `signers` must appear once and own at least one field here; otherwise `400`.
 - `message` (string) — Text included in the invitation email.
-- `expires_at` (string) — ISO 8601; default is no expiration. Must be at least one hour in the future.
+- `expires_at` (string) — ISO 8601; default is no expiration. Must be at least one hour in the future. A UTC offset in the value is honored (`2026-12-31T23:59:59-03:00` is `2027-01-01T02:59:59Z`); a value without one is read as UTC, and a date alone (`2026-12-31`) means 23:59 UTC that day.
 - `copy_receivers` (array) — Signer IDs that only receive a copy.
 
 Example — Create without input (method: virtual, with verification & notification methods):
@@ -2290,7 +2333,7 @@ Example — Create with input fields (method: collect):
     "data": {
         "resource": "assignment",
         "id": "example_id_21",
-        "sender_email": "user1@example.com",
+        "sender_email": "user2@example.com",
         "method": "virtual",
         "expires_at": "2021-09-30T21:00:00Z",
         "message": null,
@@ -2298,7 +2341,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_15",
                 "full_name": "Example User",
-                "email": "user3@example.com",
+                "email": "user4@example.com",
                 "verification_method": "Email",
                 "notification_methods": [
                     "Email"
@@ -2310,7 +2353,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_16",
                 "full_name": "Example User",
-                "email": "user4@example.com",
+                "email": "user5@example.com",
                 "verification_method": "Whatsapp",
                 "notification_methods": [
                     "Whatsapp"
@@ -2328,7 +2371,7 @@ Example — Create with input fields (method: collect):
                 "signer": {
                     "id": "example_id_15",
                     "full_name": "Example User",
-                    "email": "user3@example.com"
+                    "email": "user4@example.com"
                 },
                 "field": {
                     "id": "example_id_23",
@@ -2347,13 +2390,13 @@ Example — Create with input fields (method: collect):
                 {
                     "id": "example_id_15",
                     "full_name": "Example User",
-                    "email": "user3@example.com",
+                    "email": "user4@example.com",
                     "completed": false
                 },
                 {
                     "id": "example_id_16",
                     "full_name": "Example User",
-                    "email": "user4@example.com",
+                    "email": "user5@example.com",
                     "completed": false
                 }
             ]
@@ -2361,11 +2404,11 @@ Example — Create with input fields (method: collect):
         "signing_urls": [
             {
                 "signer_id": "example_id_15",
-                "url": "https://example.com/example-url-6"
+                "url": "https://example.com/example-url-7"
             },
             {
                 "signer_id": "example_id_16",
-                "url": "https://example.com/example-url-7"
+                "url": "https://example.com/example-url-8"
             }
         ]
     }
@@ -2381,7 +2424,7 @@ Example — Create with input fields (method: collect):
     "data": {
         "resource": "assignment",
         "id": "example_id_13",
-        "sender_email": "user1@example.com",
+        "sender_email": "user2@example.com",
         "method": "collect",
         "expires_at": "2021-09-30T21:00:00Z",
         "message": null,
@@ -2389,7 +2432,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_17",
                 "full_name": "Example User",
-                "email": "user5@example.com",
+                "email": "user6@example.com",
                 "verification_method": "Email",
                 "notification_methods": [
                     "Email"
@@ -2401,7 +2444,7 @@ Example — Create with input fields (method: collect):
             {
                 "id": "example_id_18",
                 "full_name": "Example User",
-                "email": "user6@example.com",
+                "email": "user7@example.com",
                 "verification_method": "Whatsapp",
                 "notification_methods": [
                     "Whatsapp"
@@ -2420,12 +2463,12 @@ Example — Create with input fields (method: collect):
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-8"
+                    "download_url": "https://example.com/example-url-9"
                 },
                 "signer": {
                     "id": "example_id_17",
                     "full_name": "Example User",
-                    "email": "user5@example.com"
+                    "email": "user6@example.com"
                 },
                 "field": {
                     "id": "example_id_20",
@@ -2451,12 +2494,12 @@ Example — Create with input fields (method: collect):
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-8"
+                    "download_url": "https://example.com/example-url-9"
                 },
                 "signer": {
                     "id": "example_id_18",
                     "full_name": "Example User",
-                    "email": "user6@example.com"
+                    "email": "user7@example.com"
                 },
                 "field": {
                     "id": "example_id_20",
@@ -2483,13 +2526,13 @@ Example — Create with input fields (method: collect):
                 {
                     "id": "example_id_17",
                     "full_name": "Example User",
-                    "email": "user5@example.com",
+                    "email": "user6@example.com",
                     "completed": false
                 },
                 {
                     "id": "example_id_18",
                     "full_name": "Example User",
-                    "email": "user6@example.com",
+                    "email": "user7@example.com",
                     "completed": false
                 }
             ]
@@ -2497,11 +2540,11 @@ Example — Create with input fields (method: collect):
         "signing_urls": [
             {
                 "signer_id": "example_id_17",
-                "url": "https://example.com/example-url-9"
+                "url": "https://example.com/example-url-10"
             },
             {
                 "signer_id": "example_id_18",
-                "url": "https://example.com/example-url-10"
+                "url": "https://example.com/example-url-11"
             }
         ]
     }
@@ -2577,7 +2620,7 @@ Per-unit costs (in credits) used to build the estimate:
 
 Fields (`application/json`):
 
-- `method` (string)
+- `method` (string) — Send the method you will create the assignment with. With `collect`, a `DigitalCertificate` signer returns `400`, because certificate signing works only on `virtual` assignments.
 - `signers` (array) — Required for `virtual`; each entry may be `{}` to default to Email.
 - `entries` (array) — Required for `collect`.
 
@@ -2608,10 +2651,10 @@ Example:
 {
     "data": {
         "documents": 1,
-        "credits": 0,
+        "credits": 0.9,
         "needs_extra_document": true,
         "extra_document_cost": 1,
-        "total_credits": 0,
+        "total_credits": 1.9,
         "breakdown": [
             {
                 "code": "NotificationWhatsapp",
@@ -2622,7 +2665,7 @@ Example:
             }
         ],
         "document_balance": 0,
-        "credit_balance": 0,
+        "credit_balance": 10,
         "has_sufficient_resources": true,
         "blocking_reason": null,
         "message": null
@@ -2666,7 +2709,7 @@ Example:
 
 `PUT /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/resend`
 
-Resend the signature-request notification to a specific signer of an assignment.
+Resend the signature-request notification to a signer of the assignment who has not signed yet, while the document is pending signature. Paid notification methods are charged for each message that goes out.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -2694,6 +2737,10 @@ Resend the signature-request notification to a specific signer of an assignment.
 }
 ```
 
+##### 400 — The document is not pending signature, the signer is not part of the assignment, has already signed, or waits for an earlier signing step; or the account lacks credits for the reminder.
+
+##### 404 — The assignment or signer was not found on this document.
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
@@ -2718,7 +2765,7 @@ Resend the signature-request notification to a specific signer of an assignment.
 
 `POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/estimate-resend-cost`
 
-Estimate the cost of resending the signature request to a signer.
+Estimate the cost of resending the signature request to a signer. The response has its own shape (`total`, not `total_credits`), because a reminder uses no document.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -2737,25 +2784,16 @@ Estimate the cost of resending the signature request to a signer.
 ```json
 {
     "data": {
-        "documents": 1,
-        "credits": 0,
-        "needs_extra_document": true,
-        "extra_document_cost": 1,
-        "total_credits": 0,
+        "total": 0.45,
         "breakdown": [
             {
-                "code": "NotificationWhatsapp",
-                "name": "Whatsapp Notification",
-                "cost": 0.9,
-                "quantity": 2,
-                "unit_cost": 0.45
+                "code": "NotificationWhatsappResend",
+                "name": "Whatsapp Notification Resend",
+                "cost": 0.45
             }
         ],
-        "document_balance": 0,
-        "credit_balance": 0,
-        "has_sufficient_resources": true,
-        "blocking_reason": null,
-        "message": null
+        "credit_balance": 10,
+        "has_sufficient_credits": true
     },
     "status": 200,
     "message": ""
@@ -2801,7 +2839,7 @@ Set a new expiration date for an assignment, or remove its expiration by sending
 
 Fields (`application/json`):
 
-- `expires_at` (string | null, required) — New expiration date (ISO 8601). Must be at least one hour in the future. Send `null` to remove the expiration — the key itself is required.
+- `expires_at` (string | null, required) — New expiration date (ISO 8601). Must be at least one hour in the future. Send `null` to remove the expiration — the key itself is required. A UTC offset in the value is honored (`2026-12-31T23:59:59-03:00` is `2027-01-01T02:59:59Z`); a value without one is read as UTC, and a date alone (`2026-12-31`) means 23:59 UTC that day.
 
 Example:
 
@@ -2820,7 +2858,9 @@ Example:
     "data": {
         "resource": "assignment",
         "id": "example_id_13",
-        "sender_email": "user1@example.com",
+        "document_id": "example_id_3",
+        "created_at": "2026-06-03T03:54:16Z",
+        "sender_email": "user2@example.com",
         "method": "virtual",
         "expires_at": null,
         "message": null,
@@ -2838,7 +2878,7 @@ Example:
                 "resource": "signer",
                 "id": "example_id_14",
                 "full_name": "Example User",
-                "email": "user2@example.com",
+                "email": "user3@example.com",
                 "whatsapp_phone_number": "+5500000000000",
                 "government_id": "00000000000",
                 "has_accepted_terms": false
@@ -2868,7 +2908,7 @@ Example:
         "signing_urls": [
             {
                 "signer_id": "example_id_5",
-                "url": "https://example.com/example-url-5"
+                "url": "https://example.com/example-url-6"
             }
         ]
     },
@@ -2922,7 +2962,7 @@ Example:
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification`
 
 The signer's identity-document verification as the account's reviewer sees it. When the provider sends a verification to review, the account decides it with **Decide signer identity review**. The signer can still view and sign meanwhile; the review holds the document's certification instead (status `pending_identity_review` once every signer has signed).
-Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_available` is false when the provider keeps none or it could not be fetched yet. While the review is open, `images` lists the evidence images the reviewer can open with **Signer identity review image**. A verification the provider approved directly, without a review, shows no evidence here (`evidence_available` is false); its evidence is on the `signer_identity_verified` activity.
+Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_available` is false when the provider keeps none or it could not be fetched yet. While the review is open, `images` lists the evidence images the reviewer can open with **Signer identity review image**. A verification the provider approved directly, without a review, shows no evidence here (`evidence_available` is false); its evidence is on the `signer_identity_verified` activity. Reachable with the `documents:read` OAuth scope, but the images and the decision are not available to OAuth applications (`403`): the review is made by a person in Assinafy.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3008,7 +3048,7 @@ Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_avai
 
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/images/{name}`
 
-One evidence image of a signer identity verification that is `InReview`, for the account's reviewer: the document photos (or the digital document PDF) and the face photo. Fetched from the verification provider on each request and never stored by Assinafy. Available only while the review is open; once it is decided, every image returns 404. `name` must be one of the review's `images`.
+One evidence image of a signer identity verification that is `InReview`, for the account's reviewer: the document photos (or the digital document PDF) and the face photo. Fetched from the verification provider on each request and never stored by Assinafy. Available only while the review is open; once it is decided, every image returns 404. `name` must be one of the review's `images`. Not available to OAuth applications (`403`): the images are for the person reviewing.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3051,7 +3091,7 @@ One evidence image of a signer identity verification that is `InReview`, for the
 
 `POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/review`
 
-Approves or rejects a signer whose identity verification is `InReview`, while the document is `pending_signature` or `pending_identity_review`. Approved: once every signer has signed and no other signer is under review, the document is certificated; the certificate states the approval by review and every difference found. Rejected: the document is cancelled (`rejected_by_user`, with the reviewer as the user) and every signer and copy receiver gets the cancellation notice; the note is never shown to them. The signer gets no message about the decision itself. The decision is also reported to the verification provider.
+Approves or rejects a signer whose identity verification is `InReview`, while the document is `pending_signature` or `pending_identity_review`. Approved: once every signer has signed and no other signer is under review, the document is certificated; the certificate states the approval by review and every difference found. Rejected: the document is cancelled (`rejected_by_user`, with the reviewer as the user) and every signer and copy receiver gets the cancellation notice; the note is never shown to them. The signer gets no message about the decision itself. The decision is also reported to the verification provider. Not available to OAuth applications (`403`): the certificate names the person who reviewed, so the decision is made in Assinafy.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3174,7 +3214,7 @@ List all WhatsApp notification messages sent for an assignment. The response inc
 {
     "data": [
         {
-            "sent_at": 1710000000,
+            "sent_at": "2026-07-07T12:00:00Z",
             "header": "Documento para assinatura: Contrato de Servico",
             "body": "string",
             "buttons": [
@@ -3232,7 +3272,7 @@ Example:
 
 ```json
 {
-    "email": "user7@example.com",
+    "email": "user8@example.com",
     "password": "example_secret"
 }
 ```
@@ -3248,7 +3288,7 @@ Example:
         "user": {
             "id": "example_id_28",
             "name": "John Smith",
-            "email": "user8@example.com",
+            "email": "user9@example.com",
             "telephone": "+5500000000000",
             "government_id": "00000000000",
             "is_email_verified": false,
@@ -3311,7 +3351,7 @@ Example:
 
 ```json
 {
-    "email": "user7@example.com"
+    "email": "user8@example.com"
 }
 ```
 
@@ -3322,7 +3362,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user7@example.com"
+        "email": "user8@example.com"
     },
     "status": 200,
     "message": ""
@@ -3359,7 +3399,7 @@ Example:
 
 ```json
 {
-    "email": "user7@example.com",
+    "email": "user8@example.com",
     "token": "example_secret",
     "new_password": "example_secret"
 }
@@ -3372,7 +3412,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user7@example.com"
+        "email": "user8@example.com"
     },
     "status": 200,
     "message": ""
@@ -3419,7 +3459,7 @@ Example:
 
 ```json
 {
-    "email": "user7@example.com",
+    "email": "user8@example.com",
     "password": "example_secret",
     "new_password": "example_secret"
 }
@@ -3432,7 +3472,7 @@ Example:
 ```json
 {
     "data": {
-        "email": "user7@example.com"
+        "email": "user8@example.com"
     },
     "status": 200,
     "message": ""
@@ -3504,7 +3544,7 @@ Example:
         "user": {
             "id": "example_id_28",
             "name": "John Smith",
-            "email": "user8@example.com",
+            "email": "user9@example.com",
             "telephone": "+5500000000000",
             "government_id": "00000000000",
             "is_email_verified": false,
@@ -3633,7 +3673,7 @@ Example:
     "data": {
         "id": "example_id_29",
         "secret": "example_secret",
-        "provisioning_uri": "https://example.com/example-url-11"
+        "provisioning_uri": "https://example.com/example-url-12"
     },
     "status": 200,
     "message": ""
@@ -3935,7 +3975,7 @@ Example:
         "user": {
             "id": "example_id_28",
             "name": "John Smith",
-            "email": "user8@example.com",
+            "email": "user9@example.com",
             "telephone": "+5500000000000",
             "government_id": "00000000000",
             "is_email_verified": false,
@@ -4183,6 +4223,1037 @@ Delete the existing API key.
 }
 ```
 
+## Contracts
+
+### List contracts
+
+`GET /v1/accounts/{accountId}/contracts`
+
+List the contract terms tracked on the workspace's documents, most recently updated first. Every filter is optional and only narrows the list. To catch up after a webhook that never arrived, page this list until the contracts are older than your last sync: every change to the terms, by a user or by the hourly run, moves `updated_at`. Each document's history of contract events is at `GET /v1/documents/{documentId}/activities`.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `status` | query | array | no | Contract status; several, comma-separated, match any of them. |
+| `counterparty` | query | string | no | Part of the counterparty name, or its exact CPF/CNPJ. |
+| `search` | query | string | no | Part of the document's name. |
+| `end_date_from` | query | string | no | Contracts ending on or after this date. |
+| `end_date_to` | query | string | no | Contracts ending on or before this date. |
+| `ending_within_days` | query | integer | no | Contracts ending from today (the API's calendar day, Brasília time) to that many days later, both included; `0` is today. Any status: add `status=active` for the ones still in force. |
+| `external_system` | query | string | no | System of an external reference, e.g. `hubspot`. |
+| `external_id` | query | string | no | ID of an external reference in that system. |
+| `sort` | query | string | no | `end_date` or `updated_at`; prefix with `-` for descending (`-updated_at`, the default). Contracts without an end date come last either way. |
+| `expand` | query | string | no | `document` embeds each contract's document. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page (max 100). |
+
+#### Responses
+
+##### 200 — A page of contracts
+
+**A page of contracts**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": [
+        {
+            "document_id": "example_id_30",
+            "status": "active",
+            "counterparty_name": "Acme Ltda",
+            "counterparty_taxpayer_id": "00000000000",
+            "value": 120000.5,
+            "currency": "BRL",
+            "start_date": "2026-11-01",
+            "end_date": "2027-10-31",
+            "auto_renew": true,
+            "renewal_term_months": 12,
+            "notice_period_days": 30,
+            "term": 1,
+            "owner_id": "example_id_31",
+            "metadata": {
+                "crm_stage": "won"
+            },
+            "external_references": [
+                {
+                    "system": "hubspot",
+                    "id": "example_id_32"
+                }
+            ],
+            "created_at": "2026-10-23T12:00:00Z",
+            "updated_at": "2026-10-23T12:00:00Z"
+        }
+    ]
+}
+```
+
+**A page of contracts with their documents (expand=document)**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": [
+        {
+            "document_id": "example_id_30",
+            "status": "active",
+            "counterparty_name": "Acme Ltda",
+            "counterparty_taxpayer_id": "00000000000",
+            "value": 120000.5,
+            "currency": "BRL",
+            "start_date": "2026-11-01",
+            "end_date": "2027-10-31",
+            "auto_renew": true,
+            "renewal_term_months": 12,
+            "notice_period_days": 30,
+            "term": 1,
+            "owner_id": "example_id_31",
+            "metadata": {
+                "crm_stage": "won"
+            },
+            "external_references": [
+                {
+                    "system": "hubspot",
+                    "id": "example_id_32"
+                }
+            ],
+            "created_at": "2026-10-23T12:00:00Z",
+            "updated_at": "2026-10-23T12:00:00Z",
+            "document": {
+                "id": "example_id_30",
+                "account_id": "example_id_4",
+                "template_id": null,
+                "name": "Contrato de prestação de serviços.pdf",
+                "status": "certificated",
+                "artifacts": {
+                    "original": "https://example.com/example-url-13"
+                },
+                "is_closed": true,
+                "signing_url": "https://example.com/example-url-14",
+                "verification_code": "example_secret",
+                "verification_url": "https://example.com/example-url-4",
+                "decline_reason": null,
+                "declined_by": null,
+                "tags": [],
+                "created_at": "2026-10-20T14:00:00Z",
+                "updated_at": "2026-10-22T09:00:00Z"
+            }
+        }
+    ]
+}
+```
+
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+
+```json
+{
+    "status": 400,
+    "message": "value must be no less than 0.",
+    "errors": [
+        {
+            "field": "value",
+            "code": "TooSmall",
+            "message": "value must be no less than 0."
+        },
+        {
+            "field": "currency",
+            "code": "Invalid",
+            "message": "currency is invalid."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Get a document's contract terms
+
+`GET /v1/accounts/{accountId}/documents/{documentId}/contract`
+
+The contract terms tracked on a document, with `amendments`: the documents that amend, renew or terminate it. For a document that is itself an amendment, its link and delta (`DocumentContractAmendment`) instead. Readable even after the workspace's plan stops including contract tracking.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — The contract terms, or the amendment
+
+**The contract terms with their amendments**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract",
+        "document_id": "example_id_30",
+        "status": "active",
+        "counterparty_name": "Acme Ltda",
+        "counterparty_taxpayer_id": "00000000000",
+        "value": 130000,
+        "currency": "BRL",
+        "start_date": "2026-11-01",
+        "end_date": "2028-06-30",
+        "auto_renew": true,
+        "renewal_term_months": 12,
+        "notice_period_days": 30,
+        "term": 2,
+        "owner_id": "example_id_31",
+        "metadata": {
+            "crm_stage": "won"
+        },
+        "external_references": [
+            {
+                "system": "hubspot",
+                "id": "example_id_32"
+            }
+        ],
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2027-05-12T18:20:00Z",
+        "amendments": [
+            {
+                "document_id": "example_id_33",
+                "document_name": "Aditivo 1 - Contrato de prestação de serviços.pdf",
+                "parent_document_id": "example_id_30",
+                "relation_type": "amendment",
+                "number": 1,
+                "status": "applied",
+                "document_status": "certificated",
+                "apply_error": null,
+                "currency": "BRL",
+                "terms": {
+                    "value": 130000,
+                    "end_date": "2028-06-30"
+                },
+                "changes": {
+                    "value": {
+                        "from": 120000.5,
+                        "to": 130000
+                    },
+                    "end_date": {
+                        "from": "2027-10-31",
+                        "to": "2028-06-30"
+                    },
+                    "term": {
+                        "from": 1,
+                        "to": 2
+                    }
+                },
+                "applied_at": "2027-05-12T18:20:00Z",
+                "created_at": "2027-05-10T15:00:00Z",
+                "updated_at": "2027-05-12T18:20:00Z"
+            }
+        ]
+    }
+}
+```
+
+**The amendment, waiting for its signature**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract_amendment",
+        "document_id": "example_id_33",
+        "document_name": "Aditivo 1 - Contrato de prestação de serviços.pdf",
+        "parent_document_id": "example_id_30",
+        "relation_type": "amendment",
+        "number": null,
+        "status": "pending",
+        "document_status": "pending_signature",
+        "apply_error": null,
+        "currency": "BRL",
+        "terms": {
+            "value": 130000,
+            "end_date": "2028-06-30"
+        },
+        "changes": {
+            "value": {
+                "from": 120000.5,
+                "to": 130000
+            },
+            "end_date": {
+                "from": "2027-10-31",
+                "to": "2028-06-30"
+            },
+            "term": {
+                "from": 1,
+                "to": 2
+            }
+        },
+        "applied_at": null,
+        "created_at": "2027-05-10T15:00:00Z",
+        "updated_at": "2027-05-10T15:00:00Z"
+    }
+}
+```
+
+##### 404 — The document is not in the workspace (`Document not found.`), or carries no contract terms (on a read: neither its own nor those of a contract it amends whose document still exists). Only the second has a `code`, `NoContractTerms`, so a document without terms can be told from one that is not there.
+
+```json
+{
+    "status": 404,
+    "message": "This document has no contract terms.",
+    "code": "NoContractTerms"
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Set a document's contract terms
+
+`PUT /v1/accounts/{accountId}/documents/{documentId}/contract`
+
+Creates the document's contract terms, or changes only the attributes sent (see the request body for what `null` does). `external_references`, when sent, replaces the whole list. Records a `document_contract_updated` event when the terms change; a retry that changes nothing records none. The body must be a JSON object with at least one attribute. With `parent_document_id`, the document is instead linked as an amendment, renewal or termination of that contract (or of any document in its family, resolved to the root) and the other attributes are the terms it changes; a later `PUT` on a pending amendment merges into that delta (a `null` drops a key) and `parent_document_id: null` unlinks it; every change to the link records `document_contract_amendment_updated` on this document. The delta applies to the parent once the document is certificated (at once, if it already is), in signing order (the order the documents' certifications were recorded in, fixed for each once it is; a certificated document with none recorded waits, and is placed by its certification time an hour on): instruments signed earlier apply first, one that cannot holds the later ones back, and an instrument signed before one already applied is blocked instead of applied over it. Applying records `document_contract_amended`; an applied amendment is read-only. A cancelled, declined or expired document takes no new terms and no new link; terms or a link already on one stay and can still change. Send the `updated_at` you read with the write to have it refused (`409`) if the contract or link changed meanwhile. Needs a plan with contract tracking (`403` otherwise).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `status` (string) — On creation any status, so a contract that ended before it was tracked is registered as it ended: `expired` needs an `end_date` in the past, `terminated` its `end_date`; neither is walked by the lifecycle. Afterwards only `draft` or `active` (a contract in force never goes back to `draft`): `expired` and `terminated` are set by the lifecycle and the terminate endpoint; a closed contract is reopened by renewing it.
+- `counterparty_name` (string | null) — Emoji are kept; other characters outside the 3-byte range are dropped.
+- `counterparty_taxpayer_id` (string | null) — A valid CPF or CNPJ, formatted or not.
+- `value` (number | null) — Two decimal places at most.
+- `currency` (string | null) — Three letters, such as `BRL` or `USD`, stored in capitals; `BRL` when a `value` is set without one.
+- `start_date` (string | null) — `YYYY-MM-DD`, from the year 1000.
+- `end_date` (string | null) — `YYYY-MM-DD`, on or after `start_date`.
+- `auto_renew` (boolean) — Whether the hourly run starts the next term the day after `end_date`, by `renewal_term_months`, instead of expiring the contract.
+- `renewal_term_months` (integer | null) — How far a renewal by the term moves `end_date`; 12 when unset.
+- `notice_period_days` (integer | null) — Days before `end_date` the notice period starts (`document_contract_renewal_notice`); none when unset.
+- `owner_id` (string | null) — An active member of this workspace.
+- `metadata` (object | null) — Your own fields: up to 50 keys of 1 to 40 letters, digits, `_`, `-` or `.`, each holding plain text of at most 500 characters; no number under a key ending in `_at`, or `stuck_since`.
+- `external_references` (array | null) — Replaces the whole list; `[]` or `null` clears it. Two items whose `system` and `id` compare equal case aside are one reference (the first sent is kept); a pair the database takes for one beyond that (accents, `ß` and `ss`) answers `400`.
+- `parent_document_id` (string | null) — Links the document as an amendment of this contract document, or of any document in its family (resolved to the root); `null` unlinks a pending amendment. With it, the other attributes are the terms the instrument changes, not terms of its own; on a pending amendment a `null` value drops that term from the delta rather than clearing it on the parent.
+- `relation_type` (string) — Required on the first link. `amendment` may change `value`, `currency`, `start_date` (effective from, display only), `end_date`, `auto_renew`, `renewal_term_months`, `notice_period_days`, `counterparty_name`, `counterparty_taxpayer_id` and `metadata`; `renewal` only `end_date` and `value`; `termination` only `end_date` (the effective date).
+- `updated_at` (string) — Optional precondition: the `updated_at` the client read the contract (or this document's amendment link) with, as the API returned it. If the contract or link changed since, nothing is written and the answer is `409` with `code: ContractChanged`. Not sent, or `null`: the write applies whatever changed meanwhile (last write wins). Compared to the second; a fraction of a second, as a JavaScript date prints it, is read and ignored. New terms and a first link have nothing to have read, so sending one answers `409`; on a pending amendment, send the link's own `updated_at` (the GET on that document).
+
+Example — Set every term:
+
+```json
+{
+    "status": "active",
+    "counterparty_name": "Acme Ltda",
+    "counterparty_taxpayer_id": "00000000000",
+    "value": 120000.5,
+    "currency": "BRL",
+    "start_date": "2026-11-01",
+    "end_date": "2027-10-31",
+    "auto_renew": true,
+    "renewal_term_months": 12,
+    "notice_period_days": 30,
+    "owner_id": "example_id_31",
+    "metadata": {
+        "crm_stage": "won"
+    },
+    "external_references": [
+        {
+            "system": "hubspot",
+            "id": "example_id_32"
+        }
+    ]
+}
+```
+
+Example — Change one term, clear another:
+
+```json
+{
+    "notice_period_days": 60,
+    "counterparty_name": null
+}
+```
+
+Example — Replace the external references:
+
+```json
+{
+    "external_references": [
+        {
+            "system": "hubspot",
+            "id": "example_id_32"
+        },
+        {
+            "system": "erp",
+            "id": "example_id_34"
+        }
+    ]
+}
+```
+
+Example — Link an aditivo that changes the value and the end date:
+
+```json
+{
+    "parent_document_id": "example_id_30",
+    "relation_type": "amendment",
+    "value": 130000,
+    "end_date": "2028-06-30"
+}
+```
+
+#### Responses
+
+##### 200 — The contract terms as saved, or the amendment as linked
+
+**The contract terms**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract",
+        "document_id": "example_id_30",
+        "status": "active",
+        "counterparty_name": "Acme Ltda",
+        "counterparty_taxpayer_id": "00000000000",
+        "value": 120000.5,
+        "currency": "BRL",
+        "start_date": "2026-11-01",
+        "end_date": "2027-10-31",
+        "auto_renew": true,
+        "renewal_term_months": 12,
+        "notice_period_days": 30,
+        "term": 1,
+        "owner_id": "example_id_31",
+        "metadata": {
+            "crm_stage": "won"
+        },
+        "external_references": [
+            {
+                "system": "hubspot",
+                "id": "example_id_32"
+            }
+        ],
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2026-10-23T12:00:00Z"
+    }
+}
+```
+
+**The amendment, waiting for its signature**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract_amendment",
+        "document_id": "example_id_33",
+        "document_name": "Aditivo 1 - Contrato de prestação de serviços.pdf",
+        "parent_document_id": "example_id_30",
+        "relation_type": "amendment",
+        "number": null,
+        "status": "pending",
+        "document_status": "pending_signature",
+        "apply_error": null,
+        "currency": "BRL",
+        "terms": {
+            "value": 130000,
+            "end_date": "2028-06-30"
+        },
+        "changes": {
+            "value": {
+                "from": 120000.5,
+                "to": 130000
+            },
+            "end_date": {
+                "from": "2027-10-31",
+                "to": "2028-06-30"
+            },
+            "term": {
+                "from": 1,
+                "to": 2
+            }
+        },
+        "applied_at": null,
+        "created_at": "2027-05-10T15:00:00Z",
+        "updated_at": "2027-05-10T15:00:00Z"
+    }
+}
+```
+
+**The amendment, applied to the parent**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract_amendment",
+        "document_id": "example_id_33",
+        "document_name": "Aditivo 1 - Contrato de prestação de serviços.pdf",
+        "parent_document_id": "example_id_30",
+        "relation_type": "amendment",
+        "number": 1,
+        "status": "applied",
+        "document_status": "certificated",
+        "apply_error": null,
+        "currency": "BRL",
+        "terms": {
+            "value": 130000,
+            "end_date": "2028-06-30"
+        },
+        "changes": {
+            "value": {
+                "from": 120000.5,
+                "to": 130000
+            },
+            "end_date": {
+                "from": "2027-10-31",
+                "to": "2028-06-30"
+            },
+            "term": {
+                "from": 1,
+                "to": 2
+            }
+        },
+        "applied_at": "2027-05-12T18:20:00Z",
+        "created_at": "2027-05-10T15:00:00Z",
+        "updated_at": "2027-05-12T18:20:00Z"
+    }
+}
+```
+
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+
+```json
+{
+    "status": 400,
+    "message": "value must be no less than 0.",
+    "errors": [
+        {
+            "field": "value",
+            "code": "TooSmall",
+            "message": "value must be no less than 0."
+        },
+        {
+            "field": "currency",
+            "code": "Invalid",
+            "message": "currency is invalid."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan does not include contract tracking.
+
+```json
+{
+    "status": 403,
+    "message": "Contract tracking is not available for your current plan."
+}
+```
+
+##### 409 — The write sent the `updated_at` it read the contract (or the amendment link) with, and the contract changed since: by another user, an integration or the hourly run. Nothing was written. Read it again, check the change still applies, and send it with the new `updated_at`.
+
+```json
+{
+    "status": 409,
+    "message": "The contract changed after it was read; read it again and resend the change.",
+    "code": "ContractChanged"
+}
+```
+
+##### 404 — The document is not in the workspace, the `parent_document_id` names a document outside it, or `parent_document_id: null` is sent for a document that is not an amendment.
+
+```json
+{
+    "status": 404,
+    "message": "Document not found."
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### List the contracts related to a document
+
+`GET /v1/accounts/{accountId}/documents/{documentId}/contract/related`
+
+The family the document belongs to, seen from its root: the contract terms with every amendment, renewal and termination document linked to them (`amendments`). Works from the contract document and from any of its amendments alike.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — The root contract and its family
+
+**The contract terms with their amendments**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract",
+        "document_id": "example_id_30",
+        "status": "active",
+        "counterparty_name": "Acme Ltda",
+        "counterparty_taxpayer_id": "00000000000",
+        "value": 130000,
+        "currency": "BRL",
+        "start_date": "2026-11-01",
+        "end_date": "2028-06-30",
+        "auto_renew": true,
+        "renewal_term_months": 12,
+        "notice_period_days": 30,
+        "term": 2,
+        "owner_id": "example_id_31",
+        "metadata": {
+            "crm_stage": "won"
+        },
+        "external_references": [
+            {
+                "system": "hubspot",
+                "id": "example_id_32"
+            }
+        ],
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2027-05-12T18:20:00Z",
+        "amendments": [
+            {
+                "document_id": "example_id_33",
+                "document_name": "Aditivo 1 - Contrato de prestação de serviços.pdf",
+                "parent_document_id": "example_id_30",
+                "relation_type": "amendment",
+                "number": 1,
+                "status": "applied",
+                "document_status": "certificated",
+                "apply_error": null,
+                "currency": "BRL",
+                "terms": {
+                    "value": 130000,
+                    "end_date": "2028-06-30"
+                },
+                "changes": {
+                    "value": {
+                        "from": 120000.5,
+                        "to": 130000
+                    },
+                    "end_date": {
+                        "from": "2027-10-31",
+                        "to": "2028-06-30"
+                    },
+                    "term": {
+                        "from": 1,
+                        "to": 2
+                    }
+                },
+                "applied_at": "2027-05-12T18:20:00Z",
+                "created_at": "2027-05-10T15:00:00Z",
+                "updated_at": "2027-05-12T18:20:00Z"
+            }
+        ]
+    }
+}
+```
+
+##### 404 — The document is not in the workspace (`Document not found.`), or carries no contract terms (on a read: neither its own nor those of a contract it amends whose document still exists). Only the second has a `code`, `NoContractTerms`, so a document without terms can be told from one that is not there.
+
+```json
+{
+    "status": 404,
+    "message": "This document has no contract terms.",
+    "code": "NoContractTerms"
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Renew a contract
+
+`POST /v1/accounts/{accountId}/documents/{documentId}/contract/renew`
+
+Starts the contract's next term: `end_date` moves by `renewal_term_months` (12 when unset), or to the `end_date` sent, which must be after the current one. A `value` sent replaces the current one. Reopens an expired contract; a terminated one returns `400`. Steps `term`, so the lifecycle alerts run again for the new term. Records a `document_contract_renewed` event. Needs a plan with contract tracking (`403` otherwise). The body names the `term` the renewal starts from (the contract's current one) or the `end_date` it renews to, so a renewal answered with a `5xx` error, or whose answer was lost, is safe to send again: the repeat is refused with `400`, as the contract is then in its next term and that date is no longer after the current one (or with `409`, when it sends the `updated_at` it read).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `end_date` (string | null) — The new end date, after the current one. Absent, empty or `null`: the current end date plus the renewal term, stepped until it is in the future; `term` is then required.
+- `value` (number | null) — The new value; unchanged when not sent, cleared by `null`.
+- `term` (integer) — The term this renewal starts from, the contract's current `term`. Required unless `end_date` is sent; for a contract in another term the renewal is refused, so a repeated request never renews twice.
+- `updated_at` (string) — Optional precondition: the contract's `updated_at` as read. Changed since: `409`, nothing renewed.
+
+Example — Renew from term 1 by the renewal term, with a new value: safe to repeat:
+
+```json
+{
+    "term": 1,
+    "value": 126000
+}
+```
+
+Example — Renew to a date with a new value:
+
+```json
+{
+    "end_date": "2029-06-30",
+    "value": 130000
+}
+```
+
+#### Responses
+
+##### 200 — The renewed contract
+
+**The renewed contract**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract",
+        "document_id": "example_id_30",
+        "status": "active",
+        "counterparty_name": "Acme Ltda",
+        "counterparty_taxpayer_id": "00000000000",
+        "value": 130000,
+        "currency": "BRL",
+        "start_date": "2026-11-01",
+        "end_date": "2029-06-30",
+        "auto_renew": true,
+        "renewal_term_months": 12,
+        "notice_period_days": 30,
+        "term": 2,
+        "owner_id": "example_id_31",
+        "metadata": {
+            "crm_stage": "won"
+        },
+        "external_references": [
+            {
+                "system": "hubspot",
+                "id": "example_id_32"
+            }
+        ],
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2027-10-15T09:30:00Z"
+    }
+}
+```
+
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+
+```json
+{
+    "status": 400,
+    "message": "value must be no less than 0.",
+    "errors": [
+        {
+            "field": "value",
+            "code": "TooSmall",
+            "message": "value must be no less than 0."
+        },
+        {
+            "field": "currency",
+            "code": "Invalid",
+            "message": "currency is invalid."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan does not include contract tracking.
+
+```json
+{
+    "status": 403,
+    "message": "Contract tracking is not available for your current plan."
+}
+```
+
+##### 409 — The write sent the `updated_at` it read the contract (or the amendment link) with, and the contract changed since: by another user, an integration or the hourly run. Nothing was written. Read it again, check the change still applies, and send it with the new `updated_at`.
+
+```json
+{
+    "status": 409,
+    "message": "The contract changed after it was read; read it again and resend the change.",
+    "code": "ContractChanged"
+}
+```
+
+##### 404 — The document is not in the workspace (`Document not found.`), or carries no contract terms (on a read: neither its own nor those of a contract it amends whose document still exists). Only the second has a `code`, `NoContractTerms`, so a document without terms can be told from one that is not there.
+
+```json
+{
+    "status": 404,
+    "message": "This document has no contract terms.",
+    "code": "NoContractTerms"
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+### Terminate a contract
+
+`POST /v1/accounts/{accountId}/documents/{documentId}/contract/terminate`
+
+Closes the contract: its status becomes `terminated` and the lifecycle job stops alerting on it. Records a `document_contract_terminated` event carrying the `reason`. Needs a plan with contract tracking (`403` otherwise).
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `reason` (string | null) — Kept in the `document_contract_terminated` event; HTML is stripped.
+- `updated_at` (string) — Optional precondition: the contract's `updated_at` as read. Changed since: `409`, nothing terminated.
+
+Example — Terminate with a reason:
+
+```json
+{
+    "reason": "Fornecedor substituído"
+}
+```
+
+#### Responses
+
+##### 200 — The terminated contract
+
+**The terminated contract**
+
+```json
+{
+    "status": 200,
+    "message": "",
+    "data": {
+        "resource": "document_contract",
+        "document_id": "example_id_30",
+        "status": "terminated",
+        "counterparty_name": "Acme Ltda",
+        "counterparty_taxpayer_id": "00000000000",
+        "value": 120000.5,
+        "currency": "BRL",
+        "start_date": "2026-11-01",
+        "end_date": "2027-10-31",
+        "auto_renew": true,
+        "renewal_term_months": 12,
+        "notice_period_days": 30,
+        "term": 1,
+        "owner_id": "example_id_31",
+        "metadata": {
+            "crm_stage": "won"
+        },
+        "external_references": [
+            {
+                "system": "hubspot",
+                "id": "example_id_32"
+            }
+        ],
+        "created_at": "2026-10-23T12:00:00Z",
+        "updated_at": "2027-03-02T14:00:00Z"
+    }
+}
+```
+
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+
+```json
+{
+    "status": 400,
+    "message": "value must be no less than 0.",
+    "errors": [
+        {
+            "field": "value",
+            "code": "TooSmall",
+            "message": "value must be no less than 0."
+        },
+        {
+            "field": "currency",
+            "code": "Invalid",
+            "message": "currency is invalid."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan does not include contract tracking.
+
+```json
+{
+    "status": 403,
+    "message": "Contract tracking is not available for your current plan."
+}
+```
+
+##### 409 — The write sent the `updated_at` it read the contract (or the amendment link) with, and the contract changed since: by another user, an integration or the hourly run. Nothing was written. Read it again, check the change still applies, and send it with the new `updated_at`.
+
+```json
+{
+    "status": 409,
+    "message": "The contract changed after it was read; read it again and resend the change.",
+    "code": "ContractChanged"
+}
+```
+
+##### 404 — The document is not in the workspace (`Document not found.`), or carries no contract terms (on a read: neither its own nor those of a contract it amends whose document still exists). Only the second has a `code`, `NoContractTerms`, so a document without terms can be told from one that is not there.
+
+```json
+{
+    "status": 404,
+    "message": "This document has no contract terms.",
+    "code": "NoContractTerms"
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null
+}
+```
+
 ## Fields
 
 ### List fields
@@ -4191,7 +5262,9 @@ Delete the existing API key.
 
 List the field definitions of a workspace.
 
-When `include_standard` is enabled, records of type `signature`, `initial` and `signatureDate` are also returned.
+When `include_standard` is enabled, records of type `signature`, `initial` and `signatureDate` are also returned. Every workspace has one of each, created with it; they cannot be created, and a field can't be placed on the `Editor` role with them.
+
+To find the fields a sender can place on a document or template, list with `include_standard=true`: the result is every active field definition, signature fields included, and each one's `id` is the `field_id` to place.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4636,7 +5709,7 @@ Example:
 ```json
 [
     {
-        "field_id": "example_id_30",
+        "field_id": "example_id_35",
         "value": "1111111111111"
     }
 ]
@@ -4650,7 +5723,7 @@ Example:
 {
     "data": [
         {
-            "field_id": "example_id_30",
+            "field_id": "example_id_35",
             "type": "cpf",
             "success": false,
             "error_message": "Invalid CPF."
@@ -4685,7 +5758,7 @@ Example:
 
 `GET /v1/field-types`
 
-List the possible field types. `cpf` expects 11 digits; `cnpj` accepts 14-char values (letters A-Z allowed in positions 1–12 per the CNPJ Alfanumérico rule; check digits 13–14 stay numeric). Punctuation is ignored during validation.
+List the types a workspace can create field definitions with (`POST /v1/accounts/{accountId}/fields`). The built-in `signature`, `initial` and `signatureDate` types are not listed: they can't be created, and their definitions come from `GET /v1/accounts/{accountId}/fields?include_standard=true`. `cpf` expects 11 digits; `cnpj` accepts 14-char values (letters A-Z allowed in positions 1–12 per the CNPJ Alfanumérico rule; check digits 13–14 stay numeric). Punctuation is ignored during validation.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4732,7 +5805,7 @@ List the possible field types. `cpf` expects 11 digits; `cnpj` accepts 14-char v
 
 `GET /v1/users/self/notification-preferences`
 
-Which owner-facing document notifications the authenticated user receives by e-mail. All nine keys are always returned; everything defaults to `true`. Account and security e-mail (welcome, password reset, invitations, account deletion) is not configurable and never appears here.
+Which owner-facing document notifications the authenticated user receives by e-mail. All thirteen keys are always returned; everything defaults to `true`. Account and security e-mail (welcome, password reset, invitations, account deletion) is not configurable and never appears here. Not available to third-party OAuth applications (`403`), whatever their scopes: these are the user's personal settings. Assinafy's own apps can reach it.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4751,7 +5824,11 @@ Which owner-facing document notifications the authenticated user receives by e-m
         "DocumentExpirationReset": true,
         "DocumentProcessingFailed": true,
         "TemplateProcessingFailed": true,
-        "SignerWhatsappFailed": true
+        "SignerWhatsappFailed": true,
+        "ContractRenewalNotice": true,
+        "ContractExpiring": true,
+        "ContractExpired": true,
+        "ContractRenewed": true
     },
     "status": 200,
     "message": ""
@@ -4782,7 +5859,7 @@ Which owner-facing document notifications the authenticated user receives by e-m
 
 `PUT /v1/users/self/notification-preferences`
 
-Merges the supplied map into the authenticated user's preferences. Send only the keys you want to change — omitted keys keep their current value. Setting a key to `false` stops that e-mail for this user in every account they belong to. Returns the full map. An unknown code, a non-boolean value, or an empty body is rejected with 400 and nothing is written.
+Merges the supplied map into the authenticated user's preferences. Send only the keys you want to change — omitted keys keep their current value. Setting a key to `false` stops that e-mail for this user in every account they belong to. Returns the full map. An unknown code, a non-boolean value, or an empty body is rejected with 400 and nothing is written. Not available to third-party OAuth applications (`403`), whatever their scopes: these are the user's personal settings. Assinafy's own apps can reach it.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4799,6 +5876,10 @@ Fields (`application/json`):
 - `DocumentProcessingFailed` (boolean) — An uploaded document could not be processed.
 - `TemplateProcessingFailed` (boolean) — A template could not be processed.
 - `SignerWhatsappFailed` (boolean) — A WhatsApp notification to a signer could not be delivered.
+- `ContractRenewalNotice` (boolean) — A tracked contract entered its notice period: it is about to end or to renew.
+- `ContractExpiring` (boolean) — A tracked contract ends in 45 or in 30 days.
+- `ContractExpired` (boolean) — A tracked contract ended without renewal.
+- `ContractRenewed` (boolean) — A tracked contract was auto-renewed into its next term.
 
 Example:
 
@@ -4812,7 +5893,11 @@ Example:
     "DocumentExpirationReset": true,
     "DocumentProcessingFailed": true,
     "TemplateProcessingFailed": true,
-    "SignerWhatsappFailed": true
+    "SignerWhatsappFailed": true,
+    "ContractRenewalNotice": true,
+    "ContractExpiring": true,
+    "ContractExpired": true,
+    "ContractRenewed": true
 }
 ```
 
@@ -4831,7 +5916,11 @@ Example:
         "DocumentExpirationReset": true,
         "DocumentProcessingFailed": true,
         "TemplateProcessingFailed": true,
-        "SignerWhatsappFailed": true
+        "SignerWhatsappFailed": true,
+        "ContractRenewalNotice": true,
+        "ContractExpiring": true,
+        "ContractExpired": true,
+        "ContractRenewed": true
     },
     "status": 200,
     "message": ""
@@ -4872,7 +5961,7 @@ Example:
 
 `GET /v1/users/self/stats`
 
-The authenticated user's document-funnel KPIs summed across all accounts they currently belong to. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled.
+The authenticated user's document-funnel KPIs summed across all accounts they currently belong to. `granularity=monthly` (default) returns the last 12 months, most recent first; `granularity=daily` with `month=YYYY-MM` returns that month's days. Series are zero-filled. Not available to OAuth access tokens (`403`): a token is bound to one workspace, so an OAuth app reads that workspace's figures from **Account document KPIs** instead.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4946,7 +6035,7 @@ The authenticated user's document-funnel KPIs summed across all accounts they cu
 
 `GET /v1/users/self`
 
-Returns the profile of the user owning the access token.
+Returns the profile of the user owning the access token. Not available to OAuth access tokens (`403`); an OAuth app reads the user's identity from `GET /v1/oauth/userinfo`.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4959,7 +6048,7 @@ Returns the profile of the user owning the access token.
     "data": {
         "id": "example_id_28",
         "name": "John Smith",
-        "email": "user8@example.com",
+        "email": "user9@example.com",
         "telephone": "+5500000000000",
         "government_id": "00000000000",
         "is_email_verified": false,
@@ -5039,7 +6128,7 @@ Example:
 {
     "grant_type": "authorization_code",
     "code": "string",
-    "redirect_uri": "https://example.com/example-url-12",
+    "redirect_uri": "https://example.com/example-url-15",
     "code_verifier": "string",
     "refresh_token": "example_secret",
     "client_id": "example_id_5",
@@ -5277,6 +6366,8 @@ Retrieve a publicly shared document by ID. Public endpoint.
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -5292,9 +6383,10 @@ Retrieve a publicly shared document by ID. Public endpoint.
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -5349,7 +6441,7 @@ Example:
 ```json
 {
     "channel": "email",
-    "recipient": "user9@example.com"
+    "recipient": "user1@example.com"
 }
 ```
 
@@ -5362,13 +6454,13 @@ Example:
     "data": {
         "document": {
             "resource": "document",
-            "id": "example_id_32",
+            "id": "example_id_36",
             "name": "Contract.pdf",
             "page_count": 3,
             "created_by": "Jane Doe"
         },
         "channel": "email",
-        "recipient": "user9@example.com"
+        "recipient": "user1@example.com"
     },
     "status": 200,
     "message": ""
@@ -5411,7 +6503,7 @@ Example:
 
 Return the signer identified by the signer access code, including the `has_signature`/`has_initial`/`is_signature_reusable` flags and the `verification_method` of this signature request. Available before verification, so the signing page can pick the right first step.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Responses
 
@@ -5427,7 +6519,7 @@ Return the signer identified by the signer access code, including the `has_signa
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
-        "email": "user2@example.com",
+        "email": "user3@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "government_id": "00000000000",
         "has_accepted_terms": false
@@ -5467,7 +6559,7 @@ Current state of the signer's identity document verification. Backfills a pendin
 
 **In review:** the signer continues -- views, confirms their data and signs -- while the account reviews the result. The document is certificated only after the account approves every signer under review; if it rejects one, the document is cancelled and every signer receives the cancellation notice.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Responses
 
@@ -5478,7 +6570,7 @@ Current state of the signer's identity document verification. Backfills a pendin
     "data": {
         "can_start": false,
         "status": "Pending",
-        "url": "https://example.com/example-url-13",
+        "url": "https://example.com/example-url-16",
         "expires_at": "2026-10-07T21:18:47Z",
         "completed_at": "2026-08-10T20:32:00Z"
     },
@@ -5515,7 +6607,7 @@ Records the signer's biometric-processing consent and opens a provider session. 
 
 **One live session per signer:** this succeeds when no session exists yet, or when the last one Expired (the capture link lapsed before anything was submitted); the expired session is replaced by a new one. Otherwise -- Pending, In Review, Approved, Declined or Abandoned -- it returns `400`. A resend never destroys or replaces a live provider session, and the account is billed once per signer at assignment creation, never again on a restart. Recovering from a Declined or Abandoned verification means the account must start a whole new process (new document, new assignment).
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Request Body (required)
 
@@ -5539,7 +6631,7 @@ Example:
 {
     "data": {
         "id": "example_id_20",
-        "url": "https://example.com/example-url-13",
+        "url": "https://example.com/example-url-16",
         "expires_at": "2026-10-07T21:18:47Z"
     },
     "status": 200,
@@ -5573,9 +6665,9 @@ Example:
 
 `GET /v1/signers/{signerId}/document`
 
-Return the document and the signer's assignment items, scoped to the signer access code.
+Return the document and the signer's assignment items, scoped to the signer access code. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed).
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5601,6 +6693,8 @@ Return the document and the signer's assignment items, scoped to the signer acce
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -5616,9 +6710,10 @@ Return the document and the signer's assignment items, scoped to the signer acce
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -5661,11 +6756,11 @@ Return the document and the signer's assignment items, scoped to the signer acce
 
 `GET /v1/sign`
 
-Retrieve the document a signer has been invited to sign, using the signer access code. Marks the document as viewed. Returns 409 while the document is still being prepared (retry with backoff).
+Retrieve the document a signer has been invited to sign, using the signer access code. Marks the document as viewed. The assignment carries only this signer's items, and leaves out the other signers, their signing links (`signing_urls`), the copy receivers and the signing `summary`. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed). Returns 409 while the document is still being prepared (retry with backoff).
 
 **Signers whose verification method is `DigitalCertificate`** must have confirmed their data *and* accepted the terms before this returns the document; otherwise it is `400`. Both are satisfied in one call to `PUT /v1/documents/{documentId}/signers/confirm-data` with `has_accepted_terms: true`, so send that before this endpoint — the `has_accepted_terms` query parameter here is too late to open the gate. `PUT /v1/signers/accept-terms` also works and is never gated.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5691,6 +6786,8 @@ Retrieve the document a signer has been invited to sign, using the signer access
         },
         "is_closed": false,
         "signing_url": "https://example.com/example-url-3",
+        "verification_code": "example_secret",
+        "verification_url": "https://example.com/example-url-4",
         "decline_reason": null,
         "declined_by": null,
         "tags": [
@@ -5706,9 +6803,10 @@ Retrieve the document a signer has been invited to sign, using the signer access
                 "number": 1,
                 "height": 2100,
                 "width": 1275,
-                "download_url": "https://example.com/example-url-4"
+                "download_url": "https://example.com/example-url-5"
             }
         ],
+        "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
     },
@@ -5745,9 +6843,9 @@ Retrieve the document a signer has been invited to sign, using the signer access
 
 `POST /v1/documents/{documentId}/assignments/{assignmentId}`
 
-Sign a document with input fields (collect method): submit the signer's item values, completing their items. For **virtual** assignments the signer must first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`, otherwise this returns `400` (Signer data must be confirmed before signing). Signers whose verification method is `DigitalCertificate` cannot use this endpoint — their signature must be produced through `POST /v1/signers/certificate/start` + `/complete`, and this returns `400`. The request body is a JSON array of item entries. Uses the signer access code.
+Sign a document with input fields (collect method): submit the signer's item values, completing their items. Signing again after the signer has signed changes nothing and returns the current assignment. For **virtual** assignments the signer must first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`, otherwise this returns `400` (Signer data must be confirmed before signing). Signers whose verification method is `DigitalCertificate` cannot use this endpoint — their signature must be produced through `POST /v1/signers/certificate/start` + `/complete`, and this returns `400`. The request body is a JSON array of item entries. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5783,7 +6881,9 @@ Example:
 }
 ```
 
-##### 400 — Signer data must be confirmed before signing (virtual assignments), or the signer must sign with a digital certificate through the digital certificate endpoints.
+##### 400 — Signer data must be confirmed before signing (virtual assignments), the signer must sign with a digital certificate through the digital certificate endpoints, or an entry names a page, field or item that is not one of this signer's. Nothing is signed when an entry is refused.
+
+##### 404 — The assignment is not the one the access code belongs to.
 
 ##### 409 — The document is not ready to be signed yet.
 
@@ -5813,7 +6913,7 @@ Example:
 
 The signer declines to sign the document, giving a reason. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5848,6 +6948,8 @@ Example:
 }
 ```
 
+##### 404 — The assignment is not the one this access code was issued for.
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
@@ -5874,7 +6976,7 @@ Example:
 
 Sign several documents in one request, for a signer with multiple pending documents. Each document must be prepared for the **virtual** signature method. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Request Body (required)
 
@@ -5887,8 +6989,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_33",
-        "example_id_34"
+        "example_id_37",
+        "example_id_38"
     ]
 }
 ```
@@ -5904,6 +7006,10 @@ Example:
     "message": ""
 }
 ```
+
+##### 400 — A listed document is not a virtual document of this signer, is not pending signature, or waits for an earlier signing step.
+
+##### 404 — A listed document ID does not exist in the workspace. The message names the unknown IDs.
 
 ##### 401 — Missing or invalid credentials.
 
@@ -5931,7 +7037,7 @@ Example:
 
 Decline several documents in one request. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Request Body (required)
 
@@ -5945,8 +7051,8 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_33",
-        "example_id_34"
+        "example_id_37",
+        "example_id_38"
     ],
     "decline_reason": "Unfavorable terms."
 }
@@ -5963,6 +7069,10 @@ Example:
     "message": ""
 }
 ```
+
+##### 400 — A listed document is not this signer's, is not pending signature, or waits for an earlier signing step. Nothing is declined.
+
+##### 404 — A listed document ID does not exist in the workspace. The message names the unknown IDs.
 
 ##### 401 — Missing or invalid credentials.
 
@@ -5990,7 +7100,7 @@ Example:
 
 Submit the verification code (OTP) sent to the signer to unlock the signing flow. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Request Body (required)
 
@@ -6053,7 +7163,7 @@ Example:
 
 The signer confirms or updates their data before signing. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -6089,7 +7199,7 @@ Example:
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
-        "email": "user2@example.com",
+        "email": "user3@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "government_id": "00000000000",
         "has_accepted_terms": false
@@ -6125,7 +7235,7 @@ Example:
 
 Record that the signer accepted the terms of use. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Responses
 
@@ -6164,7 +7274,7 @@ Record that the signer accepted the terms of use. Uses the signer access code.
 
 Upload the signer's signature (or initials) image as the raw request body. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -6192,6 +7302,8 @@ Example:
 }
 ```
 
+##### 400 — The image is not a PNG or JPEG file, or it is blank.
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
@@ -6218,7 +7330,7 @@ Example:
 
 Download the signer's stored signature/initials image. Uses the signer access code.
 
-**Authentication:** signer access code (`access_code` query parameter).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -6264,9 +7376,9 @@ Download the signer's stored signature/initials image. Uses the signer access co
 
 `GET /v1/signers/{signerId}/documents`
 
-List the documents a signer is party to. Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace.
+List the documents a signer is party to. Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed, and each assignment leaves out `signing_urls`.
 
-**Authentication:** signer access code (`access_code` query parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** signer access code (`signer-access-code` query or body parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
 #### Parameters
 
@@ -6295,6 +7407,8 @@ List the documents a signer is party to. Accepts either the signer access code o
             },
             "is_closed": false,
             "signing_url": "https://example.com/example-url-3",
+            "verification_code": "example_secret",
+            "verification_url": "https://example.com/example-url-4",
             "decline_reason": null,
             "declined_by": null,
             "tags": [
@@ -6310,9 +7424,10 @@ List the documents a signer is party to. Accepts either the signer access code o
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-4"
+                    "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
         }
@@ -6321,6 +7436,8 @@ List the documents a signer is party to. Accepts either the signer access code o
     "message": ""
 }
 ```
+
+##### 403 — The access code belongs to another signer.
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6346,9 +7463,9 @@ List the documents a signer is party to. Accepts either the signer access code o
 
 `GET /v1/signers/{signerId}/documents/search`
 
-Search the documents a signer is party to (compact representation). Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace.
+Search the documents a signer is party to (compact representation). Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed, and each assignment leaves out `signing_urls`.
 
-**Authentication:** signer access code (`access_code` query parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** signer access code (`signer-access-code` query or body parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
 #### Parameters
 
@@ -6376,6 +7493,8 @@ Search the documents a signer is party to (compact representation). Accepts eith
             },
             "is_closed": false,
             "signing_url": "https://example.com/example-url-3",
+            "verification_code": "example_secret",
+            "verification_url": "https://example.com/example-url-4",
             "decline_reason": null,
             "declined_by": null,
             "tags": [
@@ -6391,9 +7510,10 @@ Search the documents a signer is party to (compact representation). Accepts eith
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-4"
+                    "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
         }
@@ -6402,6 +7522,8 @@ Search the documents a signer is party to (compact representation). Accepts eith
     "message": ""
 }
 ```
+
+##### 403 — The access code belongs to another signer.
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6493,7 +7615,7 @@ List the signers of a workspace.
             "resource": "signer",
             "id": "example_id_14",
             "full_name": "Example User",
-            "email": "user2@example.com",
+            "email": "user3@example.com",
             "whatsapp_phone_number": "+5500000000000",
             "government_id": "00000000000",
             "has_accepted_terms": false
@@ -6552,7 +7674,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user2@example.com",
+    "email": "user3@example.com",
     "whatsapp_phone_number": "+5500000000000",
     "government_id": "00000000000"
 }
@@ -6568,7 +7690,7 @@ Example:
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
-        "email": "user2@example.com",
+        "email": "user3@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "government_id": "00000000000",
         "has_accepted_terms": false
@@ -6633,7 +7755,7 @@ Retrieve a signer's information.
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
-        "email": "user2@example.com",
+        "email": "user3@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "government_id": "00000000000",
         "has_accepted_terms": false
@@ -6677,7 +7799,9 @@ Retrieve a signer's information.
 
 `PUT /v1/accounts/{accountId}/signers/{signerId}`
 
-Update a signer's information.
+Update a signer's information. Only the fields sent change; send just the ones you are changing.
+
+**Clearing a field:** `null` or `"` clears `email`, `whatsapp_phone_number` and `government_id` (`whatsapp_phone_number` is stored as `null` either way; the other two keep the value sent). `full_name` cannot be cleared.
 
 **Verification integrity:** `email` / `whatsapp_phone_number` cannot be changed while the signer has verified that channel on an in-flight (not yet certificated) document — the response is `400` naming the offending document(s). Already-certificated documents do not block updates. Changing a channel that has *unverified* in-flight requests rotates their access/verification codes (invalidating previously sent links/OTPs); use the resend endpoint to redeliver. `full_name` can always be updated.
 
@@ -6695,8 +7819,8 @@ Update a signer's information.
 Fields (`application/json`):
 
 - `full_name` (string)
-- `email` (string)
-- `whatsapp_phone_number` (string) — E.164; normalized on save.
+- `email` (string) — Can't be changed or cleared while the signer has verified it on an in-flight document (`400`).
+- `whatsapp_phone_number` (string) — E.164; normalized on save, and compared after normalizing, so the same number in another format is not a change. Can't be changed or cleared while the signer has verified it on an in-flight document (`400`).
 - `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save.
 
 Example:
@@ -6704,7 +7828,7 @@ Example:
 ```json
 {
     "full_name": "Example User",
-    "email": "user2@example.com",
+    "email": "user3@example.com",
     "whatsapp_phone_number": "+5500000000000",
     "government_id": "00000000000"
 }
@@ -6720,7 +7844,7 @@ Example:
         "resource": "signer",
         "id": "example_id_14",
         "full_name": "Example User",
-        "email": "user2@example.com",
+        "email": "user3@example.com",
         "whatsapp_phone_number": "+5500000000000",
         "government_id": "00000000000",
         "has_accepted_terms": false
@@ -7162,7 +8286,7 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_35",
+            "id": "example_id_39",
             "name": "template.pdf",
             "document_name": null,
             "message": null,
@@ -7173,7 +8297,7 @@ The `status` field of a template is one of:
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-12",
+                    "download_url": "https://example.com/example-url-15",
                     "fields": [
                         {
                             "id": "example_id_5",
@@ -7265,7 +8389,9 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-14",
+        "is_held": false,
+        "held_since": null,
+        "url": "https://example.com/example-url-17",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7314,7 +8440,7 @@ Fields (`application/json`):
 
 - `events` (array, required) — Event type codes to subscribe to (see `GET /v1/webhooks/event-types`).
 - `is_active` (boolean, required) — Whether events should be delivered to the webhook.
-- `url` (string, required) — The URL that will receive events.
+- `url` (string, required) — The URL that will receive events: `https` for a new or changed URL (a URL stored before keeps working). Its host must resolve to a public address (`400` otherwise), and redirects are not followed.
 - `email` (string, required) — Email that receives important webhook-communication notices.
 
 Example:
@@ -7326,7 +8452,7 @@ Example:
         "document_prepared"
     ],
     "is_active": true,
-    "url": "https://example.com/example-url-14",
+    "url": "https://example.com/example-url-17",
     "email": "user11@example.com"
 }
 ```
@@ -7343,7 +8469,9 @@ Example:
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-14",
+        "is_held": false,
+        "held_since": null,
+        "url": "https://example.com/example-url-17",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7408,7 +8536,9 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
             "document_prepared"
         ],
         "is_active": true,
-        "url": "https://example.com/example-url-14",
+        "is_held": false,
+        "held_since": null,
+        "url": "https://example.com/example-url-17",
         "email": "user11@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
@@ -7512,13 +8642,17 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_36",
+            "id": "example_id_40",
             "event": "document_ready",
             "activity_id": 456,
-            "endpoint_id": "example_id_37",
-            "endpoint": "https://example.com/example-url-15",
+            "endpoint_id": "example_id_41",
+            "endpoint": "https://example.com/example-url-18",
             "payload": null,
             "delivered": true,
+            "webhook_id": "example_id_42",
+            "attempt": 2,
+            "kind": "scheduled",
+            "will_retry": true,
             "http_status": 200,
             "response_body": "OK",
             "error": null,
@@ -7555,7 +8689,7 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
 
 `POST /v1/accounts/{accountId}/webhooks/{historyId}/retry`
 
-Manually retry a webhook delivery for a specific entry, without waiting for automatic retries. The event is sent again only to the endpoint of that entry. Returns the newly created dispatch entry.
+Sends the entry's event to the entry's endpoint once, now, even while the endpoint is paused, and returns the dispatch entry of that attempt; a delivery that gets through lifts the pause. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7574,13 +8708,17 @@ Manually retry a webhook delivery for a specific entry, without waiting for auto
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_36",
+        "id": "example_id_40",
         "event": "document_ready",
         "activity_id": 456,
-        "endpoint_id": "example_id_37",
-        "endpoint": "https://example.com/example-url-15",
+        "endpoint_id": "example_id_41",
+        "endpoint": "https://example.com/example-url-18",
         "payload": null,
         "delivered": true,
+        "webhook_id": "example_id_42",
+        "attempt": 2,
+        "kind": "scheduled",
+        "will_retry": true,
         "http_status": 200,
         "response_body": "OK",
         "error": null,
@@ -7655,15 +8793,18 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 {
     "data": [
         {
-            "id": "example_id_37",
+            "resource": "activity_event_subscription",
+            "id": "example_id_41",
             "name": "ERP",
-            "url": "https://example.com/example-url-16",
+            "url": "https://example.com/example-url-19",
             "email": "user12@example.com",
             "events": [
                 "document_ready",
                 "signer_signed_document"
             ],
             "is_active": true,
+            "is_held": false,
+            "held_since": null,
             "signing_enabled": true,
             "created_at": "2026-10-01T12:00:00Z",
             "updated_at": "2026-10-01T12:00:00Z"
@@ -7698,7 +8839,7 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 
 `POST /v1/accounts/{accountId}/webhooks/endpoints`
 
-Register a URL to receive the account's webhook events. An account can have 1 endpoint, or up to 3 on paid plans; creating one past the limit returns `403`. Each endpoint of a workspace must have a different `url` (`400` otherwise). When `signing_enabled` is `true`, a signing secret is generated and returned once, as `secret` in this response — store it, since it is never shown in list or view responses. It can be read again later with **Get webhook endpoint signing secret**, except by OAuth applications: an OAuth application that loses the secret must delete the endpoint and create a new one. Requires the `webhooks:write` OAuth scope.
+Register a URL to receive the account's webhook events. An account can have 1 endpoint, or up to 3 on paid plans; creating one past the limit returns `403`. Each endpoint of a workspace must have a different `url` (`400` otherwise). When `signing_enabled` is `true`, a signing secret is generated and returned once, as `secret` in this response — store it, since it is never shown in list or view responses. It can be read again later with **Get webhook endpoint signing secret**, except by OAuth applications: an OAuth application that loses the secret gets a new one with **Rotate webhook endpoint signing secret**. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7712,7 +8853,7 @@ Register a URL to receive the account's webhook events. An account can have 1 en
 
 Fields (`application/json`):
 
-- `url` (string, required) — URL that receives the events (http or https).
+- `url` (string, required) — URL that receives the events: `https` for a new or changed URL (a URL stored before keeps working). Its host must resolve to a public address; private, loopback, link-local and other reserved addresses are refused with `400`. Deliveries don't follow redirects: a `3xx` answer counts as a failed delivery.
 - `email` (string, required) — Contact email for delivery-failure notices.
 - `events` (array, required) — Event types to deliver (see `GET /v1/webhooks/event-types`).
 - `name` (string) — Label to tell endpoints apart.
@@ -7723,7 +8864,7 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-16",
+    "url": "https://example.com/example-url-19",
     "email": "user12@example.com",
     "events": [
         "document_ready",
@@ -7743,15 +8884,18 @@ Example:
 {
     "data": {
         "secret": "example_secret",
-        "id": "example_id_37",
+        "resource": "activity_event_subscription",
+        "id": "example_id_41",
         "name": "ERP",
-        "url": "https://example.com/example-url-16",
+        "url": "https://example.com/example-url-19",
         "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
         ],
         "is_active": true,
+        "is_held": false,
+        "held_since": null,
         "signing_enabled": true,
         "created_at": "2026-10-01T12:00:00Z",
         "updated_at": "2026-10-01T12:00:00Z"
@@ -7890,15 +9034,18 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 ```json
 {
     "data": {
-        "id": "example_id_37",
+        "resource": "activity_event_subscription",
+        "id": "example_id_41",
         "name": "ERP",
-        "url": "https://example.com/example-url-16",
+        "url": "https://example.com/example-url-19",
         "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
         ],
         "is_active": true,
+        "is_held": false,
+        "held_since": null,
         "signing_enabled": true,
         "created_at": "2026-10-01T12:00:00Z",
         "updated_at": "2026-10-01T12:00:00Z"
@@ -7942,7 +9089,7 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 
 `PUT /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}`
 
-Change a webhook endpoint. Only the fields sent are updated; `url` cannot be one another endpoint of the workspace already uses (`400`). Setting `signing_enabled` to `true` generates a secret if the endpoint has none and keeps the current one otherwise; setting it to `false` discards the secret. Requires the `webhooks:write` OAuth scope.
+Change a webhook endpoint. Only the fields sent are updated; `url` cannot be one another endpoint of the workspace already uses, nor point to a private or reserved address (`400`). Setting `signing_enabled` to `true` generates a secret if the endpoint has none and keeps the current one otherwise; setting it to `false` discards the secret. When this request turns signing on, the new secret is returned once, as `secret` in this response, as on create; otherwise `secret` is absent. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7968,7 +9115,7 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-16",
+    "url": "https://example.com/example-url-19",
     "email": "user12@example.com",
     "events": [
         "document_ready"
@@ -7986,15 +9133,19 @@ Example:
 ```json
 {
     "data": {
-        "id": "example_id_37",
+        "secret": "example_secret",
+        "resource": "activity_event_subscription",
+        "id": "example_id_41",
         "name": "ERP",
-        "url": "https://example.com/example-url-16",
+        "url": "https://example.com/example-url-19",
         "email": "user12@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
         ],
         "is_active": true,
+        "is_held": false,
+        "held_since": null,
         "signing_enabled": true,
         "created_at": "2026-10-01T12:00:00Z",
         "updated_at": "2026-10-01T12:00:00Z"
@@ -8105,7 +9256,7 @@ Stop delivering events to an endpoint and free its slot. Requires the `webhooks:
 
 `GET /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`
 
-Return the secret used to sign deliveries to this endpoint (see **Webhook Payloads → Verifying signatures**). Returns `400` when signing is disabled. Not available to OAuth applications, which receive the secret in the **Create webhook endpoint** response instead.
+Return the secret used to sign deliveries to this endpoint (see **Webhook Payloads → Verifying signatures**). Returns `400` when signing is disabled. Not available to OAuth applications: they receive a secret only when one is generated, in the **Create webhook endpoint** or **Update webhook endpoint** response (when that request turns signing on) or from **Rotate webhook endpoint signing secret**.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -8174,7 +9325,7 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 
 `POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`
 
-Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Not available to OAuth applications, which delete the endpoint and create a new one instead.
+Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 

@@ -1,5 +1,6 @@
 import { Command, Option } from '@commander-js/extra-typings';
 import type { ILoginResponse } from '../api';
+import { CliError } from '../lib/errors';
 import { printData, printSuccess } from '../lib/output';
 import { confirmDestructive, promptSecret } from '../lib/prompts';
 import { runWithClient, runWithPublicClient } from '../lib/run';
@@ -49,6 +50,7 @@ const loginCommand = new Command('login')
 					client.auth.verifyMfa({ mfa_token: mfaToken, code }),
 				);
 			}
+			if (!result.access_token) throw new CliError('Login did not return an access token.');
 			printSession(result, config);
 		});
 	});

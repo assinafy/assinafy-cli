@@ -1,6 +1,6 @@
 {
 	"name": "@assinafy/cli",
-	"version": "2.6.1",
+	"version": "2.7.0",
 	"description": "The official command-line interface for the Assinafy digital-signature API",
 	"license": "MIT",
 	"type": "module",
@@ -86,7 +86,7 @@
 		"tsup": "^8.3.5",
 		"tsx": "^4.23.12",
 		"typescript": "^7.0.2",
-		"vitest": "^4.1.11"
+		"vitest": "^4.1.12"
 	},
 	"overrides": {
 		"esbuild": "^0.28.2"

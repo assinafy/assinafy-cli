@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { assignmentsCommand } from './commands/assignments';
 import { authCommand } from './commands/auth';
 import { configCommand } from './commands/config/index';
+import { contractsCommand } from './commands/contracts';
 import { docsCommand } from './commands/docs';
 import { documentsCommand } from './commands/documents';
 import { fieldsCommand } from './commands/fields';
@@ -59,6 +60,7 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	.addCommand(sendCommand)
 	// Core resources
 	.addCommand(documentsCommand)
+	.addCommand(contractsCommand)
 	.addCommand(signersCommand)
 	.addCommand(assignmentsCommand)
 	.addCommand(templatesCommand)

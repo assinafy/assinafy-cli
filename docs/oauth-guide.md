@@ -4,7 +4,7 @@ Assinafy uses OAuth 2.1 authorization code with mandatory S256 PKCE for public a
 
 Use a separate connection for each customer workspace. An OAuth access token carries the consenting user's permissions, the granted scopes, and exactly one workspace. It never grants billing, workspace creation/deletion, API-key management, or other platform administration. An API key remains available for direct owner integrations. Signer access codes remain a separate authentication mechanism.
 
-Use `oauth.userinfo()` for the consenting user's profile. Production rejects OAuth application tokens for `users.self`, user statistics and notification preferences, workspace statistics, and API-key lookup. These operations require the owner or first-party credential supported by their endpoint. Per the live OAuth guide, `documents:read` covers webhook event types, webhook delivery history and the WhatsApp notifications sent for an assignment, and `account:read` covers reading the workspace's webhook subscription. Requesting additional OAuth scopes does not grant access to them.
+Use `oauth.userinfo()` for the consenting user's profile. Production rejects OAuth application tokens for `users.self`, user statistics and notification preferences, and API-key lookup. These operations require the owner or first-party credential supported by their endpoint. Per the live OAuth guide, `documents:read` covers webhook event types, webhook delivery history and the WhatsApp notifications sent for an assignment, and `account:read` covers workspace KPIs and reading the workspace's webhook subscription and endpoints. `webhooks:write` permits endpoint management, enabling signing, secret rotation and delivery retries; reading an existing secret remains unavailable. Additional scopes do not grant access to restricted user or administrative operations.
 
 ## Register the application
 
@@ -29,12 +29,12 @@ The resource indicator is an origin, distinct from the SDK `baseUrl`, which incl
 
 | Scope | Purpose |
 | --- | --- |
-| `documents:read` | Read documents and signing state. |
-| `documents:write` | Upload and manage documents and request signatures. |
+| `documents:read` | Read documents, signing state and contract tracking. |
+| `documents:write` | Upload/manage documents, request signatures and write contract terms. |
 | `templates:read` | Read templates. |
 | `templates:write` | Permitted template operations. |
-| `account:read` | Read the selected workspace. |
-| `webhooks:write` | Change webhook delivery and deactivate the subscription. Requested by `oauth connect` by default. |
+| `account:read` | Read the selected workspace, KPIs, webhook subscription and endpoints. |
+| `webhooks:write` | Manage endpoints, delivery, signing enablement, secret rotation and retries. Requested by `oauth connect` by default. |
 | `openid` | Request OpenID Connect identity and UserInfo. |
 | `profile` | Include permitted profile claims. |
 | `email` | Include permitted email claims. |

@@ -171,6 +171,17 @@ export function requireIso8601(value: string, name = 'timestamp'): string {
 	return value;
 }
 
+/** Validate a date, offsetless UTC time, or offset-qualified expiration without rewriting it. */
+export function requireExpiration(value: string, name = 'expires_at'): string {
+	const timestamp = /^\d{4}-\d{2}-\d{2}$/.test(value)
+		? `${value}T23:59:00Z`
+		: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)
+			? `${value}Z`
+			: value;
+	requireIso8601(timestamp, name);
+	return value;
+}
+
 /** Reject an invalid email before it reaches an API request body or query. */
 export function requireEmail(value: string | null | undefined): string {
 	if (!value || !EMAIL_RE.test(value)) {
@@ -238,7 +249,7 @@ export function validateDigitalCertificateMethod(
 	}
 }
 
-/** Validate the sequencing rules for assignments and template-document signers. */
+/** Validate the sequencing rules for assignment signers. */
 export function validateSigningSteps(
 	signers: readonly { verification_method?: unknown; step?: unknown }[],
 ): void {

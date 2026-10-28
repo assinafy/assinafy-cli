@@ -1,6 +1,6 @@
 # TypeScript SDK reference
 
-The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 24 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; operations with empty result data resolve to `IEmptyResult` (`unknown[]`). Responses without `data` remain unchanged, including direct `IStatusResponse` (`{ status, message }`) bodies. `sendToken` resolves to `{ document, channel, recipient }`.
+The Node.js SDK is published with the CLI and requires Node.js `>=22.12.0` (Node.js 26 LTS is recommended). Responses containing Assinafy's `{ status, message, data }` envelope resolve to `data`; operations with empty result data resolve to `IEmptyResult` (`unknown[]`). Responses without `data` remain unchanged, including direct `IStatusResponse` (`{ status, message }`) bodies. `sendToken` resolves to `{ document, channel, recipient }`.
 
 The [API request/response reference](./api-reference.md) is the canonical source for every published HTTP payload and example. Complete TypeScript declarations are exported and packaged with `@assinafy/cli/api`.
 
@@ -121,7 +121,7 @@ try {
 | `download(documentId, artifactName?)` | [`GET /documents/{documentId}/download/{artifact}`](./api-reference.md#download-document-artifact) | `Buffer` |
 | `thumbnail(documentId)` | [`GET /documents/{documentId}/thumbnail`](./api-reference.md#download-document-thumbnail) | JPEG `Buffer` |
 | `downloadPage(documentId, pageId)` | [`GET /documents/{documentId}/pages/{pageId}/download`](./api-reference.md#download-document-page) | JPEG `Buffer` |
-| `activities(documentId)` | [`GET /documents/{documentId}/activities`](./api-reference.md#list-document-activities) | `IDocumentActivity[]` |
+| `activities(documentId, params?)` | [`GET /documents/{documentId}/activities`](./api-reference.md#list-document-activities) | `IDocumentActivity[]` |
 | `delete(documentId)` | [`DELETE /documents/{documentId}`](./api-reference.md#delete-document) | `IEmptyResult` (`unknown[]`) |
 | `listTags(documentId, accountId?)` | [`GET /accounts/{accountId}/documents/{documentId}/tags`](./api-reference.md#list-document-tags) | `ITag[]` |
 | `replaceTags(documentId, tags, accountId?)` | [`PUT /accounts/{accountId}/documents/{documentId}/tags`](./api-reference.md#replace-document-tags) | `ITag[]` |
@@ -152,13 +152,150 @@ interface IDocumentUploadOptions {
 
 Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. `sendToken(documentId, 'signer@example.com')` emails a one-time access token to a signer who has not signed a pending document yet and sends `{ "channel": "email", "recipient": "signer@example.com" }`. Only the `email` channel is accepted; any other channel is rejected locally. The `{ email }` overload sends the same body.
 
-Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id, verification_method?, notification_methods?, step? }`; each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations. A template with placed signer fields creates a `collect` assignment, so it cannot use a `DigitalCertificate` signer. For certificate-bearing template create and estimate calls, the SDK reads the template details first and rejects placed fields with `ValidationError.errors.code` set to `digital_certificate_requires_virtual`.
+Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id?, email?, name?, whatsapp_phone_number?, verification_method?, notification_methods?, step? }`; supply an existing ID or an email for creation/reuse (an ID takes precedence); each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations. A template with placed signer fields creates a `collect` assignment, so it cannot use a `DigitalCertificate` signer. For certificate-bearing template create and estimate calls, the SDK reads the template details first and rejects placed Signer-role fields with `ValidationError.errors.code` set to `digital_certificate_requires_virtual`.
 
 Document list params are `{ page?, per_page?, status?, method?, tags?, search?, sort? }`; search params omit `method`/`tags`. Supported sort values are `name`, `-name`, `updated_at`, and `-updated_at`.
 
 In production, `replaceTags` and `addTags` accept tag names, reuse matching tags, and create missing names. Use `replaceTags(documentId, ['Contracts'])` or `addTags(documentId, ['Contracts'])`; an empty replacement removes all associations. Values are sent unchanged. Pass the tag ID from `listTags` to `detachTag`. Document-list tag filters also use IDs.
 
+Activity queries use `IDocumentActivityListParams`: `{ page?, per_page?, 'per-page'?, sort?: 'id' | '-id' }`; the default is 20 records per page, newest first. Page until an empty array to read the complete history. Expirations accept `YYYY-MM-DD` (23:59 UTC), an offsetless datetime (UTC), or an RFC 3339 timestamp; values are forwarded unchanged. Template signing steps apply to Signer roles; CopyReceiver steps are ignored. Editor fields do not force a certificate template into collect signing. Template creation/estimation forwards role-specific verification, notification and step settings to the API, which ignores them for CopyReceiver roles. The SDK validates descriptor identity locally without fetching roles solely for validation.
+
 Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline tags, assignment/signing state, decline state, and creation/update timestamps. `IPublicDocumentInfo` models the complete published public-document payload while retaining the older optional `page_count` and `created_by` fields.
+
+## Contracts (`client.contracts`)
+
+Contract tracking (CLM / Gestão de Contratos) records terms on an existing document. It does not upload a document or request signatures. Writes require a plan with contract tracking; reads remain available when the plan lapses. OAuth uses `documents:read` for reads and `documents:write` for writes.
+
+| SDK method | HTTP operation | Resolves to |
+| --- | --- | --- |
+| `list(params?, accountId?)` | [`GET /accounts/{accountId}/contracts`](./api-reference.md#list-contracts) | `PaginatedResult<IContract>` |
+| `get(documentId, accountId?)` | [`GET /accounts/{accountId}/documents/{documentId}/contract`](./api-reference.md#get-a-documents-contract-terms) | `IContract \| IContractAmendment` |
+| `set(documentId, payload, accountId?)` | [`PUT /accounts/{accountId}/documents/{documentId}/contract`](./api-reference.md#set-a-documents-contract-terms) | `IContract \| IContractAmendment` |
+| `related(documentId, accountId?)` | [`GET …/contract/related`](./api-reference.md#list-the-contracts-related-to-a-document) | `IContract`, including `amendments` |
+| `renew(documentId, payload, accountId?)` | [`POST …/contract/renew`](./api-reference.md#renew-a-contract) | `IContract` |
+| `terminate(documentId, payload?, accountId?)` | [`POST …/contract/terminate`](./api-reference.md#terminate-a-contract) | `IContract` |
+
+`IContractListParams` accepts `{ page?, per_page?, 'per-page'?, status?, counterparty?, search?, end_date_from?, end_date_to?, ending_within_days?, external_system?, external_id?, sort?, expand? }`. Status is `draft`, `active`, `expired` or `terminated`, supplied singly, as a comma-separated string, or an array. `sort` is `end_date`, `-end_date`, `updated_at` or `-updated_at` (the default). `expand: 'document'` embeds the document. Date filters use `YYYY-MM-DD`; `ending_within_days` is an integer from 0 to 3650 and includes today in Brasília when zero. External reference IDs are forwarded unchanged. Results use the shared `{ data, meta? }` pagination contract.
+
+The complete `ISetContractPayload` is:
+
+```ts
+{
+  status?: 'draft' | 'active' | 'expired' | 'terminated';
+  counterparty_name?: string | null;
+  counterparty_taxpayer_id?: string | null;
+  value?: number | null;
+  currency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  auto_renew?: boolean | null;
+  renewal_term_months?: number | null;
+  notice_period_days?: number | null;
+  owner_id?: string | null;
+  metadata?: Record<string, string> | null;
+  external_references?: Array<{ system: string; id: string }> | null;
+  parent_document_id?: string | null;
+  relation_type?: 'amendment' | 'renewal' | 'termination';
+  updated_at?: string | null;
+}
+```
+
+Send at least one attribute. Omitted fields stay unchanged. `null` clears a root term, except `auto_renew` resets to false and `currency` returns to BRL while a value exists; status cannot be null. Sending `external_references` replaces the entire list; `[]` or `null` clears it. An amount is from 0 to 9999999999999.99 with at most two decimal places; currency is three letters. Stored dates start at year 1000 and the end cannot precede the start. Renewal terms are 1–600 months (12 when unset), notice periods 0–3650 days. Metadata accepts up to 50 keys of 1–40 letters, digits, `_`, `-` or `.`, each with plain text up to 500 characters. External references allow up to 20 `{ system, id }` entries, with a 1–64-character system using those same characters and a nonempty ID up to 255 characters without four-byte characters. CPF/CNPJ and workspace membership are validated by the API; the SDK forwards their values unchanged.
+
+Create a draft, then activate it when its terms should enter the hourly lifecycle:
+
+```ts
+const uploaded = await client.documents.upload({ filePath: './contract.pdf' });
+// Persist uploaded.id before setting terms; it remains valid if the next call fails.
+const terms = await client.contracts.set(uploaded.id, {
+  status: 'draft',
+  counterparty_name: 'Example Company',
+  value: 1200.50,
+  currency: 'BRL',
+  start_date: '2027-01-01',
+  end_date: '2027-12-31',
+  auto_renew: false,
+  renewal_term_months: 12,
+  notice_period_days: 30,
+  metadata: { crm_stage: 'won' },
+  external_references: [{ system: 'erp', id: 'example-contract' }],
+});
+await client.contracts.set(uploaded.id, { status: 'active', updated_at: terms.updated_at });
+```
+
+The unwrapped root response (`IContract`) is:
+
+```json
+{
+  "resource": "document_contract",
+  "document_id": "example-document",
+  "status": "active",
+  "counterparty_name": "Example Company",
+  "counterparty_taxpayer_id": null,
+  "value": 1200.5,
+  "currency": "BRL",
+  "start_date": "2027-01-01",
+  "end_date": "2027-12-31",
+  "auto_renew": false,
+  "renewal_term_months": 12,
+  "notice_period_days": 30,
+  "term": 1,
+  "owner_id": null,
+  "metadata": { "crm_stage": "won" },
+  "external_references": [{ "system": "erp", "id": "example-contract" }],
+  "amendments": [],
+  "created_at": "2026-10-23T12:00:00Z",
+  "updated_at": "2026-10-23T12:00:00Z"
+}
+```
+
+`document` is optional and uses `IDocumentListItem`; `amendments` is returned on root/family reads. `resource` may be omitted in lists or embedded objects. Owner document details expose `has_contract?: boolean`; absence means unknown, not false. Missing terms produce `ApiError` 404; `responseData.code: 'NoContractTerms'` distinguishes them from a missing document.
+
+For a signed instrument, upload a separate document and set its link:
+
+```ts
+await client.contracts.set('example-amendment', {
+  parent_document_id: 'example-document',
+  relation_type: 'amendment',
+  value: 1500,
+  end_date: '2028-12-31',
+});
+const family = await client.contracts.related('example-amendment');
+```
+
+`get` and `set` on an instrument return `IContractAmendment`:
+
+```json
+{
+  "resource": "document_contract_amendment",
+  "document_id": "example-amendment",
+  "document_name": "Example amendment.pdf",
+  "parent_document_id": "example-document",
+  "relation_type": "amendment",
+  "number": null,
+  "status": "pending",
+  "document_status": "metadata_ready",
+  "apply_error": null,
+  "currency": "BRL",
+  "terms": { "value": 1500, "end_date": "2028-12-31" },
+  "changes": {
+    "value": { "from": 1200.5, "to": 1500 },
+    "end_date": { "from": "2027-12-31", "to": "2028-12-31" },
+    "term": { "from": 1, "to": 2 }
+  },
+  "applied_at": null,
+  "created_at": "2026-10-23T12:00:00Z",
+  "updated_at": "2026-10-23T12:00:00Z"
+}
+```
+
+Use `'parent_document_id' in result` to distinguish an instrument from root terms. A link may target any document in the family; the API resolves the root. `amendment` changes value, currency, start/end dates, renewal settings, counterparty and metadata; `renewal` changes only end date/value, and `termination` only end date. Pending updates merge into `terms`, where null removes a proposed change. `parent_document_id: null` unlinks a pending instrument. Once certificated, instruments apply in signing order; `status` becomes `applied`, `number` is assigned, `applied_at` is set, and the recorded changes become read-only. Inspect `apply_error` when an instrument remains pending. `terms` and `changes` can be null.
+
+Renewal input (`IRenewContractPayload`) is `{ term?: number; end_date?: string | null; value?: number | null; updated_at?: string | null }`. Supply the current `term` or an explicit later end date. An omitted/empty/null end date uses the configured renewal period and requires `term`. A null value clears the amount. Renewal advances `term`, can reopen expired terms, and rejects terminated contracts. A repeat cannot silently renew twice: a stale term/date yields 400, or a stale timestamp yields 409. The SDK never retries writes automatically.
+
+Termination input (`ITerminateContractPayload`) is `{ reason?: string | null; updated_at?: string | null }`; the default is `{}`. The reason allows up to 500 Unicode characters and is stored in the event. The response is the complete root contract with status `terminated`. For either write, send the `updated_at` from the latest read; on `409 ContractChanged`, re-read and decide whether the change still applies. On an ambiguous network error, inspect current terms before repeating anything.
+
+The hourly lifecycle uses Brasília calendar days: notice-period alerts, warnings 45/30 days before expiry, then renewal or expiry the day after the end date. Owner notification preferences include `ContractRenewalNotice`, `ContractExpiring`, `ContractExpired` and `ContractRenewed`. Contract activities include `document_contract_updated`, `document_contract_amendment_updated`, `document_contract_amended`, `document_contract_renewal_notice`, `document_contract_expiring`, `document_contract_expired`, `document_contract_renewed` and `document_contract_terminated`. Subscribe explicitly to the event types needed; webhook defaults do not add these events. Reconcile missed events by paging `list({ sort: '-updated_at' })` until older than the last sync, and page `documents.activities(documentId, { page, sort: 'id' })` for history. A lapsed plan pauses lifecycle changes and pending amendments; restoration catches up without sending alerts whose windows have passed.
 
 ## Assignments (`client.assignments`)
 
@@ -167,7 +304,7 @@ Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline ta
 | `list(params?, accountId?)` | [`GET /assignments?accountId=…`](./api-reference.md#list-assignments) | `PaginatedResult<IAssignment>` |
 | `create(documentId, payload)` | [`POST /documents/{documentId}/assignments`](./api-reference.md#create-assignment-request-signatures) | `IAssignment` |
 | `estimateCost(documentId, payload)` | [`POST /documents/{documentId}/assignments/estimate-cost`](./api-reference.md#estimate-assignment-cost) | `IEstimateCostResponse` |
-| `resetExpiration(documentId, assignmentId, expiresAt)` | [`PUT …/reset-expiration`](./api-reference.md#reset-assignment-expiration) | `IAssignment`; the published API accepts an ISO 8601 timestamp, and deployments that support clearing also accept `null` |
+| `resetExpiration(documentId, assignmentId, expiresAt)` | [`PUT …/reset-expiration`](./api-reference.md#reset-assignment-expiration) | `IAssignment`; accepts a date, datetime or `null` to clear the deadline |
 | `resendNotification(documentId, assignmentId, signerId)` | [`PUT …/signers/{signerId}/resend`](./api-reference.md#resend-signature-request) | `IResendEmailResponse` |
 | `estimateResendCost(documentId, assignmentId, signerId)` | [`POST …/estimate-resend-cost`](./api-reference.md#estimate-resend-cost) | `IResendCostEstimate` |
 | `listWhatsAppNotifications(documentId, assignmentId)` | [`GET …/whatsapp-notifications`](./api-reference.md#list-whatsapp-notifications) | `IWhatsAppNotification[]` |
@@ -211,7 +348,7 @@ Production defaults `notification_methods: []` to `['Email']` and sends an invit
 }
 ```
 
-`IResendCostEstimate` also accepts the published `IEstimateCostResponse` shape. Check `'total' in estimate` to select the production shape; use its `has_sufficient_credits` before resending. The published shape uses `total_credits` and `has_sufficient_resources`.
+`credit_balance` can be null for unlimited plans. `IResendCostEstimate` also accepts the published `IEstimateCostResponse` shape. Check `'total' in estimate` to select the production shape; use its `has_sufficient_credits` before resending. The published shape uses `total_credits` and `has_sufficient_resources`.
 
 ## Signers (`client.signers`)
 
@@ -436,6 +573,8 @@ assinafy documents download example_document --artifact pades -o signed-pades.pd
 
 Create/update payloads use `name` and `notification_sender_type?: 'User' | 'Account'`; legacy color fields remain accepted for compatibility. List/detail responses include `resource`, `id`, `name`, nullable colors, `notification_sender_type`, roles, delete permission, and `created_at`. `IAccountTheme` is `{ account_name; primary_color; secondary_color: string | null; logo: string | null }`. Logo options are `{ fileName?, contentType? }`. Statistics params are `{ granularity?: 'monthly' | 'daily'; month?: 'YYYY-MM' }`; `month` is required for daily data.
 
+OAuth `account:read` permits workspace statistics; user statistics still require an endpoint-supported owner or first-party credential.
+
 Both account and user statistics resolve to the complete published row:
 
 ```ts
@@ -474,7 +613,7 @@ Notification counters can overlap when a request uses multiple delivery channels
 
 | SDK method | HTTP operation | Request / result |
 | --- | --- | --- |
-| `login(email, password)` | [`POST /login`](./api-reference.md#login) | `{ email, password }` → `ILoginResponse` |
+| `login(email, password)` | [`POST /login`](./api-reference.md#login) | `{ email, password }` → `ILoginResponse \| IMfaChallengeResponse` |
 | `socialLogin({ provider, token, has_accepted_terms })` | [`POST /authentication/social-login`](./api-reference.md#social-login) | Google token → `ILoginResponse` |
 | `linkSocialLogin({ provider, token })` | [`POST /auth/link-social-login`](./api-reference.md#link-social-login) | Google token → `IStatusResponse` |
 | `changePassword({ email, password, new_password })` | [`PUT /authentication/change-password`](./api-reference.md#change-password) | `{ email }` |
@@ -492,7 +631,7 @@ Notification counters can overlap when a request uses multiple delivery channels
 
 ### Two-factor authentication
 
-When the user has a confirmed authenticator, `login` returns an `mfa_token` challenge instead of a session. Exchange it within 5 minutes, once, with a 6-digit authenticator code or a recovery code:
+When the user has a confirmed authenticator, `login` returns `IMfaChallengeResponse` (`{ mfa_token: string }`) instead of `ILoginResponse` (`{ access_token, user, accounts }`). The challenge has no session fields; narrow the result before reading them. Exchange it within 5 minutes, once, with a 6-digit authenticator code or a recovery code:
 
 ```ts
 let session = await client.auth.login('user@example.com', password);
@@ -601,7 +740,7 @@ An account can register 1 webhook endpoint, or up to 3 on paid plans. Each endpo
 | `listEndpoints(accountId?, params?)` | [`GET /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#list-webhook-endpoints), with optional `{ url: string }` exact-match filter | `IWebhookEndpoint[]`, oldest first |
 | `createEndpoint(payload, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints`](./api-reference.md#create-webhook-endpoint) | `IWebhookEndpointCreatePayload` → `IWebhookEndpointCreateResponse` (endpoint plus optional `secret`) |
 | `getEndpoint(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#get-webhook-endpoint) | `IWebhookEndpoint` |
-| `updateEndpoint(endpointId, payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#update-webhook-endpoint) | `IWebhookEndpointUpdatePayload` → `IWebhookEndpoint` |
+| `updateEndpoint(endpointId, payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#update-webhook-endpoint) | `IWebhookEndpointUpdatePayload` → `IWebhookEndpointUpdateResponse` |
 | `deleteEndpoint(endpointId, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#delete-webhook-endpoint) | `IEmptyResult` (`[]`) |
 | `deleteEndpointByUrl(url, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints?url=…`](./api-reference.md#delete-webhook-endpoint-by-url) | `IEmptyResult` (`[]`); exact registered URL required |
 | `getEndpointSecret(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`](./api-reference.md#get-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` (`{ secret }`) |
@@ -613,7 +752,7 @@ An account can register 1 webhook endpoint, or up to 3 on paid plans. Each endpo
 | `listDispatches(params?, accountId?)` | [`GET /accounts/{accountId}/webhooks`](./api-reference.md#list-webhook-deliveries) | `PaginatedResult<IWebhookDispatch>` |
 | `retryDispatch(dispatchId, accountId?)` | [`POST /accounts/{accountId}/webhooks/{dispatchId}/retry`](./api-reference.md#retry-webhook-delivery) | `IWebhookDispatch` |
 
-Endpoint payload: `{ url: string; email: string; events?: string[]; name?: string; is_active?: boolean; signing_enabled?: boolean }`. Update sends only the given fields and requires at least one. URLs must be HTTP(S) and unique within the workspace (`400`); creating past the plan limit returns `403`. Enabling signing creates a `whsec_` secret if none exists; disabling it discards the secret. Secret read and rotation return `400` when signing is disabled and are not available to OAuth applications; rotation invalidates the previous secret immediately.
+Endpoint payload: `{ url: string; email: string; events?: string[]; name?: string; is_active?: boolean; signing_enabled?: boolean }`. Update sends only the given fields and requires at least one. New or changed URLs must be HTTPS and unique within the workspace (`400`); legacy HTTP URLs remain usable for exact lookup/deletion; creating past the plan limit returns `403`. Enabling signing creates a `whsec_` secret if none exists; disabling it discards the secret. Secret read and rotation return `400` when signing is disabled. OAuth applications cannot read an existing secret, but `webhooks:write` permits rotation; rotation invalidates the previous secret immediately.
 
 ```ts
 const endpoint = await client.webhooks.createEndpoint({
@@ -627,11 +766,13 @@ const { secret } = endpoint;
 // Store `secret` in your receiver's secret manager.
 ```
 
-When signing is enabled, endpoint creation returns `secret` once, including to OAuth applications. List/get responses omit it. OAuth applications cannot read or rotate it later: if lost, delete and recreate the endpoint. The CLI prints the creation secret in human and JSON output; store that output securely. `webhooks endpoints list --url <url>` and `delete-by-url --url <url> [--yes]` match the exact registered URL, including its query string. Deletion returns 404 if no endpoint matches. Existing endpoint-ID and subscription methods remain supported.
+When signing is enabled, endpoint creation returns `secret` once, including to OAuth applications. Enabling signing on an existing endpoint also returns its new secret once (`IWebhookEndpointUpdateResponse`); list/get responses omit it. OAuth applications can rotate a lost secret with `webhooks:write`. The CLI prints returned secrets in human and JSON output; store that output securely. `webhooks endpoints list --url <url>` and `delete-by-url --url <url> [--yes]` match the exact registered URL, including its query string. Deletion returns 404 if no endpoint matches. Existing endpoint-ID and subscription methods remain supported.
 
 Registration payload: `{ url: string; email: string; events?: string[]; is_active?: boolean }`. When `events` is omitted on `register` or `createEndpoint`, the SDK uses `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`; pass `[]` deliberately for none. Dispatch filters extend pagination with `{ endpoint_id?, event?, delivered?, from?, to?, sort?: 'created_at' | '-created_at' }`; sort is a compatibility extension. Dispatch records include `endpoint_id`. Dispatch `search` is unsupported and rejected locally. Retrying re-sends only to that entry's endpoint and requires the endpoint to be active. There is no delete-subscription operation; delete a specific endpoint with `deleteEndpoint` or deactivate the oldest with `inactivate`.
 
 Decline operations require a non-empty reason of at most 2,000 Unicode characters. `signers.findByEmail` follows pagination metadata until an exact case-insensitive email match is found or the search is exhausted; when a response carries no pagination metadata a partial page ends the search, and the scan is bounded at 100 pages.
+
+Biometric identity status can be read with OAuth `documents:read`. Evidence downloads and review decisions are unavailable to OAuth applications; use the supported owner credential for those operations. CLI downloads create and replace files with owner-only POSIX permissions (`0600`).
 
 ## Responses, pagination, errors, and binary data
 
@@ -654,7 +795,7 @@ try {
 
 ## Webhook verification
 
-Deliveries are `POST` requests with `Content-Type: application/json`, a `webhook-id` (stable across retries of the same event to the same endpoint; use it to deduplicate), a `webhook-timestamp` (Unix seconds), and, when the endpoint has `signing_enabled`, a `webhook-signature` following [Standard Webhooks](https://www.standardwebhooks.com). Any `2xx` is success; a failed delivery is retried once after 3 seconds. After 10 consecutive failed events the endpoint's delivery is paused and probed until one succeeds; use `retryDispatch` to force redelivery.
+Deliveries are `POST` requests with `Content-Type: application/json`, a `webhook-id` (stable across retries of the same event to the same endpoint; use it to deduplicate), a `webhook-timestamp` (Unix seconds), and, when the endpoint has `signing_enabled`, a `webhook-signature` following [Standard Webhooks](https://www.standardwebhooks.com). Any `2xx` is success. Connection failures, timeouts, `408`, `429` and `5xx` are retried up to six total attempts, about ten minutes apart; other statuses are final. Ten consecutive failed deliveries pause the endpoint. Probes run after 3, 15 and 60 minutes, then every six hours; a successful probe resumes missed events oldest first. Editing the URL or setting `is_active: true` also clears the pause. `retryDispatch` sends a manual attempt even while paused. `IWebhookEndpoint` and `IWebhookSubscription` expose `is_held`/`held_since`; dispatches include `webhook_id`, `attempt`, `kind` and `will_retry`. Delivery history is kept for seven days.
 
 | API | Result |
 | --- | --- |
@@ -686,7 +827,7 @@ Verify the raw bytes before parsing; re-serialized JSON does not match. The enve
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 112 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
-- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 112 OpenAPI operations; the API manifest contains only published paths.
+- Production OpenAPI currently publishes 118 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 118 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above. Both `sendToken` call forms send the email-only production body.
 - Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.

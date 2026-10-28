@@ -1,5 +1,6 @@
 import { Command, Option } from '@commander-js/extra-typings';
 import type {
+	IDocumentActivityListParams,
 	IDocumentListParams,
 	IDocumentListResponse,
 	IDocumentSearchParams,
@@ -13,7 +14,7 @@ import { requireAccountId } from '../lib/client';
 import { CliError, errorMessage } from '../lib/errors';
 import { defaultArtifactFilename, saveDownload } from '../lib/files';
 import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
-import { addDownloadOptions, addListOptions } from '../lib/options';
+import { addDownloadOptions, addListOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
 import { confirmDestructive } from '../lib/prompts';
@@ -207,23 +208,25 @@ const downloadPageCommand = addDownloadOptions(
 	});
 });
 
-const activitiesCommand = new Command('activities')
-	.description('Show the activity log for a document')
-	.argument('<id>', 'Document ID')
-	.action(async (id, _opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const activities = await withSpinner('Fetching activities', config, () =>
-				client.documents.activities(id),
-			);
-			printData(activities, config, (rows) =>
-				renderTable(rows, [
-					{ header: 'EVENT', value: (r) => r.event },
-					{ header: 'MESSAGE', value: (r) => r.message },
-					{ header: 'WHEN', value: (r) => r.created_at },
-				]),
-			);
-		});
+const activitiesCommand = addSortableListOptions(
+	new Command('activities')
+		.description('Show one page of the activity log for a document')
+		.argument('<id>', 'Document ID'),
+	'Sort by id or -id (default: -id, newest first)',
+).action(async (id, opts, command) => {
+	await runWithClient(command, async ({ client, config }) => {
+		const activities = await withSpinner('Fetching activities', config, () =>
+			client.documents.activities(id, listParams(opts) as IDocumentActivityListParams),
+		);
+		printData(activities, config, (rows) =>
+			renderTable(rows, [
+				{ header: 'EVENT', value: (r) => r.event },
+				{ header: 'MESSAGE', value: (r) => r.message },
+				{ header: 'WHEN', value: (r) => r.created_at },
+			]),
+		);
 	});
+});
 
 const deleteCommand = new Command('delete')
 	.alias('rm')

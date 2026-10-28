@@ -108,8 +108,16 @@ function formMediaType(operation, markdown) {
 // The renderer prints `"type": ["string", "null"]` fields as `Array`; show the union instead.
 function typeUnions(requestBody, markdown) {
 	const unions = new Map();
+	const visited = new Set();
 	const visit = (node) => {
-		if (!node || typeof node !== 'object') return;
+		if (!node || typeof node !== 'object' || visited.has(node)) return;
+		visited.add(node);
+		if (typeof node.$ref === 'string' && node.$ref.startsWith('#/')) {
+			const referenced = decodeURIComponent(node.$ref.slice(2))
+				.split('/')
+				.reduce((value, key) => value?.[key.replaceAll('~1', '/').replaceAll('~0', '~')], spec);
+			visit(referenced);
+		}
 		for (const [name, schema] of Object.entries(node.properties ?? {})) {
 			if (Array.isArray(schema?.type)) unions.set(name, schema.type.join(' | '));
 		}

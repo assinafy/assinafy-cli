@@ -37,6 +37,27 @@ const webhookEndpoint = {
 const mfaVerify = { mfa_token: 'example-mfa-token', code: '123456' };
 const image = Buffer.from('example-image');
 const cases: Case[] = [
+	['GET /v1/accounts/{accountId}/contracts', (c) => c.contracts.list(), undefined, 'list'],
+	['GET /v1/accounts/{accountId}/documents/{documentId}/contract', (c) => c.contracts.get(id)],
+	[
+		'PUT /v1/accounts/{accountId}/documents/{documentId}/contract',
+		(c) => c.contracts.set(id, { value: null }),
+		{ value: null },
+	],
+	[
+		'GET /v1/accounts/{accountId}/documents/{documentId}/contract/related',
+		(c) => c.contracts.related(id),
+	],
+	[
+		'POST /v1/accounts/{accountId}/documents/{documentId}/contract/renew',
+		(c) => c.contracts.renew(id, { term: 1, value: 0 }),
+		{ term: 1, value: 0 },
+	],
+	[
+		'POST /v1/accounts/{accountId}/documents/{documentId}/contract/terminate',
+		(c) => c.contracts.terminate(id, { reason: 'Example' }),
+		{ reason: 'Example' },
+	],
 	['GET /v1/accounts/{accountId}', (c) => c.workspaces.get(id)],
 	[
 		'PUT /v1/accounts/{accountId}',

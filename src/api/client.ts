@@ -2,6 +2,7 @@ import axios, { type AxiosInstance } from 'axios';
 import { PartialWorkflowError, ValidationError } from './errors.js';
 import { AssignmentResource } from './resources/assignments.js';
 import { AuthenticationResource } from './resources/authentication.js';
+import { ContractResource } from './resources/contracts.js';
 import { DocumentResource, type DocumentUploadSource } from './resources/documents.js';
 import { FieldsResource } from './resources/fields.js';
 import { OAuthResource } from './resources/oauth.js';
@@ -25,7 +26,7 @@ import type {
 import {
 	createNoopLogger,
 	normalizeBaseUrl,
-	requireIso8601,
+	requireExpiration,
 	validateSignerOptions,
 	validateSigningSteps,
 } from './utils.js';
@@ -83,6 +84,7 @@ export class AssinafyClient {
 	private readonly webhookSecret: string | undefined;
 
 	public readonly documents: DocumentResource;
+	public readonly contracts: ContractResource;
 	public readonly signers: SignerResource;
 	public readonly workspaces: WorkspaceResource;
 	public readonly assignments: AssignmentResource;
@@ -160,6 +162,7 @@ export class AssinafyClient {
 		});
 
 		this.documents = new DocumentResource(this.axiosInstance, this.defaultAccountId, this.logger);
+		this.contracts = new ContractResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.signers = new SignerResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.workspaces = new WorkspaceResource(this.axiosInstance, undefined, this.logger);
 		this.assignments = new AssignmentResource(
@@ -234,12 +237,11 @@ export class AssinafyClient {
 		if (!Array.isArray(options.signers) || options.signers.length === 0) {
 			throw new ValidationError('At least one signer is required');
 		}
-		if (options.expiresAt !== undefined) requireIso8601(options.expiresAt, 'expiresAt');
+		if (options.expiresAt !== undefined) requireExpiration(options.expiresAt, 'expiresAt');
 		const preparedSigners = options.signers.map((signer) => {
 			if (!signer || typeof signer !== 'object') {
 				throw new ValidationError('Each signer must be an object');
 			}
-			validateSignerOptions(signer);
 			const payload: ICreateSignerPayload = { full_name: signer.name };
 			if (signer.email !== undefined) payload.email = signer.email;
 			const phone = signer.whatsapp_phone_number ?? signer.phone;
@@ -248,7 +250,15 @@ export class AssinafyClient {
 			if (signer.government_id !== undefined) payload.government_id = signer.government_id;
 			if (signer.metadata !== undefined) payload.metadata = signer.metadata;
 			validateCreateSignerPayload(payload);
-			return { signer, payload, phone };
+			const useWhatsapp = phone !== undefined && signer.email === undefined;
+			const reference = {
+				verification_method: signer.verification_method ?? (useWhatsapp ? 'Whatsapp' : undefined),
+				notification_methods:
+					signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
+				step: signer.step,
+			};
+			validateSignerOptions(reference);
+			return { reference, payload };
 		});
 		validateSigningSteps(options.signers);
 
@@ -272,16 +282,12 @@ export class AssinafyClient {
 			}
 
 			const assignmentSigners: SignerReference[] = [];
-			for (const { signer, payload, phone } of preparedSigners) {
+			for (const { reference, payload } of preparedSigners) {
 				const created = await this.signers.create(payload, options.accountId);
 				signerIds.push(created.id);
-				const useWhatsapp = phone !== undefined && signer.email === undefined;
 				assignmentSigners.push({
 					id: created.id,
-					verification_method: signer.verification_method ?? (useWhatsapp ? 'Whatsapp' : undefined),
-					notification_methods:
-						signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
-					step: signer.step,
+					...reference,
 				});
 			}
 

@@ -375,29 +375,6 @@ describe('DocumentResource', () => {
 		await expect(
 			docs.createFromTemplate('template1', [{ role_id: 'role1', id: '' }]),
 		).rejects.toThrow(/valid id/);
-		await expect(
-			docs.createFromTemplate('template1', [
-				{
-					role_id: 'role1',
-					id: 'signer1',
-					notification_methods: ['Email', 'Whatsapp'],
-				},
-			]),
-		).rejects.toThrow(/exactly one method/);
-		await expect(
-			docs.createFromTemplate('template1', [
-				{ role_id: 'role1', id: 'signer1', step: 1 },
-				{ role_id: 'role2', id: 'signer2' },
-			]),
-		).rejects.toThrow(/every signer/);
-		await expect(
-			docs.createFromTemplate('template1', [{ role_id: 'role1', id: 'signer1', step: 0 }]),
-		).rejects.toThrow(/positive integer/);
-		await expect(
-			docs.estimateCostFromTemplate('template1', [
-				{ role_id: 'role1', verification_method: 'SMS' as never },
-			]),
-		).rejects.toThrow(/verification_method/);
 		expect(calls).toHaveLength(1);
 	});
 

@@ -19,7 +19,7 @@ Commands:
   download [options] <id>                        Download a document artifact
   thumbnail [options] <id>                       Download the document thumbnail (JPEG)
   download-page [options] <id> <pageId>          Download a single document page (JPEG)
-  activities <id>                                Show the activity log for a document
+  activities [options] <id>                      Show one page of the activity log for a document
   delete|rm [options] <id>                       Delete a document
   tags <id>                                      List the tags attached to a document
   tags-set <id> [tags...]                        Replace a document tag set by name
@@ -176,13 +176,16 @@ Options:
 ```text
 Usage: assinafy documents activities [options] <id>
 
-Show the activity log for a document
+Show one page of the activity log for a document
 
 Arguments:
-  id          Document ID
+  id              Document ID
 
 Options:
-  -h, --help  display help for command
+  --page <n>      Page number to fetch
+  --per-page <n>  Items per page
+  --sort <field>  Sort by id or -id (default: -id, newest first)
+  -h, --help      display help for command
 ```
 
 ### `assinafy documents delete`

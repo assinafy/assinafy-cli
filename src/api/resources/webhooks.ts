@@ -8,6 +8,7 @@ import type {
 	IWebhookEndpointCreateResponse,
 	IWebhookEndpointSecret,
 	IWebhookEndpointUpdatePayload,
+	IWebhookEndpointUpdateResponse,
 	IWebhookEventTypeInfo,
 	IWebhookRegisterPayload,
 	IWebhookSubscription,
@@ -149,12 +150,13 @@ export class WebhookResource extends BaseResource {
 	 * `PUT /accounts/{accountId}/webhooks/endpoints/{endpointId}` — update only
 	 * the fields sent. Enabling signing creates a secret when none exists;
 	 * disabling it discards the secret.
+	 * Enabling signing returns the new secret once, including to OAuth applications.
 	 */
 	async updateEndpoint(
 		endpointId: string,
 		payload: IWebhookEndpointUpdatePayload,
 		accountId?: string,
-	): Promise<IWebhookEndpoint> {
+	): Promise<IWebhookEndpointUpdateResponse> {
 		const id = this.accountId(accountId);
 		const eid = this.requireId(endpointId, 'Endpoint ID');
 		if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
@@ -199,7 +201,7 @@ export class WebhookResource extends BaseResource {
 
 	/**
 	 * `POST …/endpoints/{endpointId}/secret/rotate` — replace the signing secret.
-	 * The old secret stops working immediately. Not available to OAuth applications.
+	 * The old secret stops working immediately. Requires `webhooks:write` for OAuth.
 	 */
 	async rotateEndpointSecret(
 		endpointId: string,

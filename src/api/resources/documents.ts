@@ -7,6 +7,7 @@ import type {
 	ICreateDocumentFromTemplateOptions,
 	IDetachTagResponse,
 	IDocumentActivity,
+	IDocumentActivityListParams,
 	IDocumentDetailsResponse,
 	IDocumentListItem,
 	IDocumentListParams,
@@ -32,11 +33,9 @@ import {
 	publicRequestConfig,
 	requireDocumentArtifactName,
 	requireEmail,
-	requireIso8601,
+	requireExpiration,
 	requireSort,
 	validateDigitalCertificateMethod,
-	validateSignerOptions,
-	validateSigningSteps,
 } from '../utils.js';
 import { BaseResource } from './base.js';
 
@@ -160,7 +159,7 @@ export class DocumentResource extends BaseResource {
 		const id = this.requireId(documentId, 'Document ID');
 		if (!name?.trim()) throw new ValidationError('name is required');
 		return this.call('Failed to rename document', () =>
-			this.http.patch(`/documents/${id}`, { name }),
+			this.http.patch(`/documents/${id}`, { name }, { params: { expand: 'assignment' } }),
 		);
 	}
 
@@ -265,12 +264,16 @@ export class DocumentResource extends BaseResource {
 		);
 	}
 
-	/** Fetch the document activity log. */
-	async activities(documentId: string): Promise<IDocumentActivity[]> {
+	/** Fetch one page of the document activity log (20 entries by default). */
+	async activities(
+		documentId: string,
+		params: IDocumentActivityListParams = {},
+	): Promise<IDocumentActivity[]> {
 		const id = this.requireId(documentId, 'Document ID');
+		requireSort(params.sort, ['id', '-id']);
 		const result = await this.call<IDocumentActivity[] | null>(
 			'Failed to fetch document activities',
-			() => this.http.get(`/documents/${id}/activities`),
+			() => this.http.get(`/documents/${id}/activities`, { params: cleanParams({ ...params }) }),
 		);
 		return result ?? [];
 	}
@@ -347,8 +350,8 @@ export class DocumentResource extends BaseResource {
 	): Promise<IDocumentDetailsResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
-		validateTemplateSigners(signers, { requireId: true });
-		if (options.expires_at !== undefined) requireIso8601(options.expires_at, 'expires_at');
+		validateTemplateSigners(signers, { requireIdentity: true });
+		if (options.expires_at !== undefined) requireExpiration(options.expires_at);
 		if (
 			options.editor_fields !== undefined &&
 			(!Array.isArray(options.editor_fields) ||
@@ -378,7 +381,7 @@ export class DocumentResource extends BaseResource {
 	): Promise<IEstimateCostResponse> {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
-		validateTemplateSigners(signers, { requireId: false });
+		validateTemplateSigners(signers, { requireIdentity: false });
 		await this.validateCertificateTemplateMethod(tmplId, accId, signers);
 		return this.call('Failed to estimate cost from template', () =>
 			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents/estimate-cost`, { signers }),
@@ -467,18 +470,32 @@ export class DocumentResource extends BaseResource {
 	private async validateCertificateTemplateMethod(
 		templateId: string,
 		accountId: string,
-		signers: readonly { verification_method?: unknown }[],
+		signers: readonly { role_id: string; verification_method?: unknown }[],
 	): Promise<void> {
 		if (!signers.some((signer) => signer.verification_method === 'DigitalCertificate')) return;
 		const template = await this.call<ITemplateDetailsResponse>('Failed to fetch template', () =>
 			this.http.get(`/accounts/${accountId}/templates/${templateId}`),
 		);
-		const method = template.pages?.some((page) => page.fields.length > 0) ? 'collect' : 'virtual';
-		validateDigitalCertificateMethod(method, signers);
+		const nonSignerRoles = new Set(
+			template.roles
+				?.filter(
+					(role) => role.assignment_type === 'Editor' || role.assignment_type === 'CopyReceiver',
+				)
+				.map((role) => role.id),
+		);
+		const method = template.pages?.some((page) =>
+			page.fields.some((field) => !nonSignerRoles.has(field.role_id)),
+		)
+			? 'collect'
+			: 'virtual';
+		validateDigitalCertificateMethod(
+			method,
+			signers.filter((signer) => !nonSignerRoles.has(signer.role_id)),
+		);
 	}
 }
 
-function validateTemplateSigners(signers: unknown, options: { requireId: boolean }): void {
+function validateTemplateSigners(signers: unknown, options: { requireIdentity: boolean }): void {
 	if (!Array.isArray(signers)) throw new ValidationError('signers must be an array');
 	for (const value of signers) {
 		if (!value || typeof value !== 'object') {
@@ -487,27 +504,27 @@ function validateTemplateSigners(signers: unknown, options: { requireId: boolean
 		const signer = value as {
 			role_id?: unknown;
 			id?: unknown;
-			verification_method?: unknown;
-			notification_methods?: unknown;
-			step?: unknown;
+			email?: unknown;
+			name?: unknown;
 		};
 		if (typeof signer.role_id !== 'string' || !signer.role_id) {
 			throw new ValidationError('each template signer requires role_id');
 		}
-		if (
-			(options.requireId || signer.id !== undefined) &&
-			(typeof signer.id !== 'string' || !signer.id)
-		) {
-			throw new ValidationError('each template signer requires a valid id');
-		}
-		validateSignerOptions(signer);
-		if (options.requireId && signer.step !== undefined && Number(signer.step) < 1) {
-			throw new ValidationError('template signer step must be a positive integer');
+		if (signer.id !== undefined) {
+			if (typeof signer.id !== 'string' || !signer.id) {
+				throw new ValidationError('each template signer requires a valid id');
+			}
+		} else if (options.requireIdentity) {
+			if (typeof signer.email !== 'string') {
+				throw new ValidationError('each template signer requires an id or email');
+			}
+			requireEmail(signer.email);
+			if (signer.name !== undefined && (typeof signer.name !== 'string' || !signer.name.trim())) {
+				throw new ValidationError('template signer name cannot be blank');
+			}
 		}
 	}
-	if (options.requireId) {
-		validateSigningSteps(signers as Array<{ verification_method?: unknown; step?: unknown }>);
-	}
+	// The server knows which roles ignore verification, notification and signing-step controls.
 }
 
 async function loadSource(

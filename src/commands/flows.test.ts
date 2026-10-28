@@ -12,8 +12,9 @@ import { SignerDocumentsResource } from '../api/resources/signer-documents';
 import { SignerResource } from '../api/resources/signers';
 import { WebhookResource } from '../api/resources/webhooks';
 import * as cliClient from '../lib/client';
-import { readConfigFile } from '../lib/config';
+import { readConfigFile, writeConfigFile } from '../lib/config';
 import * as browserOAuth from '../lib/oauth-browser';
+import * as prompts from '../lib/prompts';
 import { assignmentsCommand } from './assignments';
 import { authCommand } from './auth';
 import { configCommand } from './config';
@@ -91,6 +92,41 @@ it.each(['config', 'login'])('saves a profile named __proto__ through %s', async
 	expect(file.profiles?.[profileName]).toEqual({
 		api_key: 'example-key',
 		account_id: 'example-account',
+	});
+});
+
+it('preserves config changes made while login waits for an API key', async () => {
+	writeConfigFile({
+		default_profile: 'default',
+		profiles: { default: {}, removed: { token: 'example-old-token' } },
+	});
+	vi.spyOn(prompts, 'promptSecret').mockImplementation(async () => {
+		writeConfigFile({
+			default_profile: 'other',
+			profiles: {
+				default: { webhook_secret: 'example-updated-secret' },
+				other: { token: 'example-new-token' },
+			},
+		});
+		return 'example-new-key';
+	});
+	const program = new Command()
+		.option('--json')
+		.option('--account-id <id>')
+		.addCommand(loginCommand);
+	await program.parseAsync(['--json', '--account-id', 'example-account', 'login'], {
+		from: 'user',
+	});
+	expect(readConfigFile()).toEqual({
+		default_profile: 'other',
+		profiles: {
+			default: {
+				api_key: 'example-new-key',
+				account_id: 'example-account',
+				webhook_secret: 'example-updated-secret',
+			},
+			other: { token: 'example-new-token' },
+		},
 	});
 });
 
@@ -546,14 +582,26 @@ it('completes a two-factor login challenge without owner credentials', async () 
 	};
 	vi.spyOn(AuthenticationResource.prototype, 'login').mockResolvedValue({
 		mfa_token: 'example-challenge',
-	} as never);
-	const verify = vi
-		.spyOn(AuthenticationResource.prototype, 'verifyMfa')
-		.mockResolvedValue(session as never);
+	});
+	const verify = vi.spyOn(AuthenticationResource.prototype, 'verifyMfa').mockResolvedValue(session);
 	const program = new Command().option('--json').addCommand(authCommand);
 	await program.parseAsync(['--json', 'auth', 'login', 'user@example.com'], { from: 'user' });
 	expect(verify).toHaveBeenCalledWith({ mfa_token: 'example-challenge', code: '123456' });
 	expect(JSON.parse(stdout)).toMatchObject({ access_token: 'example-access' });
+});
+
+it('reports a login response without an access token instead of printing a session', async () => {
+	vi.stubEnv('ASSINAFY_PASSWORD', 'example-password');
+	vi.spyOn(AuthenticationResource.prototype, 'login').mockResolvedValue({
+		access_token: '',
+		user: { id: 'example-user', name: 'Example', email: 'user@example.com' },
+		accounts: [],
+	});
+	const program = new Command().option('--json').addCommand(authCommand);
+	await program.parseAsync(['--json', 'auth', 'login', 'user@example.com'], { from: 'user' });
+	expect(stdout).toBe('');
+	expect(JSON.parse(stderr).error.message).toBe('Login did not return an access token.');
+	expect(process.exitCode).toBe(1);
 });
 
 it('maps webhook endpoint flags to a partial update and leaves omitted booleans out', async () => {

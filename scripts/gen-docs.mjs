@@ -12,15 +12,14 @@ const docsDir = path.join(root, 'docs');
 const { operations } = JSON.parse(readFileSync(path.join(docsDir, 'api-operations.json'), 'utf8'));
 
 function help(args) {
-	try {
-		return execFileSync('node', [bin, ...args, '--help'], {
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-		});
-	} catch (err) {
-		// commander exits non-zero for help in some versions; stdout still holds the text.
-		return err.stdout?.toString() ?? '';
+	const text = execFileSync(process.execPath, [bin, ...args, '--help'], {
+		encoding: 'utf8',
+		stdio: ['ignore', 'pipe', 'pipe'],
+	});
+	if (!/^Usage: assinafy(?:\s|$)/m.test(text)) {
+		throw new Error(`Missing CLI help for assinafy ${args.join(' ')}`.trim());
 	}
+	return text;
 }
 
 // Parse the "Commands:" block, returning child command names. Command lines start
@@ -51,6 +50,11 @@ function section(pathParts, depth) {
 }
 
 const topLevel = subcommands(help([]));
+if (topLevel.length === 0) throw new Error('CLI help has no commands');
+const pages = topLevel.map((name) => [
+	name,
+	`${`# \`assinafy ${name}\`\n\n${section([name], 0)}`.trimEnd()}\n`,
+]);
 mkdirSync(docsDir, { recursive: true });
 
 // Command pages are wholly generated. Remove the previous owned set so deleted
@@ -65,8 +69,7 @@ let index =
 	'# Command reference\n\nCommand pages are auto-generated from `assinafy <command> --help`.\n\n';
 index += `- [\`api-reference.md\`](./api-reference.md) — all ${operations.length} published HTTP operations with official request/response payloads\n- [\`sdk-reference.md\`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [\`oauth-guide.md\`](./oauth-guide.md) — authorization, PKCE, token rotation, and marketplace connections\n- [\`migration-v2.md\`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [\`releasing.md\`](./releasing.md) — GitHub release and registry-publishing runbook\n\n## Commands\n\n`;
 
-for (const name of topLevel) {
-	const md = `${`# \`assinafy ${name}\`\n\n${section([name], 0)}`.trimEnd()}\n`;
+for (const [name, md] of pages) {
 	const file = `${name}.md`;
 	writeFileSync(path.join(docsDir, file), md);
 	index += `- [${name}](./${file})\n`;

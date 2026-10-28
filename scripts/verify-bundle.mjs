@@ -71,6 +71,8 @@ for (const api of [cjsApi, esmApi]) {
 	const client = new api.AssinafyClient({ allowUnauthenticated: true });
 	if (!(client.oauth instanceof api.OAuthResource))
 		fail('SDK entry point is missing OAuthResource');
+	if (!(client.contracts instanceof api.ContractResource))
+		fail('SDK entry point is missing ContractResource');
 }
 
 const consumer = mkdtempSync(path.join(tmpdir(), 'assinafy-sdk-consumer-'));
@@ -115,8 +117,14 @@ try {
 	}
 	writeFileSync(
 		path.join(consumer, 'index.ts'),
-		`import { type AssinafyClient, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload } from '@assinafy/cli/api';
+		`import { type AssinafyClient, type IContract, type IContractAmendment, type PaginatedResult, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload } from '@assinafy/cli/api';
 declare const client: AssinafyClient;
+const contract: Promise<IContract | IContractAmendment> = client.contracts.set('document1', { status: 'draft', value: null, auto_renew: false });
+const contractList: Promise<PaginatedResult<IContract>> = client.contracts.list({ status: ['active', 'expired'], ending_within_days: 0 });
+const renewal: Promise<IContract> = client.contracts.renew('document1', { term: 1 });
+const inlineTemplate = client.documents.createFromTemplate('template1', [{ role_id: 'role1', email: 'signer@example.com', name: 'Example Signer' }]);
+const enabledSecret: Promise<string | undefined> = client.webhooks.updateEndpoint('endpoint1', { signing_enabled: true }).then(endpoint => endpoint.secret);
+void [contract, contractList, renewal, inlineTemplate, enabledSecret];
 const biometric = client.signerDocuments.startIdentityVerification('example-code', { consent: true });
 const identityStatus = client.signerDocuments.getIdentityVerification('example-code');
 const identityReview = client.assignments.reviewIdentityVerification('document1', 'assignment1', 'signer1', { decision: 'Approved', note: null });

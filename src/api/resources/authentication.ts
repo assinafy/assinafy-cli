@@ -4,6 +4,7 @@ import type {
 	IEmptyResult,
 	ILoginResponse,
 	IMaskedApiKeyResponse,
+	IMfaChallengeResponse,
 	IMfaReauthPayload,
 	IMfaRecoveryCodes,
 	IMfaStatus,
@@ -34,8 +35,8 @@ function requireReauth(payload: IMfaReauthPayload): IMfaReauthPayload {
  * `X-Api-Key` and skip this resource entirely.
  */
 export class AuthenticationResource extends BaseResource {
-	/** `POST /login` — exchange email + password for a JWT access token. */
-	async login(email: string, password: string): Promise<ILoginResponse> {
+	/** `POST /login` — return an authenticated session or a two-factor challenge. */
+	async login(email: string, password: string): Promise<ILoginResponse | IMfaChallengeResponse> {
 		if (!email) throw new ValidationError('email is required');
 		if (!password) throw new ValidationError('password is required');
 		return this.call('Login failed', () =>

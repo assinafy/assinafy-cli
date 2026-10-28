@@ -499,7 +499,7 @@ Source: git+https://github.com/43081j/fast-wrap-ansi.git
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## follow-redirects 1.16.0
+## follow-redirects 1.16.2
 
 License: MIT
 

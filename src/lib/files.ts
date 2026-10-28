@@ -1,4 +1,12 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import {
+	closeSync,
+	constants,
+	fchmodSync,
+	ftruncateSync,
+	openSync,
+	readFileSync,
+	writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { CliError } from './errors';
 import { type OutputConfig, printData, printSuccess } from './output';
@@ -27,7 +35,19 @@ export function writeBinary(
 ): string {
 	const resolved = path.resolve(outputPath);
 	try {
-		writeFileSync(resolved, data, { flag: options.force ? 'w' : 'wx' });
+		const descriptor = openSync(
+			resolved,
+			options.force ? constants.O_WRONLY | constants.O_CREAT : 'wx',
+			0o600,
+		);
+		try {
+			// Tighten existing files before writing private document or identity evidence.
+			if (process.platform !== 'win32') fchmodSync(descriptor, 0o600);
+			if (options.force) ftruncateSync(descriptor, 0);
+			writeFileSync(descriptor, data);
+		} finally {
+			closeSync(descriptor);
+		}
 	} catch (err) {
 		if (err && typeof err === 'object' && 'code' in err && err.code === 'EEXIST') {
 			throw new CliError(`File "${resolved}" already exists. Pass --force to overwrite it.`);

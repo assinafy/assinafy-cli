@@ -21,7 +21,13 @@ export function isCredentialKey(key) {
 }
 
 export function isGovernmentKey(key) {
-	return key === 'government_id' || key === 'tax_id' || key === 'cpf' || key === 'cnpj';
+	return (
+		key === 'government_id' ||
+		key === 'tax_id' ||
+		key === 'counterparty_taxpayer_id' ||
+		key === 'cpf' ||
+		key === 'cnpj'
+	);
 }
 
 export function isIdentifierKey(key) {

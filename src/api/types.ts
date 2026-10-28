@@ -351,22 +351,22 @@ export interface IAssignmentSigner extends ISigner {
 	notified?: boolean | null;
 	completed?: boolean | null;
 	identity_verification_status?: IdentityVerificationStatus | null;
-	notification_history?: IAssignmentSignerNotification[];
+	notification_history?: IAssignmentSignerNotification[] | null;
 }
 
 /**
  * One item (field placement instance) inside an assignment. `signer` and
  * `field` are embedded objects whose exact shape varies by context (the API's
- * own spec leaves them generic); `display_settings` is populated for
- * `collect`-method items and an empty array for `virtual`/legacy ones.
+ * own spec leaves them generic); `display_settings` follows {@link IDisplaySettings}
+ * for collect items but may be a non-object value for virtual or legacy ones.
  */
 export interface IAssignmentItem {
 	id: string;
 	page: { id: string; number: number; height: number; width: number; download_url: string } | null;
 	signer: Partial<ISigner> & Record<string, unknown>;
-	field: Partial<IFieldDefinition> & Record<string, unknown>;
-	display_settings: IDisplaySettings | unknown[] | null;
-	value: string | null;
+	field: (Partial<IFieldDefinition> & Record<string, unknown>) | null;
+	display_settings: unknown;
+	value: unknown;
 	completed: boolean;
 }
 
@@ -380,7 +380,10 @@ export interface IAssignment {
 	/** Resource type (`assignment`); present in single-resource responses. */
 	resource?: string;
 	id: string;
-	sender_email?: string;
+	/** The document may have been deleted. */
+	document_id?: string | null;
+	created_at?: string;
+	sender_email?: string | null;
 	/** `virtual` or `collect`. Documented as `null` for some `collect` responses. */
 	method: AssignmentMethod | null;
 	/** ISO 8601 timestamp, or `null` when the assignment does not expire. */
@@ -440,7 +443,8 @@ export type IResendCostEstimate =
 	| {
 			total: number;
 			breakdown: Pick<IEstimateCostBreakdownItem, 'code' | 'name' | 'cost'>[];
-			credit_balance: number;
+			/** Null when the workspace has unlimited credits. */
+			credit_balance: number | null;
 			has_sufficient_credits: boolean;
 	  };
 
@@ -534,6 +538,9 @@ export interface IDocumentListItem {
 	assignment?: IAssignment | null;
 	/** Direct signing URL when an assignment is active. */
 	signing_url?: string | null;
+	/** Public certificate verification details; null before certification or on older certificates. */
+	verification_code?: string | null;
+	verification_url?: string | null;
 	decline_reason?: string | null;
 	declined_by?: ISigner | string | null;
 	created_at: string;
@@ -575,6 +582,8 @@ export interface IDocumentUploadResponse {
 	assignment?: IAssignment | null;
 	/** Direct signing URL; present once the document has been processed. */
 	signing_url?: string | null;
+	verification_code?: string | null;
+	verification_url?: string | null;
 	artifacts: IDocumentArtifacts;
 	pages: IDocumentPage[];
 	/** Tags attached to the document (inline `{ id, name, color }` shape). */
@@ -589,6 +598,8 @@ export interface IDocumentUploadResponse {
 /** Detailed document response. */
 export interface IDocumentDetailsResponse {
 	resource?: string;
+	/** Owner detail only; absence means unknown, not false. */
+	has_contract?: boolean;
 	id: string;
 	account_id: string;
 	template_id?: string | null;
@@ -598,6 +609,8 @@ export interface IDocumentDetailsResponse {
 	download_url?: string;
 	download_final_url?: string;
 	signing_url?: string;
+	verification_code?: string | null;
+	verification_url?: string | null;
 	artifacts?: IDocumentArtifacts;
 	/** Omitted by the signer-side `GET /signers/{id}/document` endpoint. */
 	pages?: IDocumentPage[];
@@ -616,7 +629,7 @@ export interface IDocumentActivity {
 	event: string;
 	message: string;
 	/** Event-specific payload snapshot. Object for most events, occasionally `[]`. */
-	payload?: Record<string, unknown> | unknown[];
+	payload?: Record<string, unknown> | unknown[] | null;
 	/** Request origin (`ip` / `user-agent`) when available; `null` for system events. */
 	origin: { ip?: string; 'user-agent'?: string } | string | null;
 	created_at: string;
@@ -635,6 +648,11 @@ export interface IPaginationParams {
 	page?: number;
 	per_page?: number;
 	'per-page'?: number;
+}
+
+/** Document activity log pagination; newest first by default. */
+export interface IDocumentActivityListParams extends IPaginationParams {
+	sort?: 'id' | '-id';
 }
 
 /**
@@ -698,6 +716,8 @@ export interface IWorkspaceResponse {
 	notification_sender_type?: NotificationSenderType;
 	roles?: string[];
 	is_delete_allowed?: boolean;
+	/** Present on workspace details; additional plan limits may be added. */
+	limits?: { webhook_endpoints: number; [key: string]: unknown };
 	created_at: string;
 }
 
@@ -772,29 +792,40 @@ export interface IWebhookSubscription {
 	email: string | null;
 	events: string[];
 	is_active: boolean;
+	/** Delivery pause after consecutive failures, separate from is_active. */
+	is_held?: boolean;
+	/** Unix seconds, or null while deliveries run. */
+	held_since?: number | null;
 	created_at?: string | null;
 	updated_at?: string | null;
 }
 
 /** A webhook endpoint (`/accounts/{accountId}/webhooks/endpoints`). */
 export interface IWebhookEndpoint {
+	resource?: string;
 	id: string;
 	name: string | null;
 	url: string;
 	email: string;
 	events: string[];
 	is_active: boolean;
+	is_held?: boolean;
+	/** Unix seconds, or null while deliveries run. */
+	held_since?: number | null;
 	/** `true` when deliveries carry a Standard Webhooks `webhook-signature` header. */
 	signing_enabled: boolean;
 	created_at: string;
 	updated_at: string;
 }
 
-/** Endpoint creation includes its signing secret only when signing is enabled. */
+/** Endpoint creation or signing enablement includes its generated signing secret once. */
 export interface IWebhookEndpointCreateResponse extends IWebhookEndpoint {
-	/** Save securely on creation; OAuth applications cannot read or rotate it later. */
+	/** Save securely; OAuth applications can rotate but cannot read an existing secret. */
 	secret?: string;
 }
+
+/** Updating an endpoint includes secret only when this request turns signing on. */
+export type IWebhookEndpointUpdateResponse = IWebhookEndpointCreateResponse;
 
 /** `POST /accounts/{accountId}/webhooks/endpoints` body. */
 export interface IWebhookEndpointCreatePayload {
@@ -832,6 +863,11 @@ export interface IWebhookDispatch {
 	endpoint: string | null;
 	payload: IWebhookPayload | Record<string, unknown> | null;
 	delivered: boolean;
+	/** Stable across attempts of the same event to this endpoint. */
+	webhook_id?: string | null;
+	attempt?: number | null;
+	kind?: 'scheduled' | 'probe' | 'manual';
+	will_retry?: boolean;
 	http_status: number | null;
 	response_body: string | null;
 	error: string | null;
@@ -931,17 +967,21 @@ export interface ITemplateDetailsResponse extends ITemplateListItem {
 }
 
 /**
- * Signer assignment for creating a document from a template. `id` is required
- * here; for cost estimation it is optional — see {@link ITemplateCostSigner}.
+ * Signer or copy-receiver entry for creating a document from a template.
+ * Supply an existing `id` or an `email`; `id` takes precedence when both are set.
  */
 export interface ITemplateSigner {
 	role_id: string;
-	id: string;
+	id?: string;
+	/** Reuse this workspace's email match, or create a signer with name and optional WhatsApp. */
+	email?: string;
+	name?: string;
+	whatsapp_phone_number?: string;
 	verification_method?: AssignmentVerificationMethod;
 	notification_methods?: AssignmentNotificationMethod[];
 	/**
-	 * Positive signing order. If used for any role, every role needs a step and
-	 * the distinct values must form a contiguous sequence starting at 1.
+	 * Positive signing order. Signer roles use a contiguous sequence from 1;
+	 * copy receivers ignore it. The API validates these role-dependent rules.
 	 */
 	step?: number;
 }
@@ -1021,6 +1061,8 @@ export interface IPublicDocumentInfo {
 	artifacts: IDocumentArtifacts;
 	is_closed: boolean;
 	signing_url: string | null;
+	verification_code?: string | null;
+	verification_url?: string | null;
 	decline_reason: string | null;
 	declined_by: ISigner | null;
 	tags: IInlineTag[];
@@ -1081,6 +1123,14 @@ export interface ILoginResponse {
 	 * confirmed method. Complete it with `auth.verifyMfa` within 5 minutes.
 	 */
 	mfa_token?: string;
+}
+
+/** Login requires a second factor instead of returning an authenticated session. */
+export interface IMfaChallengeResponse {
+	mfa_token: string;
+	access_token?: never;
+	user?: never;
+	accounts?: never;
 }
 
 /** `POST /authentication/mfa/verify` body. */
@@ -1150,6 +1200,10 @@ export const NOTIFICATION_PREFERENCE_CODES = [
 	'DocumentProcessingFailed',
 	'TemplateProcessingFailed',
 	'SignerWhatsappFailed',
+	'ContractRenewalNotice',
+	'ContractExpiring',
+	'ContractExpired',
+	'ContractRenewed',
 ] as const;
 
 export type NotificationPreferenceCode = (typeof NOTIFICATION_PREFERENCE_CODES)[number];
@@ -1223,7 +1277,8 @@ export interface IFieldValidateMultipleEntry {
 
 /** Item returned by `GET /documents/{id}/assignments/{id}/whatsapp-notifications`. */
 export interface IWhatsAppNotification {
-	sent_at: number;
+	/** ISO 8601 timestamp; numeric values are retained for older deployments. */
+	sent_at: string | number;
 	header: string;
 	body: string;
 	buttons: Array<{ text: string; url?: string }>;

@@ -6,6 +6,27 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-28
+
+### Added
+
+- Contract tracking in `client.contracts` and `assinafy contracts`: list, read, set terms, related instruments, renewal and termination, with typed payloads, null clearing and optimistic concurrency timestamps.
+- Contract notification preferences and the optional `has_contract` document detail field.
+- Pagination and sorting for document activities in the SDK and CLI.
+
+### Fixed
+
+- Template creation accepts inline signer identities and preserves CopyReceiver controls for server handling; certificate preflight distinguishes Signer fields from Editor fields.
+- Expiration inputs accept date-only and offsetless UTC values. Signature workflows validate derived channel defaults before uploading.
+- MFA login exposes its challenge response type, and interactive login preserves configuration changes made during prompts.
+- Response types include nullable assignment data, verification URLs, webhook pause/retry diagnostics, signing-enablement secrets, unlimited credit balances and WhatsApp timestamps.
+- Downloaded files use owner-only POSIX permissions, including replacements. Documentation generation preserves existing pages on help failures and resolves referenced nullable API fields.
+
+### Changed
+
+- Development and release builds use Node.js 26 LTS while retaining Node.js 22.12+ support and 22/24/26 checks.
+- Updated compatible runtime and test dependencies.
+
 ## [2.6.1] - 2026-10-19
 
 ### Fixed

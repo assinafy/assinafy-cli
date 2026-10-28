@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "9bab4f24766a343c80c7176478c7b573ad1f1bf9ff83e82e105bf38b3d166df9",
+  "hash": "3672991376b65f82cd6dec0102dadd0cfe97045fd85dcab568cd0414a84cd050",
   "operations": [
     {
       "method": "GET",
@@ -192,6 +192,54 @@
       "tag": "Authentication",
       "summary": "Complete a two-factor login",
       "operationId": "9ea9814ff561803efd9f68fe549ef5a5",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/contracts",
+      "tag": "Contracts",
+      "summary": "List contracts",
+      "operationId": "2a72a34cba42ae35cc076033397f5faa",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/contract",
+      "tag": "Contracts",
+      "summary": "Get a document's contract terms",
+      "operationId": "fa70416e52db3ba88c4ae15d1bb8ed17",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/contract",
+      "tag": "Contracts",
+      "summary": "Set a document's contract terms",
+      "operationId": "4d76e85f05767706d8806068fe90ac01",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/contract/related",
+      "tag": "Contracts",
+      "summary": "List the contracts related to a document",
+      "operationId": "6e422c1dc2bf26648ac442e8c1971e5f",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/contract/renew",
+      "tag": "Contracts",
+      "summary": "Renew a contract",
+      "operationId": "af4dd6ad7298c3c17c47e7070c30a8da",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/documents/{documentId}/contract/terminate",
+      "tag": "Contracts",
+      "summary": "Terminate a contract",
+      "operationId": "a4ea5deb82d4e5d8e0d2022fd8954904",
       "hasRequestBody": true
     },
     {

@@ -2,9 +2,11 @@
 
 export type { ClientConfigInput } from './client.js';
 export { AssinafyClient } from './client.js';
+export * from './contract-types.js';
 export * from './errors.js';
 export { AssignmentResource, buildAssignmentPayload } from './resources/assignments.js';
 export { AuthenticationResource } from './resources/authentication.js';
+export { ContractResource } from './resources/contracts.js';
 export type { DocumentUploadSource, IDocumentUploadOptions } from './resources/documents.js';
 export { DocumentResource } from './resources/documents.js';
 export { FieldsResource } from './resources/fields.js';

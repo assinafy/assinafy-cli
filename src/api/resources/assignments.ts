@@ -16,7 +16,7 @@ import type {
 } from '../types.js';
 import {
 	cleanParams,
-	requireIso8601,
+	requireExpiration,
 	requireSort,
 	stripEmpty,
 	validateDigitalCertificateMethod,
@@ -67,9 +67,7 @@ export function buildAssignmentPayload(
 		signers: normalisedSigners,
 		message: payload.message,
 		expires_at:
-			payload.expires_at === undefined
-				? undefined
-				: requireIso8601(payload.expires_at, 'expires_at'),
+			payload.expires_at === undefined ? undefined : requireExpiration(payload.expires_at),
 		copy_receivers: payload.copy_receivers,
 		entries: payload.entries,
 	});
@@ -255,8 +253,8 @@ export class AssignmentResource extends BaseResource {
 
 	/**
 	 * Update the expiration date of an existing assignment.
-	 * The published API accepts an ISO 8601 timestamp. Deployments that support
-	 * clearing an expiration also accept `null`.
+	 * Accepts an ISO 8601 timestamp, a UTC date/time without an offset, a date
+	 * (23:59 UTC), or `null` to clear the expiration.
 	 */
 	async resetExpiration(
 		documentId: string,
@@ -265,7 +263,7 @@ export class AssignmentResource extends BaseResource {
 	): Promise<IAssignment> {
 		const docId = this.requireId(documentId, 'Document ID');
 		const asgId = this.requireId(assignmentId, 'Assignment ID');
-		if (expiresAt !== null) requireIso8601(expiresAt, 'expiresAt');
+		if (expiresAt !== null) requireExpiration(expiresAt, 'expiresAt');
 		// `null` is meaningful here ("no expiration"), so don't strip it.
 		return this.call('Failed to update assignment expiration', () =>
 			this.http.put(`/documents/${docId}/assignments/${asgId}/reset-expiration`, {

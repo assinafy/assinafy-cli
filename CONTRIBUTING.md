@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node.js 24 LTS for development; Node.js 22.12 and 26 remain CI compatibility
+Use Node.js 26 LTS for development; Node.js 22.12 and 24 remain CI compatibility
 targets. Install exactly from the lockfile and run the complete local gate:
 
 ```bash

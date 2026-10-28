@@ -2,7 +2,7 @@
 
 *Português · [Read in English](README.en.md)*
 
-A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 112 operações publicadas.
+A CLI e o SDK Node.js da [API Assinafy](https://api.assinafy.com.br/v1/docs) permitem enviar PDFs, cadastrar signatários, solicitar assinaturas, acompanhar o processamento e baixar documentos certificados. O pacote inclui um executável para terminal e um SDK TypeScript em `@assinafy/cli/api`, com acesso às 118 operações publicadas.
 
 Este guia segue o fluxo de uma integração: instalação, autenticação, envio, assinatura e armazenamento do resultado. A [referência do SDK](docs/sdk-reference.md) documenta cada método; a [referência HTTP](docs/api-reference.md) contém os parâmetros e os payloads completos de requisição e resposta publicados pela Assinafy.
 
@@ -15,15 +15,16 @@ Este guia segue o fluxo de uma integração: instalação, autenticação, envio
 5. [Fluxo completo do documento](#fluxo-completo-do-documento)
 6. [Verificação, ordem e templates](#verificação-ordem-e-templates)
 7. [Fluxo do signatário](#fluxo-do-signatário)
-8. [Eventos e webhooks](#eventos-e-webhooks)
-9. [SDK Node.js](#sdk-nodejs)
-10. [Saída, erros e automação](#saída-erros-e-automação)
-11. [Referência de comandos](#referência-de-comandos)
-12. [Desenvolvimento e publicação](#desenvolvimento-e-publicação)
+8. [Gestão de contratos (CLM)](#gestão-de-contratos-clm)
+9. [Eventos e webhooks](#eventos-e-webhooks)
+10. [SDK Node.js](#sdk-nodejs)
+11. [Saída, erros e automação](#saída-erros-e-automação)
+12. [Referência de comandos](#referência-de-comandos)
+13. [Desenvolvimento e publicação](#desenvolvimento-e-publicação)
 
 ## Requisitos e instalação
 
-Use [Node.js 24 LTS](https://nodejs.org/en/about/previous-releases) atualizado. O mínimo suportado é `22.12.0`; a CI também verifica as linhas 22 e 26. A CLI funciona em Linux, macOS e Windows, em x64 e ARM64. Os arquivos de release incluem o executável JavaScript e exigem Node.js instalado. A API Assinafy exige HTTPS com TLS 1.2 ou superior, o mínimo padrão das versões suportadas do Node.js.
+Use [Node.js 26 LTS](https://nodejs.org/en/about/previous-releases) atualizado. O mínimo suportado é `22.12.0`; a CI também verifica as linhas 22 e 24. A CLI funciona em Linux, macOS e Windows, em x64 e ARM64. Os arquivos de release incluem o executável JavaScript e exigem Node.js instalado. A API Assinafy exige HTTPS com TLS 1.2 ou superior, o mínimo padrão das versões suportadas do Node.js.
 
 Instale uma versão publicada e fixe essa versão nas automações:
 
@@ -345,6 +346,32 @@ assinafy signer sign "$DOCUMENT_ID" example_assignment --entries '[]'
 
 Os comandos de confirmação de dados, assinatura e recusa de um único documento verificam se o código de acesso corresponde ao documento e ao assignment antes de enviar a alteração.
 
+## Gestão de contratos (CLM)
+
+O acompanhamento de contratos registra contraparte, valor, vigência, renovação e vínculos de aditivos em um documento existente. Não altera o envio nem a assinatura. As escritas exigem um plano com gestão de contratos; as leituras continuam disponíveis se o plano expirar. Com OAuth, use `documents:read` para ler e `documents:write` para alterar.
+
+1. Faça o upload do PDF e salve o ID retornado, mesmo se a gravação dos termos falhar.
+2. Cadastre os termos em rascunho. Ative-os quando o contrato deva entrar no acompanhamento automático.
+3. Para um aditivo, faça outro upload e vincule esse documento ao contrato. Os termos propostos passam ao contrato após a certificação do aditivo, em ordem de assinatura.
+4. Acompanhe vencimentos, atividades e webhooks. Renove informando o período atual (`term`) ou uma data final posterior; encerre com `terminate` quando necessário.
+
+```bash
+assinafy documents upload contrato.pdf --wait --json
+assinafy contracts set <documentId> --data '{"status":"draft","counterparty_name":"Empresa Exemplo","value":1200.50,"currency":"BRL","start_date":"2027-01-01","end_date":"2027-12-31","auto_renew":false,"renewal_term_months":12,"notice_period_days":30}'
+assinafy contracts get <documentId> --json
+assinafy contracts set <documentId> --data '{"status":"active","updated_at":"<timestamp retornado>"}'
+assinafy contracts list --status active --ending-within-days 30 --expand document --page 1
+assinafy contracts set <amendmentId> --data '{"parent_document_id":"<documentId>","relation_type":"amendment","value":1500}'
+assinafy contracts related <amendmentId> --json
+assinafy contracts renew <documentId> --data '{"term":1,"updated_at":"<timestamp retornado>"}'
+assinafy contracts terminate <documentId> --data '{"reason":"Encerramento acordado","updated_at":"<timestamp retornado>"}'
+assinafy documents activities <documentId> --page 2 --sort id
+```
+
+Substitua IDs e timestamps pelos valores da sua integração. `renew` e `terminate` pedem confirmação; `--yes` permite automação. A cada escrita, envie o `updated_at` da leitura mais recente: `409 ContractChanged` exige nova leitura antes de decidir como continuar. O SDK não repete escritas automaticamente. Campos omitidos permanecem; `null` limpa um termo, e `external_references` substitui a lista inteira. Em um aditivo pendente, `null` remove a alteração proposta; `parent_document_id: null` desfaz o vínculo. Aditivos aplicados são somente leitura.
+
+O processamento horário usa o calendário de Brasília e pode enviar avisos ao responsável conforme suas preferências. Um plano sem CLM pausa esse processamento. Eventos de contrato devem ser inscritos explicitamente no webhook; para recuperar eventos perdidos, percorra `contracts list --sort=-updated_at`. Veja os [payloads e respostas completos do SDK](docs/sdk-reference.md#contracts-clientcontracts) e a [ajuda dos comandos](docs/contracts.md).
+
 ## Eventos e webhooks
 
 Cada workspace pode cadastrar 1 endpoint de webhook, ou até 3 nos planos pagos. Cada endpoint tem URL, eventos, estado e assinatura próprios, e todo endpoint ativo inscrito em um evento o recebe de forma independente.
@@ -359,9 +386,9 @@ assinafy webhooks dispatches --endpoint "$ENDPOINT_ID" --delivered false --json
 assinafy webhooks verify corpo.json --id "$WEBHOOK_ID" --timestamp "$WEBHOOK_TIMESTAMP" --signature "$WEBHOOK_SIGNATURE"
 ```
 
-Sem `--events`, o endpoint recebe `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document` e `document_processing_failed`. `endpoints update <id>` altera apenas as opções informadas (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); desativar a assinatura descarta o segredo. `endpoints rotate-secret <id>` gera um novo segredo e invalida o anterior imediatamente. `endpoints delete <id>` remove o endpoint e libera a vaga. URLs repetidas no mesmo workspace retornam `400`; criar acima do limite do plano retorna `403`. A leitura e a rotação do segredo não estão disponíveis para aplicativos OAuth.
+Sem `--events`, o endpoint recebe `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document` e `document_processing_failed`. `endpoints update <id>` altera apenas as opções informadas (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); desativar a assinatura descarta o segredo. `endpoints rotate-secret <id>` gera um novo segredo e invalida o anterior imediatamente. `endpoints delete <id>` remove o endpoint e libera a vaga. URLs repetidas no mesmo workspace retornam `400`; criar acima do limite do plano retorna `403`. Aplicativos OAuth não podem ler um segredo existente; `webhooks:write` permite rotacioná-lo e receber o novo segredo. Ativar assinatura em um endpoint existente também retorna o novo segredo uma vez. URLs novas ou alteradas exigem HTTPS.
 
-Com `--signing`, a criação retorna `secret` uma vez, inclusive via OAuth; armazene-o com segurança. A CLI o mostra em texto e em JSON. Aplicativos OAuth que perderem esse segredo precisam excluir e recriar o endpoint. `endpoints list --url <url>` filtra pela URL exata; `endpoints delete-by-url --url <url>` remove por essa mesma URL e pede confirmação ou `--yes`.
+Com `--signing`, a criação retorna `secret` uma vez, inclusive via OAuth; armazene-o com segurança. A CLI o mostra em texto e em JSON. Aplicativos OAuth que perderem esse segredo podem rotacioná-lo com `webhooks:write` e guardar o novo valor. `endpoints list --url <url>` filtra pela URL exata; `endpoints delete-by-url --url <url>` remove por essa mesma URL e pede confirmação ou `--yes`.
 
 `webhooks register`, `webhooks get` e `webhooks inactivate` continuam disponíveis e atuam sobre o endpoint mais antigo do workspace.
 
@@ -378,7 +405,7 @@ if (!verifier.verifyDelivery(rawBody, headers)) {
 const event = verifier.extractEvent(rawBody);
 ```
 
-`verifyDelivery` compara em tempo constante o HMAC-SHA256 de `{webhook-id}.{webhook-timestamp}.{corpo}` e rejeita carimbos de tempo com mais de 5 minutos de diferença. Responda com `2xx` rapidamente; uma falha é tentada novamente uma vez após 3 segundos, e 10 eventos seguidos com falha pausam o endpoint até uma entrega funcionar. `webhooks retry <dispatchId>` reenvia uma entrega para o endpoint dela, desde que esteja ativo.
+`verifyDelivery` compara em tempo constante o HMAC-SHA256 de `{webhook-id}.{webhook-timestamp}.{corpo}` e rejeita carimbos de tempo com mais de 5 minutos de diferença. Responda com `2xx` rapidamente; falhas de conexão, timeout, `408`, `429` e `5xx` recebem até seis tentativas, com cerca de dez minutos entre elas; outros erros são finais. Dez falhas seguidas pausam o endpoint até uma sondagem funcionar; os eventos pendentes voltam em ordem cronológica. `webhooks retry <dispatchId>` reenvia uma entrega para o endpoint dela, desde que esteja ativo.
 
 `document_ready` indica a assinatura pelo último signatário, não o término do processamento inicial do upload. Processe eventos de forma idempotente, consulte `event-types` para a lista vigente e confirme estado e artefatos pela API antes de ações irreversíveis.
 
@@ -462,6 +489,7 @@ No SDK, `ValidationError` indica entrada inválida; `ApiError` carrega `statusCo
 | [`workspaces`](docs/workspaces.md) / `accounts` | Cadastro, consulta, tema, logo e estatísticas. |
 | [`users`](docs/users.md) | Perfil, estatísticas e preferências de notificação. |
 | [`templates`](docs/templates.md) | Listagem, detalhes e páginas de templates. |
+| [`contracts`](docs/contracts.md) | Termos, aditivos, renovações e encerramento de contratos. |
 | [`tags`](docs/tags.md) | Organização dos documentos por tags. |
 | [`fields`](docs/fields.md) | Definições, tipos e validação de campos. |
 | [`webhooks`](docs/webhooks.md) | Endpoints de webhook, segredos de assinatura e acompanhamento das entregas. |
