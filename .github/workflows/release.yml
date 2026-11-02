@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26.x
           registry-url: https://registry.npmjs.org
@@ -212,7 +212,7 @@ jobs:
           test "$(find dist/publish -maxdepth 1 -name '*.tgz' -type f | wc -l | tr -d ' ')" = 1
 
       - name: Setup Node for npm
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26.x
           registry-url: https://registry.npmjs.org
@@ -332,7 +332,7 @@ jobs:
 
       # Re-point the .npmrc at GitHub Packages and publish the same build there.
       - name: Configure npm for GitHub Packages
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26.x
           registry-url: https://npm.pkg.github.com
