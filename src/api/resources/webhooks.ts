@@ -27,7 +27,7 @@ const DEFAULT_EVENTS: WebhookEventType[] = [
 ];
 
 /** Validate the webhook fields that are present; omitted fields are left to the caller. */
-function validateWebhookFields(payload: IWebhookEndpointUpdatePayload): void {
+function validateWebhookFields(payload: IWebhookEndpointUpdatePayload, requireHttps = false): void {
 	if (payload.url !== undefined) {
 		let webhookUrl: URL;
 		try {
@@ -37,6 +37,9 @@ function validateWebhookFields(payload: IWebhookEndpointUpdatePayload): void {
 		}
 		if (webhookUrl.protocol !== 'http:' && webhookUrl.protocol !== 'https:') {
 			throw new ValidationError('Webhook URL must be a valid HTTP(S) URL');
+		}
+		if (requireHttps && webhookUrl.protocol !== 'https:') {
+			throw new ValidationError('Webhook URL must use HTTPS');
 		}
 	}
 	if (payload.email !== undefined) requireEmail(payload.email);
@@ -68,7 +71,7 @@ export class WebhookResource extends BaseResource {
 		accountId?: string,
 	): Promise<IWebhookSubscription> {
 		if (!payload.url) throw new ValidationError('Webhook URL is required');
-		validateWebhookFields({ ...payload, email: payload.email ?? '' });
+		validateWebhookFields({ ...payload, email: payload.email ?? '' }, true);
 
 		const id = this.accountId(accountId);
 		const body = {
@@ -128,7 +131,7 @@ export class WebhookResource extends BaseResource {
 		accountId?: string,
 	): Promise<IWebhookEndpointCreateResponse> {
 		if (!payload.url) throw new ValidationError('Webhook URL is required');
-		validateWebhookFields({ ...payload, email: payload.email ?? '' });
+		validateWebhookFields({ ...payload, email: payload.email ?? '' }, true);
 		const id = this.accountId(accountId);
 		const body = { ...payload, events: payload.events ?? DEFAULT_EVENTS };
 		this.logger.info('Creating webhook endpoint', { eventCount: body.events.length });
@@ -162,7 +165,7 @@ export class WebhookResource extends BaseResource {
 		if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
 			throw new ValidationError('At least one webhook endpoint field is required');
 		}
-		validateWebhookFields(payload);
+		validateWebhookFields(payload, true);
 		return this.call('Failed to update webhook endpoint', () =>
 			this.http.put(`/accounts/${id}/webhooks/endpoints/${eid}`, payload),
 		);

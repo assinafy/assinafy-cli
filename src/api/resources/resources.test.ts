@@ -832,6 +832,9 @@ describe('WebhookResource', () => {
 			webhooks.register({ url: 'ftp://example.com/hook', email: 'ops@example.com' }),
 		).rejects.toThrow(/HTTP/);
 		await expect(
+			webhooks.register({ url: 'http://example.com/hook', email: 'ops@example.com' }),
+		).rejects.toThrow(/HTTPS/);
+		await expect(
 			webhooks.register({ url: 'https://example.com/hook', email: 'not-email' }),
 		).rejects.toThrow(/email/);
 		await expect(
@@ -875,7 +878,7 @@ describe('WebhookResource', () => {
 	it('filters and deletes webhook endpoints by the exact registered URL', async () => {
 		const calls: CapturedCall[] = [];
 		const webhooks = new WebhookResource(mockHttp(calls), 'acc');
-		const url = 'https://example.com/hook?tenant=example&token=example-secret';
+		const url = 'http://example.com/legacy-hook?tenant=example&token=example-secret';
 		await webhooks.listEndpoints(undefined, { url });
 		await webhooks.deleteEndpointByUrl(url);
 		expect(calls).toMatchObject([
@@ -925,6 +928,12 @@ describe('WebhookResource', () => {
 		await expect(webhooks.updateEndpoint('ep', {})).rejects.toThrow(/At least one/);
 		await expect(webhooks.updateEndpoint('ep', { url: 'ftp://example.com' })).rejects.toThrow(
 			/HTTP/,
+		);
+		await expect(
+			webhooks.createEndpoint({ url: 'http://example.com/hook', email: 'ops@example.com' }),
+		).rejects.toThrow(/HTTPS/);
+		await expect(webhooks.updateEndpoint('ep', { url: 'http://example.com/hook' })).rejects.toThrow(
+			/HTTPS/,
 		);
 		await expect(webhooks.getEndpointSecret('')).rejects.toThrow(ValidationError);
 		await expect(webhooks.rotateEndpointSecret('')).rejects.toThrow(ValidationError);

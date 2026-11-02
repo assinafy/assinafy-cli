@@ -6,6 +6,18 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-11-02
+
+### Fixed
+
+- New and changed webhook endpoint URLs require HTTPS, while exact lookup and deletion keep supporting legacy HTTP URLs.
+- Interactive prompt cancellation remains type-safe across supported Clack prompt releases.
+
+### Changed
+
+- Refreshed the generated API reference fingerprint from the current production schema.
+- Condensed the primary README while retaining the complete document and signature workflow.
+
 ## [2.7.0] - 2026-10-28
 
 ### Added

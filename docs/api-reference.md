@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
 - Operations: 118
-- Contract SHA-256: `3672991376b65f82cd6dec0102dadd0cfe97045fd85dcab568cd0414a84cd050`
+- Contract SHA-256: `38cb1b376546c1db6e9eabb06fbb613a9c17ca7c22f66388de2ffbf4b6931e93`
 
 ## Accounts
 

@@ -1,4 +1,4 @@
-import { cancel, confirm, isCancel, password, text } from '@clack/prompts';
+import { cancel, confirm, password, text } from '@clack/prompts';
 import { CliError } from './errors';
 
 /** Prompt for a single line of text. Throws a 130-exit CliError if the user cancels. */
@@ -27,10 +27,12 @@ export async function confirmDestructive(message: string, force: boolean): Promi
 	return unwrap(value);
 }
 
-function unwrap<T>(value: T | symbol): T {
-	if (isCancel(value)) {
+function unwrap(value: string | symbol): string;
+function unwrap(value: boolean | symbol): boolean;
+function unwrap(value: string | boolean | symbol): string | boolean {
+	if (typeof value === 'symbol') {
 		cancel('Cancelled.', { output: process.stderr });
 		throw new CliError('Cancelled.', { exitCode: 130 });
 	}
-	return value as T;
+	return value;
 }
