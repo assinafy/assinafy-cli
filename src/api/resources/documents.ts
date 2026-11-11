@@ -20,6 +20,7 @@ import type {
 	IEstimateCostResponse,
 	IPublicDocumentInfo,
 	ISendTokenResponse,
+	ISignerDocumentDetailsResponse,
 	ISigningProgress,
 	ITag,
 	ITemplateCostSigner,
@@ -30,11 +31,14 @@ import type {
 import {
 	appendFilePart,
 	cleanParams,
+	idempotencyHeaders,
 	publicRequestConfig,
 	requireDocumentArtifactName,
 	requireEmail,
 	requireExpiration,
 	requireSort,
+	signerAccessConfig,
+	validateCreditCeiling,
 	validateDigitalCertificateMethod,
 } from '../utils.js';
 import { BaseResource } from './base.js';
@@ -144,9 +148,12 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/** Get document details. */
-	async details(documentId: string): Promise<IDocumentDetailsResponse> {
+	async details(
+		documentId: string,
+		params: { expand?: 'envelope' | 'envelope_id' | 'envelope,envelope_id' } = {},
+	): Promise<IDocumentDetailsResponse> {
 		const id = this.requireId(documentId, 'Document ID');
-		return this.fetchDetails(id);
+		return this.fetchDetails(id, undefined, params);
 	}
 
 	/**
@@ -164,8 +171,23 @@ export class DocumentResource extends BaseResource {
 	}
 
 	/** Alias for {@link details}. */
-	async get(documentId: string): Promise<IDocumentDetailsResponse> {
-		return this.details(documentId);
+	async get(
+		documentId: string,
+		params: { expand?: 'envelope' | 'envelope_id' | 'envelope,envelope_id' } = {},
+	): Promise<IDocumentDetailsResponse> {
+		return this.details(documentId, params);
+	}
+
+	/** Read only the assignment items visible to this signer. */
+	async getAsSigner(
+		documentId: string,
+		signerAccessCode: string,
+	): Promise<ISignerDocumentDetailsResponse> {
+		const id = this.requireId(documentId, 'Document ID');
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.call('Failed to fetch signer document', () =>
+			this.http.get(`/documents/${id}`, signerAccessConfig(code)),
+		);
 	}
 
 	/** Poll document status until ready (or a terminal status / timeout). */
@@ -225,9 +247,13 @@ export class DocumentResource extends BaseResource {
 		});
 	}
 
-	private fetchDetails(documentId: string, timeout?: number): Promise<IDocumentDetailsResponse> {
+	private fetchDetails(
+		documentId: string,
+		timeout?: number,
+		params?: { expand?: string },
+	): Promise<IDocumentDetailsResponse> {
 		return this.call('Failed to fetch document details', () =>
-			this.http.get(`/documents/${documentId}`, timeout === undefined ? undefined : { timeout }),
+			this.http.get(`/documents/${documentId}`, { timeout, ...(params?.expand ? { params } : {}) }),
 		);
 	}
 
@@ -235,33 +261,59 @@ export class DocumentResource extends BaseResource {
 	async download(
 		documentId: string,
 		artifactName: DocumentArtifactName = 'certificated',
+		options: { signerAccessCode?: string } = {},
 	): Promise<Buffer> {
 		const id = this.requireId(documentId, 'Document ID');
 		const artifact = requireDocumentArtifactName(artifactName);
+		const config = this.artifactConfig(options);
 		return this.callBinary('Failed to download document', () =>
 			this.http.get<ArrayBuffer>(`/documents/${id}/download/${artifact}`, {
+				...config,
 				responseType: 'arraybuffer',
 			}),
 		);
 	}
 
 	/** Download the document thumbnail. */
-	async thumbnail(documentId: string): Promise<Buffer> {
+	async thumbnail(
+		documentId: string,
+		options: { artifact?: 'certificated'; signerAccessCode?: string } = {},
+	): Promise<Buffer> {
+		const config = this.artifactConfig(options);
 		const id = this.requireId(documentId, 'Document ID');
 		return this.callBinary('Failed to download document thumbnail', () =>
-			this.http.get<ArrayBuffer>(`/documents/${id}/thumbnail`, { responseType: 'arraybuffer' }),
+			this.http.get<ArrayBuffer>(`/documents/${id}/thumbnail`, {
+				...config,
+				responseType: 'arraybuffer',
+			}),
 		);
 	}
 
 	/** Download a single page as a JPEG. */
-	async downloadPage(documentId: string, pageId: string): Promise<Buffer> {
+	async downloadPage(
+		documentId: string,
+		pageId: string,
+		options: { artifact?: 'certificated'; signerAccessCode?: string } = {},
+	): Promise<Buffer> {
+		const config = this.artifactConfig(options);
 		const docId = this.requireId(documentId, 'Document ID');
 		const pid = this.requireId(pageId, 'Page ID');
 		return this.callBinary('Failed to download page', () =>
 			this.http.get<ArrayBuffer>(`/documents/${docId}/pages/${pid}/download`, {
+				...config,
 				responseType: 'arraybuffer',
 			}),
 		);
+	}
+
+	private artifactConfig(options: { artifact?: 'certificated'; signerAccessCode?: string }) {
+		if (options.artifact !== undefined && options.artifact !== 'certificated') {
+			throw new ValidationError('artifact must be certificated');
+		}
+		const params = options.artifact === undefined ? {} : { artifact: options.artifact };
+		return options.signerAccessCode === undefined
+			? { params }
+			: signerAccessConfig(this.requireId(options.signerAccessCode, 'signer-access-code'), params);
 	}
 
 	/** Fetch one page of the document activity log (20 entries by default). */
@@ -351,6 +403,9 @@ export class DocumentResource extends BaseResource {
 		const tmplId = this.requireId(templateId, 'Template ID');
 		const accId = this.accountId(accountId);
 		validateTemplateSigners(signers, { requireIdentity: true });
+		validateCreditCeiling(options.max_total_credits);
+		const { idempotencyKey, ...bodyOptions } = options;
+		const headers = idempotencyHeaders(idempotencyKey);
 		if (options.expires_at !== undefined) requireExpiration(options.expires_at);
 		if (
 			options.editor_fields !== undefined &&
@@ -366,10 +421,10 @@ export class DocumentResource extends BaseResource {
 			throw new ValidationError('tags must contain non-empty tag names');
 		}
 		await this.validateCertificateTemplateMethod(tmplId, accId, signers);
-		const body: Record<string, unknown> = { ...options, signers };
+		const body: Record<string, unknown> = { ...bodyOptions, signers };
 		this.logger.info('Creating document from template', { templateId: tmplId, accountId: accId });
 		return this.call('Failed to create document from template', () =>
-			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents`, body),
+			this.http.post(`/accounts/${accId}/templates/${tmplId}/documents`, body, { headers }),
 		);
 	}
 

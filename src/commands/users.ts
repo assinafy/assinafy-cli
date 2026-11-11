@@ -75,8 +75,34 @@ const preferencesCommand = new Command('notification-preferences')
 	.addCommand(preferencesGetCommand)
 	.addCommand(preferencesUpdateCommand);
 
+const pushPreferences = new Command('push-preferences')
+	.description('Manage mobile push notification preferences')
+	.addCommand(
+		new Command('get').description('Read push preferences').action(async (_opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				printData(await client.users.getPushPreferences(), config);
+			});
+		}),
+	)
+	.addCommand(
+		new Command('update')
+			.description('Merge push preference booleans')
+			.requiredOption('--set <json>', 'Partial map of notification codes to booleans')
+			.action(async (opts, command) => {
+				await runWithClient(command, async ({ client, config }) => {
+					printData(
+						await client.users.updatePushPreferences(
+							parseJsonObject(opts.set, '--set') as Partial<import('../api').IPushPreferences>,
+						),
+						config,
+					);
+				});
+			}),
+	);
+
 export const usersCommand = new Command('users')
 	.description('Show the authenticated user and personal preferences')
 	.addCommand(selfCommand)
 	.addCommand(statsCommand)
-	.addCommand(preferencesCommand);
+	.addCommand(preferencesCommand)
+	.addCommand(pushPreferences);

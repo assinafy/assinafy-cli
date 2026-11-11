@@ -29,10 +29,13 @@ const documentCommand = new Command('document')
 	.description("Fetch the signer's current document")
 	.argument('<signerId>', 'Signer ID')
 	.addOption(accessCodeOption())
+	.addOption(
+		new Option('--expand <relation>', 'Include the envelope').choices(['envelope'] as const),
+	)
 	.action(async (signerId, opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const doc = await withSpinner('Fetching document', config, () =>
-				client.signerDocuments.getCurrent(signerId, opts.accessCode),
+				client.signerDocuments.getCurrent(signerId, opts.accessCode, { expand: opts.expand }),
 			);
 			printData(doc, config, (d) => renderKeyValue({ id: d.id, name: d.name, status: d.status }));
 		});
@@ -41,14 +44,21 @@ const documentCommand = new Command('document')
 const documentsCommand = addListOptions(
 	new Command('documents')
 		.description("List the signer's documents")
+		.option('--envelope <id>', 'Filter by envelope ID')
 		.argument('<signerId>', 'Signer ID')
 		.addOption(optionalAccessCodeOption()),
 ).action(async (signerId, opts, command) => {
 	await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 		const result = await withSpinner('Fetching documents', config, () =>
 			opts.accessCode === undefined
-				? client.signerDocuments.listAsOwner(signerId, listParams(opts))
-				: client.signerDocuments.list(signerId, opts.accessCode, listParams(opts)),
+				? client.signerDocuments.listAsOwner(signerId, {
+						...listParams(opts),
+						envelope_id: opts.envelope,
+					})
+				: client.signerDocuments.list(signerId, opts.accessCode, {
+						...listParams(opts),
+						envelope_id: opts.envelope,
+					}),
 		);
 		printPaginatedData(result, config, (rows) =>
 			renderTable(rows, [
@@ -62,6 +72,7 @@ const documentsCommand = addListOptions(
 
 const searchCommand = new Command('search')
 	.description("Search the signer's documents")
+	.option('--envelope <id>', 'Filter by envelope ID')
 	.argument('<signerId>', 'Signer ID')
 	.argument('<query>', 'Search text')
 	.addOption(optionalAccessCodeOption())
@@ -69,8 +80,10 @@ const searchCommand = new Command('search')
 		await runSignerOrOwner(opts.accessCode)(command, async ({ client, config }) => {
 			const result = await withSpinner('Searching documents', config, () =>
 				opts.accessCode === undefined
-					? client.signerDocuments.searchAsOwner(signerId, query)
-					: client.signerDocuments.search(signerId, query, opts.accessCode),
+					? client.signerDocuments.searchAsOwner(signerId, query, { envelope_id: opts.envelope })
+					: client.signerDocuments.search(signerId, query, opts.accessCode, {
+							envelope_id: opts.envelope,
+						}),
 			);
 			printPaginatedData(result, config, (rows) =>
 				renderTable(rows, [
@@ -84,12 +97,12 @@ const searchCommand = new Command('search')
 
 const downloadCommand = addDownloadOptions(
 	new Command('download')
-		.description('Download a signer document artifact')
+		.description('Download the original with a signer code; use download-copy for certified files')
 		.argument('<signerId>', 'Signer ID')
 		.argument('<documentId>', 'Document ID')
 		.argument('<artifact>', 'original | certificated | certificate-page | pades | bundle')
 		.addOption(
-			new Option('--access-code <code>', 'Optional signer identity preflight code').env(
+			new Option('--access-code <code>', 'Signer access code (required by the current API)').env(
 				'ASSINAFY_SIGNER_ACCESS_CODE',
 			),
 		),
@@ -181,18 +194,20 @@ const verifyCodeCommand = new Command('verify-code')
 	});
 
 const certificateStartCommand = new Command('certificate-start')
+	.option('--document-id <id>', 'Select a document of the same envelope')
 	.description('Start an ICP-Brasil A1/A3 signature and return the Web PKI token')
 	.addOption(accessCodeOption())
 	.action(async (opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Starting certificate signature', config, () =>
-				client.signerDocuments.startCertificate(opts.accessCode),
+				client.signerDocuments.startCertificate(opts.accessCode, opts.documentId),
 			);
 			printData(result, config);
 		});
 	});
 
 const certificateCompleteCommand = new Command('certificate-complete')
+	.option('--document-id <id>', 'Select a document of the same envelope')
 	.description('Complete an ICP-Brasil A1/A3 signature after Web PKI has signed the token')
 	.addOption(accessCodeOption())
 	.addOption(
@@ -203,7 +218,11 @@ const certificateCompleteCommand = new Command('certificate-complete')
 	.action(async (opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Completing certificate signature', config, () =>
-				client.signerDocuments.completeCertificate(opts.accessCode, opts.certificateToken),
+				client.signerDocuments.completeCertificate(
+					opts.accessCode,
+					opts.certificateToken,
+					opts.documentId,
+				),
 			);
 			printSuccess('Certificate signature completed', config);
 			printData(result, config);
@@ -285,12 +304,19 @@ const downloadSignatureCommand = addDownloadOptions(
 
 const assignmentCommand = new Command('assignment')
 	.description('Fetch the assignment as the signer sees it')
+	.option('--document-id <id>', 'Select another document of the same envelope')
 	.addOption(accessCodeOption())
 	.option('--accept-terms', 'Pass has_accepted_terms=true')
+	.addOption(
+		new Option('--expand <relation>', 'Include the envelope').choices(['envelope'] as const),
+	)
 	.action(async (opts, command) => {
 		await runWithPublicClient(command, async ({ client, config }) => {
 			const result = await withSpinner('Fetching assignment', config, () =>
-				client.signerDocuments.getAssignment(opts.accessCode, opts.acceptTerms ? true : undefined),
+				client.signerDocuments.getAssignment(opts.accessCode, opts.acceptTerms ? true : undefined, {
+					expand: opts.expand,
+					document_id: opts.documentId,
+				}),
 			);
 			printData(result, config);
 		});
@@ -363,7 +389,82 @@ const declineMultipleCommand = new Command('decline-multiple')
 		});
 	});
 
+const themeCommand = new Command('theme')
+	.description('Read the signing workspace brand')
+	.addOption(accessCodeOption())
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			printData(await client.signerDocuments.getTheme(opts.accessCode), config);
+		});
+	});
+const logoCommand = addDownloadOptions(
+	new Command('logo')
+		.description('Download the signing workspace logo')
+		.addOption(accessCodeOption()),
+).action(async (opts, command) => {
+	await runWithPublicClient(command, async ({ client, config }) => {
+		await saveDownload(config, {
+			message: 'Downloading logo',
+			download: () => client.signerDocuments.downloadLogo(opts.accessCode),
+			output: opts.output,
+			defaultName: 'signing-logo',
+			force: opts.force,
+		});
+	});
+});
+const certifiedCopyCommand = new Command('certified-copy')
+	.description('Send a new certified-copy link to the original signing contact')
+	.addOption(accessCodeOption())
+	.option('--document-id <id>', 'Another document in the same envelope')
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			printData(
+				await client.signerDocuments.resendCertifiedCopy(opts.accessCode, opts.documentId),
+				config,
+			);
+		});
+	});
+const downloadTokenOption = () =>
+	new Option('--download-token <token>', 'Private certified-copy link token')
+		.env('ASSINAFY_DOWNLOAD_TOKEN')
+		.makeOptionMandatory();
+const downloadCopyCommand = addDownloadOptions(
+	new Command('download-copy')
+		.description('Download a PDF using a certified-copy link token')
+		.addOption(downloadTokenOption()),
+)
+	.addOption(
+		new Option('--artifact <name>', 'PDF artifact')
+			.choices(['certificated', 'pades'] as const)
+			.default('certificated'),
+	)
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			await saveDownload(config, {
+				message: 'Downloading certified copy',
+				download: () =>
+					client.signerDocuments.downloadCertifiedCopy(opts.downloadToken, opts.artifact),
+				output: opts.output,
+				defaultName: `${opts.artifact}.pdf`,
+				force: opts.force,
+			});
+		});
+	});
+const resendCopyCommand = new Command('resend-download-link')
+	.description('Send a new link using an expired download token')
+	.addOption(downloadTokenOption())
+	.action(async (opts, command) => {
+		await runWithPublicClient(command, async ({ client, config }) => {
+			printData(await client.signerDocuments.resendDownloadLink(opts.downloadToken), config);
+		});
+	});
+
 export const signerCommand = new Command('signer')
+	.addCommand(themeCommand)
+	.addCommand(logoCommand)
+	.addCommand(certifiedCopyCommand)
+	.addCommand(downloadCopyCommand)
+	.addCommand(resendCopyCommand)
 	.description('Signer-side flows and public artifact downloads')
 	.addCommand(documentCommand)
 	.addCommand(documentsCommand)

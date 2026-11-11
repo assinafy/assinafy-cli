@@ -1,4 +1,14 @@
+import { validateCreditCeiling } from '../api/utils';
 import { CliError } from './errors';
+
+/** Parse the optional spend ceiling before any upload or assignment is created. */
+export function parseCreditCeiling(raw: string | undefined): number | undefined {
+	if (raw === undefined) return undefined;
+	if (!raw.trim()) throw new CliError('--max-total-credits must be a non-negative number.');
+	const value = Number(raw);
+	validateCreditCeiling(value);
+	return value;
+}
 
 /**
  * Parse a JSON string supplied on the command line into a record.

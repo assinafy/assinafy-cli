@@ -1,18 +1,22 @@
 import { ValidationError } from '../errors.js';
 import type {
 	IAccountTheme,
+	IAccountUsage,
 	ICreateWorkspacePayload,
 	IDocumentStatsParams,
 	IDocumentStatsRow,
 	IEmptyResult,
+	INotificationPolicy,
 	IStatusResponse,
+	IUpdateNotificationPolicyPayload,
 	IUpdateWorkspacePayload,
 	IUploadAccountLogoOptions,
 	IWorkspaceListItem,
 	IWorkspaceListResponse,
 	IWorkspaceResponse,
 } from '../types.js';
-import { appendFilePart, documentStatsParams } from '../utils.js';
+import { NOTIFICATION_PREFERENCE_CODES, PUSH_PREFERENCE_CODES } from '../types.js';
+import { appendFilePart, documentStatsParams, validateBooleanMap } from '../utils.js';
 import { BaseResource } from './base.js';
 
 export class WorkspaceResource extends BaseResource {
@@ -33,9 +37,57 @@ export class WorkspaceResource extends BaseResource {
 	}
 
 	/** Fetch a single workspace. */
-	async get(accountId: string): Promise<IWorkspaceResponse> {
+	async get(
+		accountId: string,
+		params: { expand?: 'signing_features' } = {},
+	): Promise<IWorkspaceResponse> {
 		const id = this.requireId(accountId, 'Account ID');
-		return this.call('Failed to fetch workspace', () => this.http.get(`/accounts/${id}`));
+		return this.call('Failed to fetch workspace', () =>
+			this.http.get(`/accounts/${id}`, { params }),
+		);
+	}
+
+	/** Plan allowance and balances; unavailable to third-party OAuth applications. */
+	async usage(accountId: string): Promise<IAccountUsage> {
+		const id = this.requireId(accountId, 'Account ID');
+		return this.call('Failed to fetch workspace usage', () =>
+			this.http.get(`/accounts/${id}/usage`),
+		);
+	}
+
+	async getNotificationPolicy(accountId: string): Promise<INotificationPolicy> {
+		const id = this.requireId(accountId, 'Account ID');
+		return this.call('Failed to fetch notification policy', () =>
+			this.http.get(`/accounts/${id}/notification-policy`),
+		);
+	}
+
+	/** Owner-only partial merge; false disables the alert workspace-wide. */
+	async updateNotificationPolicy(
+		accountId: string,
+		payload: IUpdateNotificationPolicyPayload,
+	): Promise<INotificationPolicy> {
+		const id = this.requireId(accountId, 'Account ID');
+		if (
+			!payload ||
+			typeof payload !== 'object' ||
+			Array.isArray(payload) ||
+			!Object.keys(payload).length ||
+			Object.keys(payload).some((key) => !['events', 'owners_receive_all'].includes(key))
+		)
+			throw new ValidationError('Provide events and/or owners_receive_all');
+		if (payload.owners_receive_all !== undefined && typeof payload.owners_receive_all !== 'boolean')
+			throw new ValidationError('owners_receive_all must be a boolean');
+		if (payload.events !== undefined)
+			validateBooleanMap(payload.events, [
+				...NOTIFICATION_PREFERENCE_CODES,
+				...PUSH_PREFERENCE_CODES,
+			]);
+		if (payload.events === undefined && payload.owners_receive_all === undefined)
+			throw new ValidationError('At least one notification policy field is required');
+		return this.call('Failed to update notification policy', () =>
+			this.http.put(`/accounts/${id}/notification-policy`, payload),
+		);
 	}
 
 	/** Fetch the workspace's public branding theme. */

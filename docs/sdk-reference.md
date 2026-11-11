@@ -56,7 +56,7 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
 
 | API | Result |
 | --- | --- |
-| `new AssinafyClient(options: AssinafyClientOptions)` | Client with `documents`, `signers`, `workspaces`, `assignments`, `webhooks`, `templates`, `tags`, `auth`, `oauth`, `fields`, `users`, `signerDocuments`, and `webhookVerifier`. |
+| `new AssinafyClient(options: AssinafyClientOptions)` | Client with `documents`, `signers`, `workspaces`, `assignments`, `webhooks`, `templates`, `tags`, `auth`, `oauth`, `fields`, `users`, `signerDocuments`, `contracts`, `envelopes`, `embed`, and `webhookVerifier`. |
 | `AssinafyClient.create(apiKey, accountId, options?)` | Convenience constructor. |
 | `AssinafyClient.fromConfig(config: ClientConfigInput)` | Accepts snake-case or camel-case configuration keys. |
 | `client.uploadAndRequestSignatures(options)` | Uploads a PDF, optionally waits for processing, creates/reuses signers, and creates a virtual assignment; returns `IUploadAndRequestSignaturesResult`. |
@@ -78,12 +78,14 @@ const publicClient = new AssinafyClient({ allowUnauthenticated: true });
     verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
     notification_methods?: Array<'Email' | 'Whatsapp'>;
     step?: number;
+    embedded?: boolean;
   }>;
   message?: string;
   metadata?: Record<string, unknown>;
   waitForReady?: boolean;
   expiresAt?: string;
   copyReceivers?: string[];
+  maxTotalCredits?: number;
   accountId?: string;
 }
 ```
@@ -114,13 +116,14 @@ try {
 | `upload(source, options?)` | [`POST /accounts/{accountId}/documents`](./api-reference.md#upload-and-create-document) | `IDocumentUploadResponse` |
 | `list(params?, accountId?)` | [`GET /accounts/{accountId}/documents`](./api-reference.md#list-documents) | `IDocumentListResponse` |
 | `search(params?, accountId?)` | [`GET /accounts/{accountId}/documents/search`](./api-reference.md#search-documents-lightweight) | `IDocumentListResponse` |
-| `details(documentId)` | [`GET /documents/{documentId}`](./api-reference.md#get-document) | `IDocumentDetailsResponse` |
-| `get(documentId)` | Same as `details` | `IDocumentDetailsResponse` |
+| `details(documentId, params?)` | [`GET /documents/{documentId}`](./api-reference.md#get-document) | `IDocumentDetailsResponse` |
+| `get(documentId, params?)` | Same as `details` | `IDocumentDetailsResponse` |
+| `getAsSigner(documentId, accessCode)` | `GET /documents/{documentId}`, stripped owner headers | `ISignerDocumentDetailsResponse` |
 | `rename(documentId, name)` | [`PATCH /documents/{documentId}`](./api-reference.md#rename-document) | `IDocumentDetailsResponse` |
 | `waitUntilReady(documentId, { maxWaitMs?, pollIntervalMs? }?)` | Polls [Get document](./api-reference.md#get-document) | `IDocumentDetailsResponse`; rejects on terminal failure, permanent 4xx, or timeout |
-| `download(documentId, artifactName?)` | [`GET /documents/{documentId}/download/{artifact}`](./api-reference.md#download-document-artifact) | `Buffer` |
-| `thumbnail(documentId)` | [`GET /documents/{documentId}/thumbnail`](./api-reference.md#download-document-thumbnail) | JPEG `Buffer` |
-| `downloadPage(documentId, pageId)` | [`GET /documents/{documentId}/pages/{pageId}/download`](./api-reference.md#download-document-page) | JPEG `Buffer` |
+| `download(documentId, artifactName?, options?)` | [`GET /documents/{documentId}/download/{artifact}`](./api-reference.md#download-document-artifact) | `Buffer` |
+| `thumbnail(documentId, options?)` | [`GET /documents/{documentId}/thumbnail`](./api-reference.md#download-document-thumbnail) | JPEG `Buffer` |
+| `downloadPage(documentId, pageId, options?)` | [`GET /documents/{documentId}/pages/{pageId}/download`](./api-reference.md#download-document-page) | JPEG `Buffer` |
 | `activities(documentId, params?)` | [`GET /documents/{documentId}/activities`](./api-reference.md#list-document-activities) | `IDocumentActivity[]` |
 | `delete(documentId)` | [`DELETE /documents/{documentId}`](./api-reference.md#delete-document) | `IEmptyResult` (`unknown[]`) |
 | `listTags(documentId, accountId?)` | [`GET /accounts/{accountId}/documents/{documentId}/tags`](./api-reference.md#list-document-tags) | `ITag[]` |
@@ -152,26 +155,177 @@ interface IDocumentUploadOptions {
 
 Uploads must be non-empty PDFs up to 25 MiB. `DocumentArtifactName` is `original | certificated | certificate-page | pades | bundle`; `bundle` is ZIP and the other document artifacts are PDF. `sendToken(documentId, 'signer@example.com')` emails a one-time access token to a signer who has not signed a pending document yet and sends `{ "channel": "email", "recipient": "signer@example.com" }`. Only the `email` channel is accepted; any other channel is rejected locally. The `{ email }` overload sends the same body.
 
-Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags? }`. Each signer is `{ role_id, id?, email?, name?, whatsapp_phone_number?, verification_method?, notification_methods?, step? }`; supply an existing ID or an email for creation/reuse (an ID takes precedence); each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations. A template with placed signer fields creates a `collect` assignment, so it cannot use a `DigitalCertificate` signer. For certificate-bearing template create and estimate calls, the SDK reads the template details first and rejects placed Signer-role fields with `ValidationError.errors.code` set to `digital_certificate_requires_virtual`.
+Template document creation sends `{ signers, name?, message?, expires_at?, editor_fields?, tags?, max_total_credits? }`. Options also accept `idempotencyKey`, sent only in the `Idempotency-Key` header. Each signer is `{ role_id, id?, email?, name?, whatsapp_phone_number?, verification_method?, notification_methods?, step?, embedded? }`; supply an existing ID or an email for creation/reuse (an ID takes precedence); each editor field is `{ field_id, value: string }`. Template cost estimation publishes `{ signers: Array<{ role_id, verification_method?, notification_methods? }> }`. The optional cost-signer `id` and `step` properties remain compatibility extensions for existing integrations. A template with placed signer fields creates a `collect` assignment, so it cannot use a `DigitalCertificate` signer. For certificate-bearing template create and estimate calls, the SDK reads the template details first and rejects placed Signer-role fields with `ValidationError.errors.code` set to `digital_certificate_requires_virtual`.
 
-Document list params are `{ page?, per_page?, status?, method?, tags?, search?, sort? }`; search params omit `method`/`tags`. Supported sort values are `name`, `-name`, `updated_at`, and `-updated_at`.
+Document list params are `{ page?, per_page?, status?, method?, tags?, search?, sort?, envelope_id? }`; search params omit `method`/`tags`. Supported sort values are `name`, `-name`, `updated_at`, and `-updated_at`.
 
 In production, `replaceTags` and `addTags` accept tag names, reuse matching tags, and create missing names. Use `replaceTags(documentId, ['Contracts'])` or `addTags(documentId, ['Contracts'])`; an empty replacement removes all associations. Values are sent unchanged. Pass the tag ID from `listTags` to `detachTag`. Document-list tag filters also use IDs.
 
 Activity queries use `IDocumentActivityListParams`: `{ page?, per_page?, 'per-page'?, sort?: 'id' | '-id' }`; the default is 20 records per page, newest first. Page until an empty array to read the complete history. Expirations accept `YYYY-MM-DD` (23:59 UTC), an offsetless datetime (UTC), or an RFC 3339 timestamp; values are forwarded unchanged. Template signing steps apply to Signer roles; CopyReceiver steps are ignored. Editor fields do not force a certificate template into collect signing. Template creation/estimation forwards role-specific verification, notification and step settings to the API, which ignores them for CopyReceiver roles. The SDK validates descriptor identity locally without fetching roles solely for validation.
 
+Owner `get`/`details` params accept `{ expand: "envelope" | "envelope_id" | "envelope,envelope_id" }`; the expanded relation is null for a standalone document. `getAsSigner` returns only the signer-visible assignment fields. Download options accept `{ signerAccessCode? }`; thumbnail/page options also accept `{ artifact: "certificated" }` to render the signed PDF. Omit the code to use owner authentication; a supplied code strips owner credentials, and a blank code is rejected. CLI `documents get|download|thumbnail|download-page --access-code` selects the same behavior.
+
 Document responses expose typed `IDocumentArtifacts`, `IDocumentPage`, inline tags, assignment/signing state, decline state, and creation/update timestamps. `IPublicDocumentInfo` models the complete published public-document payload while retaining the older optional `page_count` and `created_by` fields.
+
+## Envelopes (`client.envelopes`)
+
+An envelope groups up to 20 processed documents and 20 existing workspace signers. Each document keeps its own assignment, status, certificate, artifacts and webhooks. Creation consumes one document allowance; notifications and biometric verification are charged once per signer for the envelope, while certificate signatures are charged per document. The Envelopes feature is required for creation, adding documents and estimates. OAuth uses `documents:read`/`documents:write`.
+
+| SDK method | HTTP operation | SDK result |
+| --- | --- | --- |
+| `list(params?, accountId?)` | `GET /accounts/{accountId}/envelopes`; `{ page?, per_page?, search?, status?: "open" | "closed" }` | `PaginatedResult<IDocumentEnvelope>` |
+| `create(payload, options?)` | `POST /accounts/{accountId}/envelopes`; `ICreateEnvelopePayload` | `IDocumentEnvelope` |
+| `estimateCost(payload, accountId?)` | `POST /accounts/{accountId}/envelopes/estimate-cost`; same creation body, no changes or charges | `IEstimateCostResponse` |
+| `get(envelopeId, accountId?)` | `GET /accounts/{accountId}/envelopes/{envelopeId}` | `IDocumentEnvelope` |
+| `update(envelopeId, payload, accountId?)` | `PATCH /accounts/{accountId}/envelopes/{envelopeId}`; `{ name?, message?: string | null, document_ids?: string[] }` | `IDocumentEnvelope` |
+| `delete(envelopeId, accountId?)` | `DELETE /accounts/{accountId}/envelopes/{envelopeId}`; no body, requires all documents closed | `[]`; documents remain |
+| `activities(envelopeId, params?, accountId?)` | `GET …/{envelopeId}/activities`; pagination and `sort: "id" | "-id"` | `PaginatedResult<IEnvelopeActivity>` |
+| `download(envelopeId, artifactName?, accountId?)` | `GET …/{envelopeId}/download/{artifactName}`; defaults to certificated | ZIP `Buffer` |
+| `cancel(envelopeId, accountId?)` | `PUT …/{envelopeId}/cancel`, no body | `Array<{ id, status, cancelled: boolean }>` |
+| `resendNotification(envelopeId, signerId, accountId?)` | `PUT …/{envelopeId}/signers/{signerId}/resend`, no body | `{ is_sent: boolean, envelope_id: string, signer_id: string }` |
+| `addDocument(envelopeId, payload, accountId?)` | `POST …/{envelopeId}/documents`; `IEnvelopeDocumentPayload & { max_total_credits?: number }` | `IDocumentEnvelope` |
+| `removeDocument(envelopeId, documentId, accountId?)` | `DELETE …/{envelopeId}/documents/{documentId}`, no body | `IDocumentEnvelope` |
+
+Complete creation body (optional controls shown):
+
+```ts
+interface ICreateEnvelopePayload {
+  name: string; // 1–255 characters, no <
+  message?: string | null;
+  max_total_credits?: number;
+  signers: Array<{
+    id: string;
+    verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
+    notification_methods?: Array<'Email' | 'Whatsapp'>;
+    embedded?: boolean;
+  }>;
+  documents: Array<{
+    id: string;
+    signer_ids: string[];
+    method?: 'virtual' | 'collect';
+    entries?: ICollectAssignmentEntry[];
+    expires_at?: string | number | null;
+    copy_receiver_ids?: string[];
+  }>;
+}
+```
+
+Signers act in parallel; `step` is not accepted. Every signer must appear on at least one document, and every document signer must be in the envelope's signer list. A certificate signer must be alone on each virtual document they sign. Collect entries use the assignment field format and exactly that document's signers. The server enforces workspace ownership, document readiness, at most 2,000 fields and 100 copy receivers across the envelope. Expiration accepts ISO dates/timestamps or Unix seconds; null, zero or empty text means no expiration. Reorder updates must name every current document exactly once; null clears only the message.
+
+A complete SDK flow:
+
+```ts
+import { randomUUID } from 'node:crypto';
+import { AssinafyClient } from '@assinafy/cli/api';
+
+const client = new AssinafyClient({
+  apiKey: process.env.ASSINAFY_API_KEY!,
+  accountId: process.env.ASSINAFY_ACCOUNT_ID!,
+});
+const signer = await client.signers.create({ full_name: 'Example Signer', email: 'signer@example.com' });
+const documents = [];
+for (const filePath of ['./contract.pdf', './annex.pdf']) {
+  const uploaded = await client.documents.upload({ filePath });
+  // Persist uploaded.id before waiting so a failure can be resumed.
+  await client.documents.waitUntilReady(uploaded.id);
+  documents.push({ id: uploaded.id, signer_ids: [signer.id] });
+}
+const payload = {
+  name: 'Service agreement',
+  message: 'Please review both documents.',
+  signers: [{ id: signer.id }],
+  documents,
+  max_total_credits: 0,
+};
+const estimate = await client.envelopes.estimateCost(payload);
+if (!estimate.has_sufficient_resources) throw new Error('Insufficient resources');
+const idempotencyKey = randomUUID(); // Persist with this business operation before sending.
+const envelope = await client.envelopes.create(payload, { idempotencyKey });
+// Persist envelope.id, then inspect document status and notification history.
+const current = await client.envelopes.get(envelope.id);
+```
+
+The SDK result has this complete shape (the wire body wraps it in `{ status, message, data }`):
+
+```ts
+interface IDocumentEnvelope {
+  resource?: string;
+  id: string;
+  name: string;
+  message: string | null;
+  documents: Array<{
+    id: string;
+    position: number;
+    name: string;
+    status: string;
+    artifacts: Record<string, string>;
+    signers: Array<{
+      id: string;
+      full_name: string;
+      email: string | null;
+      whatsapp_phone_number: string | null;
+      completed: boolean;
+      signed_at: string | null;
+    }>;
+  }>;
+  counts: Record<string, number> | null;
+  signing_urls: Array<{ signer_id: string; url: string | null; embedded?: boolean }>;
+  created_at: string;
+}
+```
+
+A successful creation means the envelope exists, not that every invitation arrived. Inspect assignment `notification_history` and WhatsApp delivery history. One invitation covers a signer's documents; the email/WhatsApp code carries across the envelope. `getAssignment(code, undefined, { document_id })` selects a document, and `sign`/`decline` perform that selection automatically. Biometric verification and review are shared across the signer's envelope documents; certificate signing remains one operation per document. Pass `documentId` to `startCertificate(code, documentId)` and `completeCertificate(code, token, documentId)` to select each one.
+
+Creation options are `{ accountId?, idempotencyKey? }`. The case-sensitive key belongs to the workspace and does not expire; reusing it returns the original envelope regardless of the replacement body. Persist and deliberately reuse it after an ambiguous failure; never generate a new key for the same intended operation. `IdempotencyKeyInUse` is 409 while the first request runs. A credit ceiling refusal creates and charges nothing. There are no SDK write retries. Deleting an envelope also removes its idempotency replay result.
+
+Adding a document uses existing envelope signers, sends updated invitations, and can charge certificate credits. Removing an open document cancels it and notifies recipients; links from it continue to open the rest. Cancel affects only cancellable documents; completed certificates stay valid. Deleting requires every document closed and leaves the documents intact. Document deletion is refused while its envelope remains open, including documents removed from it. CLI cancel/delete/remove-document confirm unless `--yes`.
+
+## Embedded signing (`client.embed`)
+
+The Embed feature and an owner API key or first-party user token are required to mint sessions; OAuth application tokens cannot mint them. Keep that credential on your backend. The Node SDK is not shipped in the browser or a native mobile app; the frontend displays the hosted iframe. See the [official Embedded Signing Guide](https://api.assinafy.com.br/v1/docs) for the frontend message protocol and event payloads.
+
+| SDK method | HTTP operation and request | SDK result |
+| --- | --- | --- |
+| `listOrigins(accountId?)` | `GET /accounts/{accountId}/embed-origins`, no body | `IEmbedOrigin[]` |
+| `createOrigin(origin, accountId?)` | `POST /accounts/{accountId}/embed-origins`; `{ origin }` | `IEmbedOrigin` |
+| `updateOrigin(originId, origin, accountId?)` | `PUT …/embed-origins/{originId}`; `{ origin }` | `IEmbedOrigin` |
+| `deleteOrigin(originId, accountId?)` | `DELETE …/embed-origins/{originId}`, no body | `[]` |
+| `createSession(documentId, assignmentId, signerId)` | `POST /documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/embed-sessions`, no body | `IEmbedSession` |
+| `exchangeSession(token, parentOrigin?)` | `POST /embed/sessions/{token}/exchange`; no body or `{ parent_origin }`, no owner headers | `IEmbedSessionExchange` |
+
+Complete SDK response types:
+
+```ts
+interface IEmbedOrigin { id: string; origin: string; created_at: string }
+interface IEmbedSession { url: string; expires_at: string }
+interface IEmbedSessionExchange {
+  signer_access_code: string;
+  signer_id: string;
+  document_id: string;
+  verification_method: string;
+  embed_origins: string[];
+}
+```
+
+1. Register an exact HTTPS origin with `createOrigin('https://app.example.com')`. HTTP is allowed only on localhost or 127.0.0.1. Paths, credentials, wildcards, query strings and fragments are rejected; at most 10 origins are allowed. No origins means embedding is disabled.
+2. Create the assignment/template/envelope signer with `embedded: true`, Email or Whatsapp verification, and the matching notification method. Invitations still deliver the OTP; `signing_urls` contains `{ signer_id, url: null, embedded: true }`.
+3. Your authenticated backend verifies that the logged-in application user may act for that signer, then calls `createSession(documentId, assignmentId, signerId)`. Pass only its URL to that user's frontend. Sessions expire after five minutes and are single-use; mint a new one each time the frame is opened. Limit: 30 per signer per hour.
+4. Load the URL in the iframe. On load, send `{ v: 1, type: 'assinafy:hello' }` every 500 ms for at most 10 seconds, targeting the exact Assinafy origin, until `ready` or `error`. Repeat the handshake on frame reload. Accept messages only when both `event.origin` and `event.source === iframe.contentWindow` match. Production iframe origin: `https://app.assinafy.com.br`; sandbox: `https://app-sandbox.assinafy.com.br`.
+5. The hosted page exchanges the token and handles verification, terms and signing. Integrations must not call `exchangeSession` before loading the frame: it consumes the token, including on a 409. That method/CLI operation is exposed for implementing the hosted-page protocol. Unknown, expired or consumed tokens return 410/`embed_session_invalid`.
+6. Treat frame events as UI hints. Confirm completion using verified webhooks or document reads before releasing goods or changing permissions. An external invitation can also complete signing; the frame reports that with `via: 'external'`.
+
+A 409/`document_not_ready` from session creation permits a later deliberate mint after processing. Other refusal codes distinguish `already_signed`, `document_unavailable`, and `embed_origins_missing`; inspect `ApiError.responseData`. Editing the signer's contact before verification rotates the access code and expires open frames. Re-send an invitation only as an intentional notification operation. Never store/log embed URLs or exchange results in browser storage.
 
 ## Contracts (`client.contracts`)
 
-Contract tracking (CLM / Gestão de Contratos) records terms on an existing document. It does not upload a document or request signatures. Writes require a plan with contract tracking; reads remain available when the plan lapses. OAuth uses `documents:read` for reads and `documents:write` for writes.
+Contract tracking (CLM / Gestão de Contratos) records terms on an existing document. It does not upload a document or request signatures. Contract tracking is included in all standard plans, including Free; writes require the feature to be active; reads remain available when the plan lapses. OAuth uses `documents:read` for reads and `documents:write` for writes.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
 | `list(params?, accountId?)` | [`GET /accounts/{accountId}/contracts`](./api-reference.md#list-contracts) | `PaginatedResult<IContract>` |
 | `get(documentId, accountId?)` | [`GET /accounts/{accountId}/documents/{documentId}/contract`](./api-reference.md#get-a-documents-contract-terms) | `IContract \| IContractAmendment` |
 | `set(documentId, payload, accountId?)` | [`PUT /accounts/{accountId}/documents/{documentId}/contract`](./api-reference.md#set-a-documents-contract-terms) | `IContract \| IContractAmendment` |
-| `related(documentId, accountId?)` | [`GET …/contract/related`](./api-reference.md#list-the-contracts-related-to-a-document) | `IContract`, including `amendments` |
+| `related(documentId, accountId?, params?)` | [`GET …/contract/related`](./api-reference.md#list-the-contracts-related-to-a-document) | `IContract`, including `amendments` |
 | `renew(documentId, payload, accountId?)` | [`POST …/contract/renew`](./api-reference.md#renew-a-contract) | `IContract` |
 | `terminate(documentId, payload?, accountId?)` | [`POST …/contract/terminate`](./api-reference.md#terminate-a-contract) | `IContract` |
 
@@ -297,6 +451,8 @@ Termination input (`ITerminateContractPayload`) is `{ reason?: string | null; up
 
 The hourly lifecycle uses Brasília calendar days: notice-period alerts, warnings 45/30 days before expiry, then renewal or expiry the day after the end date. Owner notification preferences include `ContractRenewalNotice`, `ContractExpiring`, `ContractExpired` and `ContractRenewed`. Contract activities include `document_contract_updated`, `document_contract_amendment_updated`, `document_contract_amended`, `document_contract_renewal_notice`, `document_contract_expiring`, `document_contract_expired`, `document_contract_renewed` and `document_contract_terminated`. Subscribe explicitly to the event types needed; webhook defaults do not add these events. Reconcile missed events by paging `list({ sort: '-updated_at' })` until older than the last sync, and page `documents.activities(documentId, { page, sort: 'id' })` for history. A lapsed plan pauses lifecycle changes and pending amendments; restoration catches up without sending alerts whose windows have passed.
 
+`related` accepts `{ expand: "document" }` to include document details, also available as `contracts related --expand document`.
+
 ## Assignments (`client.assignments`)
 
 | SDK method | HTTP operation | Resolves to |
@@ -323,15 +479,19 @@ Assignment payload:
     verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
     notification_methods?: Array<'Email' | 'Whatsapp'>;
     step?: number;
+    embedded?: boolean;
   }>;
   signer_ids?: string[]; // compatibility alias
   signerIds?: string[];  // compatibility alias
   message?: string;
   expires_at?: string;
   copy_receivers?: string[];
+  max_total_credits?: number;
   entries?: ICollectAssignmentEntry[];
 }
 ```
+
+`max_total_credits` is a finite non-negative ceiling; `0` allows only a free request. A higher live price returns `409`/`CreditCeilingExceeded` before creation or charging. The high-level helper calls this option `maxTotalCredits`; CLI `send`, `assignments create`, and `documents create-from-template` expose `--max-total-credits`. A null balance means unlimited, not zero. `embedded: true` requires Email or Whatsapp verification and the workspace Embed feature; signing links return `url: null`.
 
 Production defaults `notification_methods: []` to `['Email']` and sends an invitation. An empty array is not a way to disable delivery. Choose the intended supported channel explicitly before creating an assignment.
 
@@ -361,20 +521,20 @@ Production defaults `notification_methods: []` to `['Email']` and sends an invit
 | `delete(signerId, accountId?)` | [`DELETE /accounts/{accountId}/signers/{signerId}`](./api-reference.md#delete-signer) | `IEmptyResult` (`unknown[]`) |
 | `findByEmail(email, accountId?)` | SDK helper over `list({ search: email })` | `ISigner | null` |
 
-Create payload: `{ full_name: string; email?; whatsapp_phone_number?; government_id?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `government_id` accepts CPF or numeric/alphanumeric CNPJ and is forwarded unchanged for server normalization. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; the `cpf` alias retains its digit-only normalization. New integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. Existing email matches are reused without updating their government ID; call `update` explicitly when needed. List params support published `search` and compatible `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
+Create payload: `{ full_name: string; email?; whatsapp_phone_number?; government_id?; phone?; cpf?; metadata? }`. Update payload: `{ full_name?; email?; whatsapp_phone_number?; phone?; government_id?; cpf? }`. `government_id` accepts CPF or numeric/alphanumeric CNPJ and is forwarded unchanged for server normalization. `phone`, create-time `cpf`/`metadata`, and update-time `cpf` are compatibility extensions; the `cpf` alias retains its digit-only normalization. New integrations should use the published fields. Creation is idempotent by exact case-insensitive email when email is supplied; full-name-only signers are valid. Existing email matches are reused without updating their government ID; call `update` explicitly when needed. Update `email`, `whatsapp_phone_number` and `government_id` with `null` or `""` to clear them; omitted values stay unchanged. `findByEmail` requests the server maximum of 50 records per page so a capped page cannot end its search early. List params support published `search` and compatible `sort?: 'full_name' | '-full_name'`; ignored sort fields are rejected locally.
 
 ## Signer-side flows (`client.signerDocuments`)
 
-These methods use the private `signer-access-code`, not the workspace API key, except for the artifact download that the API publishes as a public route. `listAsOwner` and `searchAsOwner` call the same routes with the client's API key or bearer token instead; the signer must belong to that workspace. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
+These methods use the private `signer-access-code` and strip the workspace API key or bearer header. Token-based certified-copy downloads use the private download token instead. `listAsOwner` and `searchAsOwner` call the same routes with the client's API key or bearer token instead; the signer must belong to that workspace. For email or WhatsApp verification, obtain the access code from the verification link and the OTP from the same message. An invitation containing only a document ID and recipient is not an access code. Call `self` and `getAssignment` to confirm the signer and document before submitting a decision; keep each document's verification credentials together.
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
-| `getCurrent(signerId, accessCode)` | [`GET /signers/{signerId}/document`](./api-reference.md#get-signers-document) | `IDocumentDetailsResponse` |
+| `getCurrent(signerId, accessCode, params?)` | [`GET /signers/{signerId}/document`](./api-reference.md#get-signers-document) | `ISigningDocument` |
 | `list(signerId, accessCode, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) | `IDocumentListResponse` |
 | `listAsOwner(signerId, params?)` | [`GET /signers/{signerId}/documents`](./api-reference.md#list-signers-documents) with owner credentials | `IDocumentListResponse` |
-| `search(signerId, search, accessCode)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
-| `searchAsOwner(signerId, search)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) with owner credentials | `IDocumentListResponse` |
-| `download(signerId, documentId, artifact, accessCode?)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-signers-document-artifact) | `Buffer` |
+| `search(signerId, search, accessCode, params?)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) | `IDocumentListResponse` |
+| `searchAsOwner(signerId, search, params?)` | [`GET /signers/{signerId}/documents/search`](./api-reference.md#search-signers-documents) with owner credentials | `IDocumentListResponse` |
+| `download(signerId, documentId, artifact, accessCode?)` | [`GET /signers/{signerId}/documents/{documentId}/download/{artifact}`](./api-reference.md#download-the-document-to-sign) | `Buffer` |
 | `signMultiple(documentIds, accessCode)` | [`PUT /signers/documents/sign-multiple`](./api-reference.md#sign-multiple-documents) | `unknown[]` |
 | `declineMultiple(documentIds, reason, accessCode)` | [`PUT /signers/documents/decline-multiple`](./api-reference.md#decline-multiple-documents) | `unknown[]` |
 | `self(accessCode)` | [`GET /signers/self`](./api-reference.md#get-current-signer) | `ISignerSelf` |
@@ -383,18 +543,18 @@ These methods use the private `signer-access-code`, not the workspace API key, e
 | `verifyEmail(payload: IVerifySignerCodePayload)` | Compatibility alias for `verifyCode` | `IEmptyResult \| IStatusResponse` |
 | `getIdentityVerification(accessCode)` | [`GET /signers/identity-verification`](./api-reference.md#identity-document-verification-status) | `IIdentityVerificationState` |
 | `startIdentityVerification(accessCode, payload)` | [`POST /signers/identity-verification`](./api-reference.md#start-identity-document-verification) | `IIdentityVerificationSession`; payload is `{ consent: true }` |
-| `startCertificate(accessCode)` | [`POST /signers/certificate/start`](#icp-brasil-a1a3-certificates) | `ICertificateStartResponse` (`{ token: string }`) |
-| `completeCertificate(accessCode, token)` | [`POST /signers/certificate/complete`](#icp-brasil-a1a3-certificates) | `ICertificateCompleteResponse` (`{ signerName: string }`) |
+| `startCertificate(accessCode, documentId?)` | [`POST /signers/certificate/start`](#icp-brasil-a1a3-certificates) | `ICertificateStartResponse` (`{ token: string }`) |
+| `completeCertificate(accessCode, token, documentId?)` | [`POST /signers/certificate/complete`](#icp-brasil-a1a3-certificates) | `ICertificateCompleteResponse` (`{ signerName: string }`) |
 | `confirmData(documentId, accessCode, payload)` | [`PUT /documents/{documentId}/signers/confirm-data`](./api-reference.md#confirm-signer-data) | `ISigner \| IEmptyResult` |
 | `uploadSignature(accessCode, image, options?)` | [`POST /signature`](./api-reference.md#upload-signature-image) | `IEmptyResult \| IStatusResponse` |
 | `downloadSignature(accessCode, imageType?)` | [`GET /signature/{type}`](./api-reference.md#download-signature-image) | `Buffer` |
-| `getAssignment(accessCode, hasAcceptedTerms?)` | [`GET /sign`](./api-reference.md#view-document-to-sign) | `IDocumentDetailsResponse` |
+| `getAssignment(accessCode, hasAcceptedTerms?, params?)` | [`GET /sign`](./api-reference.md#view-document-to-sign) | `ISigningDocument` |
 | `sign(documentId, assignmentId, accessCode, entries)` | [`POST /documents/{documentId}/assignments/{assignmentId}`](./api-reference.md#sign-assignment-items) | `Record<string, unknown>` |
 | `decline(documentId, assignmentId, accessCode, reason)` | [`PUT …/reject`](./api-reference.md#reject-decline-assignment) | `unknown[]` |
 
 `confirmData` accepts `{ full_name?, email?, government_id?, whatsapp_phone_number?, has_accepted_terms? }`. `uploadSignature` accepts a non-empty image `Buffer` plus `{ imageType?: 'signature' | 'initial'; contentType?: string; reuse?: boolean }`. Each signing entry is `{ itemId, fieldId, pageId, value }`.
 
-`confirmData`, `sign`, and `decline` first load `getAssignment(accessCode)` and reject a mismatched document or assignment before writing. These methods make one additional GET request. For virtual assignments, confirm the signer's data and then call `sign(documentId, assignmentId, accessCode, [])`. Collect assignments require a non-empty array with the actual assignment item, field, and page IDs. Signing resolves to the server's assignment result; poll document details until `certificated` before downloading final artifacts.
+`confirmData` preflights `GET /documents/{documentId}` with the signer code: `/sign` is blocked until certificate data and terms are confirmed. `sign` and `decline` preflight `getAssignment(accessCode, undefined, { document_id: documentId })`, enabling selection of another document of the same envelope and checking the returned document/assignment IDs before writing. These methods make one additional GET request. For virtual assignments, confirm the signer's data and then call `sign(documentId, assignmentId, accessCode, [])`. Collect assignments require a non-empty array with the actual assignment item, field, and page IDs. Signing resolves to the server's assignment result; poll document details until `certificated` before downloading final artifacts.
 
 Each request below includes `?signer-access-code=<private-access-code>`. These are complete example bodies and SDK results for production:
 
@@ -407,7 +567,19 @@ Each request below includes `?signer-access-code=<private-access-code>`. These a
 
 An empty result is successful acknowledgement, not a signer profile. Use `self(accessCode)` afterward when you need the updated profile, terms acceptance, or signature flags. The response types retain the published status/profile alternatives without converting or fabricating response fields.
 
-The artifact `download` route is public in the published API. If `accessCode` is supplied, the SDK first verifies it through `/signers/self` and confirms that it belongs to the requested signer before downloading.
+`getCurrent` accepts `{ expand: "envelope" }`; `getAssignment` additionally accepts `document_id` for another document of the same envelope. List/search params accept `envelope_id` and pagination. The API carries email/WhatsApp verification across documents of that envelope. `ISigningDocument` exposes `current_signer`, `is_signer_access_closed`, and `certified_copy`; closed links return only identity and copy state, and other signer operations return 410. Code closure occurs 30 minutes after this signer's work is done across the envelope. Assignment details contain only this signer's items, without other signers or their private links.
+
+The legacy `download` signature is retained, but the current API permits only `original` with an access code; without one it redirects to an expired-link page, which the SDK rejects rather than following. Supplied codes get a `/signers/self` identity preflight. Use `downloadCertifiedCopy` for completed PDFs.
+
+| SDK method | HTTP operation and request | SDK response |
+| --- | --- | --- |
+| `getTheme(accessCode)` | `GET /sign/theme`, no body | `IAccountTheme` |
+| `downloadLogo(accessCode)` | `GET /sign/logo`, no body | Image `Buffer`; 404 if absent |
+| `resendCertifiedCopy(accessCode, documentId?)` | `POST /sign/certified-copy`; no body or `{ document_id }` for an envelope document | `ICertifiedCopyResponse` |
+| `downloadCertifiedCopy(token, artifact?)` | `GET /signers/downloads/{token}`; `artifact: "pades"` selects `/pades`; default `"certificated"` | PDF `Buffer` |
+| `resendDownloadLink(token)` | `POST /signers/downloads/{token}/resend`, no body | `ICertifiedCopyResponse` |
+
+Certified-copy requests deliver to the original signing contact, never an arbitrary recipient. The result is `{ available: boolean, notification_method: "Email" | "Whatsapp", sent_to: string, resends_left: number | null }`. Links last 30 minutes. Email allows one resend every two minutes and ten per 24 hours; WhatsApp allows one resend per signature request. `sent_to` is masked. See the [HTTP reference](./api-reference.md) for refusal payloads. Expired download URLs return 302, surfaced as `ApiError`; the SDK never follows the redirect. CLI `signer certified-copy`, `download-copy`, and `resend-download-link` use `ASSINAFY_SIGNER_ACCESS_CODE` or `ASSINAFY_DOWNLOAD_TOKEN`. Theme and logo need no owner credential. Protect download URLs and the resulting files as private documents.
 
 ### Email and WhatsApp verification
 
@@ -506,9 +678,9 @@ Both A1 and A3 use `verification_method: "DigitalCertificate"`; they are not sep
 
 1. Create or select the signer and set their CPF/CNPJ with `signers.update(signerId, { government_id })`. An existing signer returned by `create` is reused without updating their data. Configure an eligible workspace, estimate cost, then create a `virtual` assignment with `DigitalCertificate` and one delivery channel. Use contiguous steps beginning at `1`, with each certificate signer alone in their step. The same descriptor works for template roles only when the template has no placed signer fields.
 2. Obtain the private signer access code through the delivered link. Load `self` and `getAssignment` to confirm the identity and document. Present the document and terms; call `acceptTerms` only after the signer agrees.
-3. Call `startCertificate(accessCode)` and retain its operation token with that signer session.
+3. Call `startCertificate(accessCode, documentId?)` and retain its operation token with that signer session.
 4. On the signer's device, use an initialized Web PKI browser client to select their A1 certificate or A3 device and execute `pki.signWithRestPki({ thumbprint, token })`. Wait for its success callback. The private key, PFX password, and device PIN stay with the local certificate provider.
-5. Call `completeCertificate(accessCode, token)` with the **same operation token**, only after Web PKI succeeds. This returns the certificate signer's name. The API validates the certificate against the required CPF/CNPJ; normal `sign` and `signMultiple` do not perform certificate signing.
+5. Call `completeCertificate(accessCode, token, documentId?)` with the **same operation token**, only after Web PKI succeeds. This returns the certificate signer's name. The API validates the certificate against the required CPF/CNPJ; normal `sign` and `signMultiple` do not perform certificate signing.
 6. Track document status until `certificated`, then download `pades` or `bundle`. The PAdES artifact exists only for documents with certificate signatures.
 
 The SDK exposes the server handshake. Browser certificate selection, the Web PKI extension/native component, and signer approval belong to the signing application. For the hosted experience, use the Assinafy signing page reached through the invitation; no separate CLI certificate driver is required.
@@ -562,7 +734,10 @@ assinafy documents download example_document --artifact pades -o signed-pades.pd
 | --- | --- | --- |
 | `create(payload)` | [`POST /accounts`](./api-reference.md#create-account) | `IWorkspaceResponse` |
 | `list()` | [`GET /accounts`](./api-reference.md#list-my-accounts) | `IWorkspaceListResponse` |
-| `get(accountId)` | [`GET /accounts/{accountId}`](./api-reference.md#get-account) | `IWorkspaceResponse` |
+| `get(accountId, params?)` | [`GET /accounts/{accountId}`](./api-reference.md#get-account) | `IWorkspaceResponse` |
+| `usage(accountId)` | `GET /accounts/{accountId}/usage`, no body | `IAccountUsage` |
+| `getNotificationPolicy(accountId)` | `GET /accounts/{accountId}/notification-policy`, no body | `INotificationPolicy` |
+| `updateNotificationPolicy(accountId, payload)` | `PUT /accounts/{accountId}/notification-policy` | `INotificationPolicy` |
 | `getTheme(accountId)` | [`GET /accounts/{accountId}/theme`](./api-reference.md#get-account-theme) | `IAccountTheme` |
 | `downloadLogo(accountId)` | [`GET /accounts/{accountId}/logo`](./api-reference.md#download-account-logo) | image `Buffer` |
 | `uploadLogo(accountId, logo, options?)` | [`POST /accounts/{accountId}/logo`](./api-reference.md#upload-account-logo) | `IStatusResponse` |
@@ -572,6 +747,10 @@ assinafy documents download example_document --artifact pades -o signed-pades.pd
 | `delete(accountId, { force? }?)` | [`DELETE /accounts/{accountId}`](./api-reference.md#delete-account) | `IEmptyResult` (`unknown[]`) |
 
 Create/update payloads use `name` and `notification_sender_type?: 'User' | 'Account'`; legacy color fields remain accepted for compatibility. List/detail responses include `resource`, `id`, `name`, nullable colors, `notification_sender_type`, roles, delete permission, and `created_at`. `IAccountTheme` is `{ account_name; primary_color; secondary_color: string | null; logo: string | null }`. Logo options are `{ fileName?, contentType? }`. Statistics params are `{ granularity?: 'monthly' | 'daily'; month?: 'YYYY-MM' }`; `month` is required for daily data.
+
+`get(accountId, { expand: "signing_features" })` adds the available verification, notification and Embed features. `usage` returns `{ plan: string | null, documents_renewal_date: string | null, balances: { documents: { balance: number | null, limit: number | null, spent: number }, credits: { balance: number | null, limit: number | null, spent: number } } }`. Treat null balances as unlimited. These reads are also CLI `workspaces get <id> --expand signing_features` and `workspaces usage <id>`. Usage is unavailable to third-party OAuth application tokens.
+
+Notification policy GET returns `{ editable: boolean, owners_receive_all: boolean, events: INotificationPolicyEvents }`. PUT accepts a non-empty partial `{ owners_receive_all?: boolean, events?: Partial<INotificationPolicyEvents> }`; omitted settings stay unchanged and explicit false disables that setting. The 16 event keys are the union of the email and push preference keys below. Only owners may edit. Workspace false overrides a user's preference, while `owners_receive_all` still respects each owner's preferences. Identity review email is always sent; the corresponding policy key affects only push. CLI `workspaces notification-policy update example_account --data '{"owners_receive_all":false,"events":{"SignerViewed":false}}'` sends that exact body.
 
 OAuth `account:read` permits workspace statistics; user statistics still require an endpoint-supported owner or first-party credential.
 
@@ -604,10 +783,16 @@ Notification counters can overlap when a request uses multiple delivery channels
 | --- | --- | --- |
 | `self()` | [`GET /users/self`](./api-reference.md#get-the-authenticated-user) | `IUserSelfResponse` |
 | `stats(params?)` | [`GET /users/self/stats`](./api-reference.md#my-cross-account-document-kpis) | `IDocumentStatsRow[]` |
+| `getPushPreferences()` | `GET /users/self/push-preferences`, no body | `IPushPreferences` |
+| `updatePushPreferences(payload)` | `PUT /users/self/push-preferences` | `IPushPreferences` |
 | `getNotificationPreferences()` | [`GET /users/self/notification-preferences`](./api-reference.md#get-my-notification-preferences) | `INotificationPreferences` |
 | `updateNotificationPreferences(payload)` | [`PUT /users/self/notification-preferences`](./api-reference.md#update-my-notification-preferences) | `INotificationPreferences` |
 
 `IUserSelfResponse` accepts the published user object and the compatible `{ user, accounts }` envelope. Preference payloads are a non-empty partial mapping of the exported `NOTIFICATION_PREFERENCE_CODES` to booleans. The production OpenAPI publishes these routes; a lagging sandbox deployment may return route-level 404s for statistics/preferences.
+
+Email keys: `DocumentCompleted`, `SignerDeclined`, `DocumentCancelled`, `DocumentAboutToExpire`, `DocumentExpired`, `DocumentExpirationReset`, `DocumentProcessingFailed`, `TemplateProcessingFailed`, `SignerWhatsappFailed`, `ContractRenewalNotice`, `ContractExpiring`, `ContractExpired`, `ContractRenewed`. Push keys (`PUSH_PREFERENCE_CODES`): `SignerViewed`, `SignerSigned`, `DocumentCompleted`, `SignerDeclined`, `DocumentAboutToExpire`, `DocumentExpired`, `SignerIdentityReviewRequired`, `SignerWhatsappFailed`.
+
+Push reads/writes return all eight booleans. Update accepts a non-empty partial map, for example `{ "SignerViewed": false }`; CLI `users push-preferences update --set '{"SignerViewed":false}'` sends that body. These are user phone preferences, separate from email. Delivery also requires the mobile app's device registration; this Node SDK does not manage devices or implement a mobile client. OAuth application tokens cannot access user preferences; use endpoint-supported owner/first-party authentication.
 
 ## Authentication (`client.auth`)
 
@@ -744,15 +929,16 @@ An account can register 1 webhook endpoint, or up to 3 on paid plans. Each endpo
 | `deleteEndpoint(endpointId, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints/{endpointId}`](./api-reference.md#delete-webhook-endpoint) | `IEmptyResult` (`[]`) |
 | `deleteEndpointByUrl(url, accountId?)` | [`DELETE /accounts/{accountId}/webhooks/endpoints?url=…`](./api-reference.md#delete-webhook-endpoint-by-url) | `IEmptyResult` (`[]`); exact registered URL required |
 | `getEndpointSecret(endpointId, accountId?)` | [`GET /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret`](./api-reference.md#get-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` (`{ secret }`) |
-| `rotateEndpointSecret(endpointId, accountId?)` | [`POST /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`](./api-reference.md#rotate-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` |
+| `rotateEndpointSecret(endpointId, accountId?, options?)` | [`POST /accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`](./api-reference.md#rotate-webhook-endpoint-signing-secret) | `IWebhookEndpointSecret` |
 | `register(payload, accountId?)` | [`PUT /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#update-webhook-subscription) | `IWebhookSubscription` (oldest endpoint) |
 | `get(accountId?)` | [`GET /accounts/{accountId}/webhooks/subscriptions`](./api-reference.md#get-webhook-subscription) | `IWebhookSubscription | null` |
 | `inactivate(accountId?)` | [`PUT /accounts/{accountId}/webhooks/inactivate`](./api-reference.md#inactivate-webhook-subscription) | `IWebhookSubscription` |
 | `listEventTypes()` | [`GET /webhooks/event-types`](./api-reference.md#list-webhook-event-types) | `IWebhookEventTypeInfo[]` |
 | `listDispatches(params?, accountId?)` | [`GET /accounts/{accountId}/webhooks`](./api-reference.md#list-webhook-deliveries) | `PaginatedResult<IWebhookDispatch>` |
+| `testEndpoint(endpointId, accountId?)` | `POST /accounts/{accountId}/webhooks/endpoints/{endpointId}/test`, no body | `IWebhookDispatch` |
 | `retryDispatch(dispatchId, accountId?)` | [`POST /accounts/{accountId}/webhooks/{dispatchId}/retry`](./api-reference.md#retry-webhook-delivery) | `IWebhookDispatch` |
 
-Endpoint payload: `{ url: string; email: string; events?: string[]; name?: string; is_active?: boolean; signing_enabled?: boolean }`. Update sends only the given fields and requires at least one. New or changed URLs must be HTTPS and unique within the workspace (`400`); legacy HTTP URLs remain usable for exact lookup/deletion; creating past the plan limit returns `403`. Enabling signing creates a `whsec_` secret if none exists; disabling it discards the secret. Secret read and rotation return `400` when signing is disabled. OAuth applications cannot read an existing secret, but `webhooks:write` permits rotation; rotation invalidates the previous secret immediately.
+Endpoint payload: `{ url: string; email: string; events?: string[]; name?: string; is_active?: boolean; signing_enabled?: boolean }`. Update sends only the given fields and requires at least one. New or changed URLs must be HTTPS and unique within the workspace (`400`); legacy HTTP URLs remain usable for exact lookup/deletion; creating past the plan limit returns `403`. Enabling signing creates a `whsec_` secret if none exists; disabling it discards the secret. Secret read and rotation return `400` when signing is disabled. OAuth applications cannot read an existing secret, but `webhooks:write` permits rotation; rotation invalidates the previous secret immediately unless `{ keep_previous: true }` is passed. That option signs deliveries with both secrets for 24 hours and returns `previous_secret_expires_at`; another rotation replaces the one retained secret. CLI `rotate-secret --keep-previous` exposes the overlap. `testEndpoint` sends a synthetic event to the registered receiver and records its delivery; it is a write, not a connectivity read. CLI: `webhooks endpoints test <endpointId>`. Dispatches include `duration_ms` when measured.
 
 ```ts
 const endpoint = await client.webhooks.createEndpoint({
@@ -827,7 +1013,7 @@ Verify the raw bytes before parsing; re-serialized JSON does not match. The enve
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 118 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
-- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 118 OpenAPI operations; the API manifest contains only published paths.
+- Production OpenAPI currently publishes 147 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 147 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above. Both `sendToken` call forms send the email-only production body.
-- Signer artifact downloads are public in the published contract. Supplying a signer access code opts into an SDK identity preflight; it does not change the server route into a private endpoint.
+- Original signer artifacts require a signer code. Completed copies use private expiring download tokens. Older download call forms remain callable for compatibility; server authorization and lifecycle rules apply.

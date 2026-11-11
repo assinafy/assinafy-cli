@@ -6,6 +6,8 @@ import { configCommand } from './commands/config/index';
 import { contractsCommand } from './commands/contracts';
 import { docsCommand } from './commands/docs';
 import { documentsCommand } from './commands/documents';
+import { embedCommand } from './commands/embed';
+import { envelopesCommand } from './commands/envelopes';
 import { fieldsCommand } from './commands/fields';
 import { loginCommand } from './commands/login';
 import { logoutCommand } from './commands/logout';
@@ -60,6 +62,8 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	.addCommand(sendCommand)
 	// Core resources
 	.addCommand(documentsCommand)
+	.addCommand(envelopesCommand)
+	.addCommand(embedCommand)
 	.addCommand(contractsCommand)
 	.addCommand(signersCommand)
 	.addCommand(assignmentsCommand)

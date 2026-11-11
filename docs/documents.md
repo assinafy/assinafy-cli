@@ -14,7 +14,7 @@ Commands:
   upload [options] <file>                        Upload a PDF to the workspace
   list [options]                                 List workspace documents
   search [options] [query]                       Lightweight document search (type-ahead)
-  get <id>                                       Show details for a document
+  get [options] <id>                             Show details for a document
   rename <id> <name>                             Rename a document (only before the signature process starts)
   download [options] <id>                        Download a document artifact
   thumbnail [options] <id>                       Download the document thumbnail (JPEG)
@@ -65,6 +65,7 @@ Options:
   --method <method>  Filter by signature method (virtual or collect) (choices:
                      "virtual", "collect")
   --tags <ids>       Comma-separated tag IDs (AND semantics)
+  --envelope <id>    Filter by envelope ID
   --page <n>         Page number to fetch
   --per-page <n>     Items per page
   --search <query>   Filter by a search query
@@ -84,6 +85,7 @@ Arguments:
 
 Options:
   --status <status>  Filter by document status
+  --envelope <id>    Filter by envelope ID
   --page <n>         Page number to fetch
   --per-page <n>     Items per page
   --search <query>   Filter by a search query
@@ -99,10 +101,14 @@ Usage: assinafy documents get [options] <id>
 Show details for a document
 
 Arguments:
-  id          Document ID
+  id                    Document ID
 
 Options:
-  -h, --help  display help for command
+  --access-code <code>  Read as a signer instead of the owner (env:
+                        ASSINAFY_SIGNER_ACCESS_CODE)
+  --expand <relation>   Include envelope details (choices: "envelope",
+                        "envelope_id", "envelope,envelope_id")
+  -h, --help            display help for command
 ```
 
 ### `assinafy documents rename`
@@ -128,14 +134,16 @@ Usage: assinafy documents download [options] <id>
 Download a document artifact
 
 Arguments:
-  id                   Document ID
+  id                    Document ID
 
 Options:
-  --artifact <name>    original | certificated | certificate-page | pades |
-                       bundle (default: "certificated")
-  -o, --output <path>  Output file path
-  --force              Overwrite the output file if it already exists
-  -h, --help           display help for command
+  --access-code <code>  Read as a signer instead of the owner (env:
+                        ASSINAFY_SIGNER_ACCESS_CODE)
+  --artifact <name>     original | certificated | certificate-page | pades |
+                        bundle (default: "certificated")
+  -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
+  -h, --help            display help for command
 ```
 
 ### `assinafy documents thumbnail`
@@ -146,12 +154,15 @@ Usage: assinafy documents thumbnail [options] <id>
 Download the document thumbnail (JPEG)
 
 Arguments:
-  id                   Document ID
+  id                    Document ID
 
 Options:
-  -o, --output <path>  Output file path
-  --force              Overwrite the output file if it already exists
-  -h, --help           display help for command
+  --artifact <name>     Use the signed PDF (choices: "certificated")
+  --access-code <code>  Read as a signer instead of the owner (env:
+                        ASSINAFY_SIGNER_ACCESS_CODE)
+  -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
+  -h, --help            display help for command
 ```
 
 ### `assinafy documents download-page`
@@ -162,13 +173,16 @@ Usage: assinafy documents download-page [options] <id> <pageId>
 Download a single document page (JPEG)
 
 Arguments:
-  id                   Document ID
-  pageId               Page ID
+  id                    Document ID
+  pageId                Page ID
 
 Options:
-  -o, --output <path>  Output file path
-  --force              Overwrite the output file if it already exists
-  -h, --help           display help for command
+  --artifact <name>     Use the signed PDF (choices: "certificated")
+  --access-code <code>  Read as a signer instead of the owner (env:
+                        ASSINAFY_SIGNER_ACCESS_CODE)
+  -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
+  -h, --help            display help for command
 ```
 
 ### `assinafy documents activities`
@@ -270,17 +284,20 @@ Usage: assinafy documents create-from-template [options] <templateId>
 Create a document from a template
 
 Arguments:
-  templateId              Template ID
+  templateId                    Template ID
 
 Options:
-  --signers <json>        JSON array of signers, e.g.
-                          '[{"role_id":"r","id":"s","verification_method":"Email","notification_methods":["Email"]}]'
-  --name <name>           Document name
-  --message <message>     Message shown to signers
-  --expires-at <iso8601>  Expiration timestamp
-  --tags <names>          Comma-separated tag names to attach
-  --editor-fields <json>  JSON array of editor field placements
-  -h, --help              display help for command
+  --idempotency-key <key>       Creation key for recovering a lost response
+  --max-total-credits <amount>  Reject creation if its credit cost exceeds this
+                                amount
+  --signers <json>              JSON array of signers, e.g.
+                                '[{"role_id":"r","id":"s","verification_method":"Email","notification_methods":["Email"]}]'
+  --name <name>                 Document name
+  --message <message>           Message shown to signers
+  --expires-at <iso8601>        Expiration timestamp
+  --tags <names>                Comma-separated tag names to attach
+  --editor-fields <json>        JSON array of editor field placements
+  -h, --help                    display help for command
 ```
 
 ### `assinafy documents estimate-template-cost`

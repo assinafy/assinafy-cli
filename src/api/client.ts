@@ -4,6 +4,8 @@ import { AssignmentResource } from './resources/assignments.js';
 import { AuthenticationResource } from './resources/authentication.js';
 import { ContractResource } from './resources/contracts.js';
 import { DocumentResource, type DocumentUploadSource } from './resources/documents.js';
+import { EmbedResource } from './resources/embed.js';
+import { EnvelopeResource } from './resources/envelopes.js';
 import { FieldsResource } from './resources/fields.js';
 import { OAuthResource } from './resources/oauth.js';
 import { SignerDocumentsResource } from './resources/signer-documents.js';
@@ -27,6 +29,7 @@ import {
 	createNoopLogger,
 	normalizeBaseUrl,
 	requireExpiration,
+	validateCreditCeiling,
 	validateSignerOptions,
 	validateSigningSteps,
 } from './utils.js';
@@ -94,6 +97,8 @@ export class AssinafyClient {
 	public readonly auth: AuthenticationResource;
 	public readonly oauth: OAuthResource;
 	public readonly fields: FieldsResource;
+	public readonly envelopes: EnvelopeResource;
+	public readonly embed: EmbedResource;
 	public readonly users: UsersResource;
 	public readonly signerDocuments: SignerDocumentsResource;
 	public readonly webhookVerifier: WebhookVerifier;
@@ -176,6 +181,8 @@ export class AssinafyClient {
 		this.auth = new AuthenticationResource(this.axiosInstance, undefined, this.logger);
 		this.oauth = new OAuthResource(this.axiosInstance, undefined, this.logger);
 		this.fields = new FieldsResource(this.axiosInstance, this.defaultAccountId, this.logger);
+		this.envelopes = new EnvelopeResource(this.axiosInstance, this.defaultAccountId, this.logger);
+		this.embed = new EmbedResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.users = new UsersResource(this.axiosInstance, undefined, this.logger);
 		this.signerDocuments = new SignerDocumentsResource(
 			this.axiosInstance,
@@ -231,6 +238,7 @@ export class AssinafyClient {
 		metadata?: Record<string, unknown>;
 		waitForReady?: boolean;
 		expiresAt?: string;
+		maxTotalCredits?: number;
 		copyReceivers?: string[];
 		accountId?: string;
 	}): Promise<IUploadAndRequestSignaturesResult> {
@@ -238,6 +246,7 @@ export class AssinafyClient {
 			throw new ValidationError('At least one signer is required');
 		}
 		if (options.expiresAt !== undefined) requireExpiration(options.expiresAt, 'expiresAt');
+		validateCreditCeiling(options.maxTotalCredits);
 		const preparedSigners = options.signers.map((signer) => {
 			if (!signer || typeof signer !== 'object') {
 				throw new ValidationError('Each signer must be an object');
@@ -256,6 +265,7 @@ export class AssinafyClient {
 				notification_methods:
 					signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
 				step: signer.step,
+				embedded: signer.embedded,
 			};
 			validateSignerOptions(reference);
 			return { reference, payload };
@@ -294,6 +304,7 @@ export class AssinafyClient {
 			const assignmentPayload: ICreateAssignmentPayload = {
 				method: 'virtual',
 				signers: assignmentSigners,
+				max_total_credits: options.maxTotalCredits,
 			};
 			if (options.message !== undefined) assignmentPayload.message = options.message;
 			if (options.expiresAt !== undefined) assignmentPayload.expires_at = options.expiresAt;

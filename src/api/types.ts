@@ -104,12 +104,12 @@ export interface ICreateSignerPayload {
 /** Payload for updating a signer. */
 export interface IUpdateSignerPayload {
 	full_name?: string;
-	email?: string;
-	whatsapp_phone_number?: string;
+	email?: string | null;
+	whatsapp_phone_number?: string | null;
 	/** PHP SDK compatibility alias for `whatsapp_phone_number`. */
 	phone?: string;
 	/** CPF or numeric/alphanumeric CNPJ; forwarded unchanged for server normalization. */
-	government_id?: string;
+	government_id?: string | null;
 	/** Backwards-compatible alias for `government_id`. */
 	cpf?: string;
 }
@@ -268,6 +268,7 @@ export type SignerReference =
 			verification_method?: AssignmentVerificationMethod;
 			/** Production defaults an empty array to Email; it does not disable invitations. */
 			notification_methods?: AssignmentNotificationMethod[];
+			embedded?: boolean;
 			/** Integer signing-order value forwarded to the assignment API. */
 			step?: number;
 	  };
@@ -275,6 +276,8 @@ export type SignerReference =
 /** Payload for creating an assignment. */
 export interface ICreateAssignmentPayload {
 	method?: AssignmentMethod;
+	/** Reject the send if its total credit cost exceeds this ceiling. */
+	max_total_credits?: number;
 	/**
 	 * List of signers. Each entry may be a signer id string, or an object with
 	 * `id` / `signer_id`. For cost estimation, entries may omit the ID and
@@ -322,7 +325,8 @@ export interface ICollectAssignmentEntry {
 /** Direct signing URL generated for one signer (inside `assignment.signing_urls`). */
 export interface ISigningUrl {
 	signer_id: string;
-	url: string;
+	url: string | null;
+	embedded?: boolean;
 }
 
 /**
@@ -430,8 +434,8 @@ export interface IEstimateCostResponse {
 	extra_document_cost: number;
 	total_credits: number;
 	breakdown: IEstimateCostBreakdownItem[];
-	document_balance: number;
-	credit_balance: number;
+	document_balance: number | null;
+	credit_balance: number | null;
 	has_sufficient_resources: boolean;
 	blocking_reason: 'PendingPayment' | 'InsufficientDocuments' | 'InsufficientCredits' | null;
 	message: string | null;
@@ -552,6 +556,7 @@ export type IDocumentListResponse = PaginatedResult<IDocumentListItem>;
 
 /** Query parameters accepted by `documents.list`. */
 export interface IDocumentListParams extends IPaginationParams {
+	envelope_id?: string;
 	/** Filter by document status, e.g. `pending_signature`. */
 	status?: DocumentStatus | string;
 	/** Filter by signature method (`virtual` or `collect`). */
@@ -564,6 +569,7 @@ export interface IDocumentListParams extends IPaginationParams {
 
 /** Query parameters accepted by the lightweight document search endpoint. */
 export interface IDocumentSearchParams extends IPaginationParams {
+	envelope_id?: string;
 	status?: DocumentStatus | string;
 	search?: string;
 	/** Live-verified extension; absent from the published OpenAPI. */
@@ -598,6 +604,8 @@ export interface IDocumentUploadResponse {
 /** Detailed document response. */
 export interface IDocumentDetailsResponse {
 	resource?: string;
+	envelope_id?: string | null;
+	envelope?: { id: string; name: string } | null;
 	/** Owner detail only; absence means unknown, not false. */
 	has_contract?: boolean;
 	id: string;
@@ -631,7 +639,7 @@ export interface IDocumentActivity {
 	/** Event-specific payload snapshot. Object for most events, occasionally `[]`. */
 	payload?: Record<string, unknown> | unknown[] | null;
 	/** Request origin (`ip` / `user-agent`) when available; `null` for system events. */
-	origin: { ip?: string; 'user-agent'?: string } | string | null;
+	origin: { ip?: string | null; 'user-agent'?: string } | string | null;
 	created_at: string;
 }
 
@@ -684,6 +692,7 @@ export interface ISignerListParams extends IPaginationParams {
 
 /** Signer-side document list compatibility filters. */
 export interface ISignerDocumentListParams extends IPaginationParams {
+	envelope_id?: string;
 	search?: string;
 	sort?: string;
 }
@@ -718,6 +727,13 @@ export interface IWorkspaceResponse {
 	is_delete_allowed?: boolean;
 	/** Present on workspace details; additional plan limits may be added. */
 	limits?: { webhook_endpoints: number; [key: string]: unknown };
+	signing_features?: {
+		DigitalCertificate: boolean;
+		VerificationIdDocumentFaceMatchBasic: boolean;
+		WhatsappNotification: boolean;
+		VerificationBypass: boolean;
+		Embed: boolean;
+	};
 	created_at: string;
 }
 
@@ -736,6 +752,96 @@ export interface IAccountTheme {
 	primary_color: string;
 	secondary_color: string | null;
 	logo: string | null;
+}
+
+export interface IAccountUsage {
+	plan: string | null;
+	documents_renewal_date: string | null;
+	balances: {
+		documents: IAccountBalance;
+		credits: IAccountBalance;
+	};
+}
+
+export interface IAccountBalance {
+	balance: number | null;
+	limit: number | null;
+	spent: number;
+}
+
+export interface IEmbedOrigin {
+	id: string;
+	origin: string;
+	created_at: string;
+}
+
+/** Private, single-use iframe URL, valid for five minutes. */
+export interface IEmbedSession {
+	url: string;
+	expires_at: string;
+}
+
+/** Returned to the embed page only, never to the integration's frontend. */
+export interface IEmbedSessionExchange {
+	signer_access_code: string;
+	signer_id: string;
+	document_id: string;
+	verification_method: AssignmentVerificationMethod;
+	embed_origins: string[];
+}
+
+export const PUSH_PREFERENCE_CODES = [
+	'SignerViewed',
+	'SignerSigned',
+	'DocumentCompleted',
+	'SignerDeclined',
+	'DocumentAboutToExpire',
+	'DocumentExpired',
+	'SignerIdentityReviewRequired',
+	'SignerWhatsappFailed',
+] as const;
+export type IPushPreferences = Record<(typeof PUSH_PREFERENCE_CODES)[number], boolean>;
+
+export type INotificationPolicyEvents = INotificationPreferences & IPushPreferences;
+export interface INotificationPolicy {
+	editable: boolean;
+	owners_receive_all: boolean;
+	events: INotificationPolicyEvents;
+}
+export interface IUpdateNotificationPolicyPayload {
+	owners_receive_all?: boolean;
+	events?: Partial<INotificationPolicyEvents>;
+}
+
+export interface ICertifiedCopyState {
+	available: boolean;
+	notification_method: 'Email' | 'Whatsapp' | null;
+	resends_left: number | null;
+}
+export interface ICertifiedCopyResponse extends ICertifiedCopyState {
+	notification_method: 'Email' | 'Whatsapp';
+	sent_to: string;
+}
+
+/** Signer-authenticated document reads omit owner-only assignment fields. */
+export interface ISignerDocumentDetailsResponse
+	extends Omit<IDocumentDetailsResponse, 'assignment'> {
+	assignment?: Omit<IAssignment, 'signers' | 'signing_urls' | 'copy_receivers' | 'summary'> | null;
+}
+
+/** Closed signer codes expose only the document identity and signer/copy state. */
+export interface ISigningDocument extends Partial<ISignerDocumentDetailsResponse> {
+	id: string;
+	name: string;
+	status: DocumentStatus;
+	current_signer: Partial<ISigner> & {
+		id: string;
+		verification_method: AssignmentVerificationMethod;
+		notification_methods: AssignmentNotificationMethod[] | null;
+		completed: boolean;
+	};
+	is_signer_access_closed: boolean;
+	certified_copy: ICertifiedCopyState;
 }
 
 /** Query parameters shared by account and user document statistics. */
@@ -846,6 +952,7 @@ export type IWebhookEndpointUpdatePayload = Partial<IWebhookEndpointCreatePayloa
 /** Endpoint signing secret, prefixed `whsec_`. */
 export interface IWebhookEndpointSecret {
 	secret: string;
+	previous_secret_expires_at?: string | null;
 }
 
 export interface IWebhookEventTypeInfo {
@@ -868,6 +975,7 @@ export interface IWebhookDispatch {
 	attempt?: number | null;
 	kind?: 'scheduled' | 'probe' | 'manual';
 	will_retry?: boolean;
+	duration_ms?: number | null;
 	http_status: number | null;
 	response_body: string | null;
 	error: string | null;
@@ -897,6 +1005,7 @@ export interface IUploadAndRequestSignaturesResult {
 
 /** Input for a signer in `uploadAndRequestSignatures`. */
 export interface IUploadAndRequestSignaturesSigner {
+	embedded?: boolean;
 	name: string;
 	email?: string;
 	whatsapp_phone_number?: string;
@@ -971,6 +1080,7 @@ export interface ITemplateDetailsResponse extends ITemplateListItem {
  * Supply an existing `id` or an `email`; `id` takes precedence when both are set.
  */
 export interface ITemplateSigner {
+	embedded?: boolean;
 	role_id: string;
 	id?: string;
 	/** Reuse this workspace's email match, or create a signer with name and optional WhatsApp. */
@@ -1005,6 +1115,9 @@ export interface ITemplateEditorField {
 
 /** Options for creating a document from a template. */
 export interface ICreateDocumentFromTemplateOptions {
+	/** Sent as an Idempotency-Key header, never in the request body. */
+	idempotencyKey?: string;
+	max_total_credits?: number;
 	name?: string;
 	message?: string;
 	expires_at?: string;

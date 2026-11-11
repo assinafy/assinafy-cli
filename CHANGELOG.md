@@ -6,6 +6,27 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-11-11
+
+### Added
+
+- Envelope creation, estimates, updates, activities, downloads, reminders and document membership in the SDK and CLI.
+- Embedded-signing origins and single-use sessions, with embedded signer options for assignments, templates and the send workflow.
+- Workspace usage and notification policies, mobile push preferences, signer branding, certified-copy delivery and token downloads.
+- Credit ceilings, template/envelope idempotency keys, envelope document filters and expansion, signed-page images and signer-authenticated document reads.
+- Webhook test deliveries and optional 24-hour overlap when rotating signing secrets.
+
+### Fixed
+
+- Certificate data confirmation uses a document read that is available before confirmation; envelope signing selects the requested document before validating its assignment.
+- Certificate start/completion can select a document within the same envelope.
+- Signer updates preserve null/empty contact clearing, and email lookup continues across the server's 50-record page limit.
+- Response types represent unlimited balances, embedded signing URLs, closed signer links and signer-visible assignment fields.
+
+### Changed
+
+- SDK and command references cover all 147 published API operations, with complete envelope and embedded-signing flows.
+
 ## [2.7.1] - 2026-11-02
 
 ### Fixed

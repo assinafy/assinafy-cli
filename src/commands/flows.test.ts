@@ -187,12 +187,12 @@ it('passes certificate operation tokens through the CLI without owner credential
 		.mockResolvedValue({ signerName: 'Example Signer' });
 	const program = new Command().option('--json').addCommand(signerCommand);
 	await program.parseAsync(['--json', 'signer', 'certificate-start'], { from: 'user' });
-	expect(start).toHaveBeenCalledWith('example-code');
+	expect(start).toHaveBeenCalledWith('example-code', undefined);
 	expect(JSON.parse(stdout)).toEqual({ token: 'example-token' });
 	stdout = '';
 	vi.stubEnv('ASSINAFY_CERTIFICATE_TOKEN', 'example-token');
 	await program.parseAsync(['--json', 'signer', 'certificate-complete'], { from: 'user' });
-	expect(complete).toHaveBeenCalledWith('example-code', 'example-token');
+	expect(complete).toHaveBeenCalledWith('example-code', 'example-token', undefined);
 	expect(JSON.parse(stdout)).toEqual({ signerName: 'Example Signer' });
 	expect(stderr).toBe('');
 });

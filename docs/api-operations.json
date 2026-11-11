@@ -1,6 +1,6 @@
 {
   "specUrl": "https://api.assinafy.com.br/v1/docs/openapi.json",
-  "hash": "38cb1b376546c1db6e9eabb06fbb613a9c17ca7c22f66388de2ffbf4b6931e93",
+  "hash": "511261bfe294776d09e879a9e0cf4cd586542653d87d78fe3e32e125037edaac",
   "operations": [
     {
       "method": "GET",
@@ -32,6 +32,14 @@
       "tag": "Accounts",
       "summary": "Get account theme",
       "operationId": "e769023db72349e5b478396ae92d12b2",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/usage",
+      "tag": "Accounts",
+      "summary": "Get account usage",
+      "operationId": "569cfc5ec3a3dc3384aff421edf5e13e",
       "hasRequestBody": false
     },
     {
@@ -348,6 +356,150 @@
     },
     {
       "method": "GET",
+      "path": "/v1/accounts/{accountId}/embed-origins",
+      "tag": "Embedded Signing",
+      "summary": "List embed origins",
+      "operationId": "ef7df4297ac8656ed5d32b727c5b9e3e",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/embed-origins",
+      "tag": "Embedded Signing",
+      "summary": "Add embed origin",
+      "operationId": "29cab5a031f9a885d490b04dee7d91a4",
+      "hasRequestBody": true
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/embed-origins/{originId}",
+      "tag": "Embedded Signing",
+      "summary": "Update embed origin",
+      "operationId": "b27fa7c2e564a9fbd8692df2bafad99b",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/embed-origins/{originId}",
+      "tag": "Embedded Signing",
+      "summary": "Remove embed origin",
+      "operationId": "f4ed1006257eca4367815f73d2a2a1dc",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/embed-sessions",
+      "tag": "Embedded Signing",
+      "summary": "Create an embed session",
+      "operationId": "5d57fa2ec0166bd135783feda21141eb",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/embed/sessions/{token}/exchange",
+      "tag": "Embedded Signing",
+      "summary": "Exchange an embed session",
+      "operationId": "645417f72ef4fa41864f217ee14af438",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/envelopes",
+      "tag": "Envelopes",
+      "summary": "List envelopes",
+      "operationId": "49dce8a177564c63ad57a0972f95bede",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/envelopes",
+      "tag": "Envelopes",
+      "summary": "Create envelope",
+      "operationId": "6c4e72a133c3f93240b24df1f910912a",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/envelopes/estimate-cost",
+      "tag": "Envelopes",
+      "summary": "Estimate envelope cost",
+      "operationId": "46efe1f80f0eeeadbcb87de65b7f50f4",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}",
+      "tag": "Envelopes",
+      "summary": "Get envelope",
+      "operationId": "7252a24ec458753d201b94621924399c",
+      "hasRequestBody": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}",
+      "tag": "Envelopes",
+      "summary": "Delete envelope",
+      "operationId": "6d3ecc98427ad85659db43f3d67da1ac",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}",
+      "tag": "Envelopes",
+      "summary": "Update envelope",
+      "operationId": "d7f051784fd3cfca022908598b12b48a",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/activities",
+      "tag": "Envelopes",
+      "summary": "List envelope activities",
+      "operationId": "4e63b2ec1d3d85c6f17299c8ca209a51",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/download/{artifactName}",
+      "tag": "Envelopes",
+      "summary": "Download envelope artifacts",
+      "operationId": "6b95a37c21ba29f45be011d43d5646e2",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/cancel",
+      "tag": "Envelopes",
+      "summary": "Cancel envelope",
+      "operationId": "d00cffe402e0399f87bfb66cb9351bf0",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/signers/{signerId}/resend",
+      "tag": "Envelopes",
+      "summary": "Remind envelope signer",
+      "operationId": "7e8194a9458b32123995f6358e5a5ecd",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/documents",
+      "tag": "Envelopes",
+      "summary": "Add document to envelope",
+      "operationId": "80c4aa75bd8a80dadd208a999429b3aa",
+      "hasRequestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}",
+      "tag": "Envelopes",
+      "summary": "Take document out of envelope",
+      "operationId": "cfd0ae9edf924aa994847c2a5e10afd4",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/accounts/{accountId}/fields",
       "tag": "Fields",
       "summary": "List fields",
@@ -452,6 +604,22 @@
     },
     {
       "method": "GET",
+      "path": "/v1/accounts/{accountId}/notification-policy",
+      "tag": "Accounts",
+      "summary": "Get the workspace notification policy",
+      "operationId": "445dda799444c8013b2da1a37d1b6f24",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/accounts/{accountId}/notification-policy",
+      "tag": "Accounts",
+      "summary": "Update the workspace notification policy",
+      "operationId": "5e03eceba508b16502bc45f38462c7d9",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
       "path": "/v1/users/self/notification-preferences",
       "tag": "Users",
       "summary": "Get my notification preferences",
@@ -524,6 +692,22 @@
     },
     {
       "method": "GET",
+      "path": "/v1/users/self/push-preferences",
+      "tag": "Users",
+      "summary": "Get my push notification preferences",
+      "operationId": "d9b289f9e49c2569e144996bc16557aa",
+      "hasRequestBody": false
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/users/self/push-preferences",
+      "tag": "Users",
+      "summary": "Update my push notification preferences",
+      "operationId": "25d7de6c8ba5a6718612b0b7eb08956c",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
       "path": "/v1/accounts/{accountId}/signers",
       "tag": "Signers",
       "summary": "List signers",
@@ -568,6 +752,22 @@
       "tag": "Signing",
       "summary": "Get current signer",
       "operationId": "5091a0e760e9aeebc055388491ef4884",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sign/theme",
+      "tag": "Signing",
+      "summary": "Workspace brand for the signing page",
+      "operationId": "e6a259c8de6443ff0d66cc45ca3de346",
+      "hasRequestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sign/logo",
+      "tag": "Signing",
+      "summary": "Workspace logo for the signing page",
+      "operationId": "55214a6e3be0bd2c3a7c7fc6195fa756",
       "hasRequestBody": false
     },
     {
@@ -694,8 +894,32 @@
       "method": "GET",
       "path": "/v1/signers/{signerId}/documents/{documentId}/download/{artifactName}",
       "tag": "Signing",
-      "summary": "Download signer's document artifact",
+      "summary": "Download the document to sign",
       "operationId": "e5b804eb68ec9ff78f77fb79e1e756f3",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sign/certified-copy",
+      "tag": "Signing",
+      "summary": "Send the certified copy again",
+      "operationId": "78a2db6f12cfde943f07ddc8724d7895",
+      "hasRequestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/signers/downloads/{token}",
+      "tag": "Signing",
+      "summary": "Download the certified copy from a sent link",
+      "operationId": "aba9158e307f63db528c0c53ac416eb2",
+      "hasRequestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/signers/downloads/{token}/resend",
+      "tag": "Signing",
+      "summary": "Send the certified copy again from an expired link",
+      "operationId": "42c416d1645251a04ab906fbb64553ee",
       "hasRequestBody": false
     },
     {
@@ -928,6 +1152,14 @@
       "tag": "Webhooks",
       "summary": "Rotate webhook endpoint signing secret",
       "operationId": "b2b6f38f1e0ed2795e48b90533236a6f",
+      "hasRequestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/test",
+      "tag": "Webhooks",
+      "summary": "Send a test delivery",
+      "operationId": "b311102d930c9ab051abae174bc53711",
       "hasRequestBody": false
     },
     {

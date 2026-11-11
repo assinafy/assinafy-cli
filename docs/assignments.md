@@ -46,22 +46,24 @@ Usage: assinafy assignments create [options] <documentId>
 Create a signing assignment for a document
 
 Arguments:
-  documentId              Document ID
+  documentId                    Document ID
 
 Options:
-  --signer-ids <csv>      Comma-separated signer IDs (required)
-  --signers <json>        JSON array of signer refs, with verification_method,
-                          step, … (required)
-  --method <method>       virtual or collect (choices: "virtual", "collect",
-                          default: "virtual")
-  --message <message>     Message shown to signers
-  --expires-at <iso8601>  Expiration timestamp
-  --copy-receivers <csv>  Comma-separated signer IDs to receive a copy of the
-                          document
-  --entries <json>        JSON array of field placement entries, required for
-                          --method collect (e.g.
-                          '[{"page_id":"p1","fields":[{"signer_id":"s1","field_id":"f1"}]}]')
-  -h, --help              display help for command
+  --signer-ids <csv>            Comma-separated signer IDs (required)
+  --signers <json>              JSON array of signer refs, with
+                                verification_method, step, … (required)
+  --method <method>             virtual or collect (choices: "virtual",
+                                "collect", default: "virtual")
+  --message <message>           Message shown to signers
+  --max-total-credits <amount>  Reject the send if its credit cost exceeds this
+                                amount
+  --expires-at <iso8601>        Expiration timestamp
+  --copy-receivers <csv>        Comma-separated signer IDs to receive a copy of
+                                the document
+  --entries <json>              JSON array of field placement entries, required
+                                for --method collect (e.g.
+                                '[{"page_id":"p1","fields":[{"signer_id":"s1","field_id":"f1"}]}]')
+  -h, --help                    display help for command
 ```
 
 ### `assinafy assignments estimate-cost`

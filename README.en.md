@@ -4,7 +4,7 @@
 
 The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track activity history, and download certified documents — from a terminal, a shell script, or an application.
 
-The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 118 published API operations.
+The CLI is a single self-contained executable. It prints human-readable tables by default and structured JSON with `--json`, so the same commands serve both interactive use and automation. The same package exposes a fully typed SDK at `@assinafy/cli/api` covering all 147 published API operations.
 
 This document reads top to bottom: install, authenticate, send your first signature request, then understand the model well enough to automate it. The [command reference](#command-reference) and [SDK](#nodejs-sdk) sections near the end are lookup tables you can jump to once the flow makes sense.
 
@@ -281,11 +281,17 @@ assinafy signer sign <documentId> <assignmentId> --entries '[]'
 
 Single-document confirmation, signing, and decline commands verify that the access code matches the requested document and assignment before writing.
 
-Owner API credentials are stripped from every public and signer-side request, so an access-code flow can never leak your workspace key. The published signer artifact download is public; passing `--access-code` adds an identity preflight that confirms the code belongs to the signer being downloaded for.
+Owner API credentials are stripped from every public and signer-side request, so an access-code flow can never leak your workspace key. Original signer downloads require `--access-code`; completed copies use `signer download-copy` with `ASSINAFY_DOWNLOAD_TOKEN`. Legacy artifact call forms remain available, subject to server restrictions.
+
+## Envelopes and embedded signing
+
+Use `envelopes estimate-cost|create` after uploading and processing up to 20 documents. Creation accepts an idempotency key and credit ceiling. Documents retain their own assignments and certificates. `embed origins` manages exact application origins, and `embed session` mints a private single-use iframe URL for an embedded Email/Whatsapp signer. Owner credentials stay on the backend. See [complete envelope and iframe flows](docs/sdk-reference.md#envelopes-clientenvelopes).
+
+`workspaces usage` reads plan/balances, `workspaces notification-policy` controls workspace alerts, and `users push-preferences` controls mobile push preferences. `signer certified-copy` sends a fresh certified-copy link to the original signing contact. All request/response contracts are in the [SDK reference](docs/sdk-reference.md).
 
 ## Contract tracking (CLM)
 
-Contract tracking records counterparty, value, dates, renewal settings and signed amendments on an existing document. Upload and signing remain separate. Writes need a plan with contract tracking; reads remain available when that plan lapses. OAuth uses `documents:read` and `documents:write`.
+Contract tracking records counterparty, value, dates, renewal settings and signed amendments on an existing document. Upload and signing remain separate. Contract tracking is included in every standard plan, including Free; writes require the feature to be active; reads remain available when that plan lapses. OAuth uses `documents:read` and `documents:write`.
 
 Upload the document and persist its ID first. Set draft terms, activate them when lifecycle tracking should begin, and use separate uploaded documents for signed amendments. An amendment's delta applies after certification, in signing order.
 
@@ -330,7 +336,7 @@ assinafy webhooks retry <dispatchId>                # redeliver one event
 assinafy webhooks verify body.json --id <webhook-id> --timestamp <webhook-timestamp> --signature <webhook-signature>
 ```
 
-Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. `endpoints update` changes only the flags given (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); disabling signing discards the secret. `rotate-secret` invalidates the previous secret immediately. A duplicate URL within the workspace returns `400`; creating past the plan limit returns `403`. OAuth applications cannot read an existing signing secret; `webhooks:write` permits rotation and returns the new secret. Enabling signing on an existing endpoint also returns the new secret once. New or changed webhook URLs require HTTPS. `retry` re-sends only to that delivery's endpoint, and only while it is active.
+Omitting `--events` subscribes to `document_ready`, `document_prepared`, `signer_signed_document`, `signer_rejected_document`, and `document_processing_failed`. `endpoints update` changes only the flags given (`--active`/`--inactive`, `--signing`/`--no-signing`, `--url`, `--email`, `--name`, `--events`); disabling signing discards the secret. `rotate-secret` invalidates the previous secret immediately unless `--keep-previous` requests a 24-hour overlap. A duplicate URL within the workspace returns `400`; creating past the plan limit returns `403`. OAuth applications cannot read an existing signing secret; `webhooks:write` permits rotation and returns the new secret. Enabling signing on an existing endpoint also returns the new secret once. New or changed webhook URLs require HTTPS. `retry` re-sends only to that delivery's endpoint, and only while it is active.
 
 Creating a signed endpoint returns `secret` once, including through OAuth; store it securely. The CLI prints it in human and JSON output. OAuth applications that lose it can rotate the secret with `webhooks:write` and store the new value. `endpoints list --url <url>` filters by the exact registered URL; `endpoints delete-by-url --url <url>` deletes by that URL and requires confirmation or `--yes`.
 
@@ -444,7 +450,7 @@ Assinafy runs a **separate sandbox** at `https://sandbox.assinafy.com.br/v1`. It
 
 ## Command reference
 
-Run `assinafy <command> --help` for the full flags of any command. Every command's help output is mirrored under [`docs/`](./docs), the [API reference](./docs/api-reference.md) holds the official request/response payloads for all 118 published operations, and the [SDK reference](./docs/sdk-reference.md) maps each SDK method to its operation.
+Run `assinafy <command> --help` for the full flags of any command. Every command's help output is mirrored under [`docs/`](./docs), the [API reference](./docs/api-reference.md) holds the official request/response payloads for all 147 published operations, and the [SDK reference](./docs/sdk-reference.md) maps each SDK method to its operation.
 
 Global flags accepted by every command: `--api-key`, `--token`, `--account-id`, `--base-url`, `-p, --profile`, `--json`, `-q, --quiet`. `assinafy -v` prints the version.
 
@@ -549,7 +555,7 @@ Field definitions are what `--method collect` assignments gather. Run `fields ty
 
 `document <signerId>` · `documents <signerId>` · `search <signerId> <query>` · `download <signerId> <documentId> <artifact>` · `self` · `accept-terms` · `verify-code --code` (alias `verify-email`) · `certificate-start` · `certificate-complete --certificate-token` · `confirm-data <documentId>` · `upload-signature --file` · `download-signature` · `assignment` · `sign <documentId> <assignmentId> --entries` · `decline <documentId> <assignmentId> --reason` · `sign-multiple --document-ids` · `decline-multiple --document-ids --reason`
 
-`documents` and `search` use owner authentication when `--access-code` is omitted. The public artifact `download` accepts it optionally for an identity preflight. Other signer commands require `--access-code <code>`. Use `ASSINAFY_SIGNER_ACCESS_CODE` to keep the code out of process arguments.
+`documents` and `search` use owner authentication when `--access-code` is omitted. The original-artifact `download` requires it on the current API, although the optional CLI flag remains for compatibility. Certified copies use `download-copy` and a private download token. Other signer commands require `--access-code <code>`. Use `ASSINAFY_SIGNER_ACCESS_CODE` to keep the code out of process arguments.
 
 ### `auth`
 
@@ -647,9 +653,9 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 
 ## Contract boundaries
 
-- The production OpenAPI publishes 118 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
+- The production OpenAPI publishes 147 operations and the SDK implements all of them. Sandbox deployments can lag individual routes — account/user statistics and user notification preferences may return route-level 404s there despite being documented in production.
 - The SDK keeps two platform-compatible template routes (`GET /accounts/{id}/templates/{id}` and its page download) that are absent from the published OpenAPI paths.
-- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 118 OpenAPI operations.
+- Certificate start/complete are deployed production extensions of the public signing frontend, exposed as `signerDocuments.startCertificate(accessCode)` and `signerDocuments.completeCertificate(accessCode, token)`. Start posts `{ "signer-access-code": code }` and returns `{ token }`; complete posts `{ "signer-access-code": code, token }` and returns `{ signerName }`. Both also carry the access code in the query string and strip owner credentials. They supplement, but are not part of, the 147 OpenAPI operations.
 - `send-token` sends the email-only body `{ "channel": "email", "recipient": "..." }`; WhatsApp and the older `{ "email" }` body are rejected by the API with `400`.
 - `signer documents` and `signer search` accept the workspace API key or token when `--access-code` is omitted.
 - Webhook signatures follow Standard Webhooks; `WebhookVerifier.verifyDelivery` implements the published scheme. The older `verify(body, signature)` method is deprecated and does not match Assinafy deliveries.

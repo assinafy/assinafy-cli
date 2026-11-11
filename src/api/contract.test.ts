@@ -36,7 +36,133 @@ const webhookEndpoint = {
 };
 const mfaVerify = { mfa_token: 'example-mfa-token', code: '123456' };
 const image = Buffer.from('example-image');
+const envelope = {
+	name: 'Example envelope',
+	signers: [{ id }],
+	documents: [{ id, signer_ids: [id] }],
+};
 const cases: Case[] = [
+	['GET /v1/accounts/{accountId}/usage', (c) => c.workspaces.usage(id)],
+	[
+		'GET /v1/accounts/{accountId}/notification-policy',
+		(c) => c.workspaces.getNotificationPolicy(id),
+	],
+	[
+		'PUT /v1/accounts/{accountId}/notification-policy',
+		(c) => c.workspaces.updateNotificationPolicy(id, { owners_receive_all: false }),
+		{ owners_receive_all: false },
+	],
+	['GET /v1/users/self/push-preferences', (c) => c.users.getPushPreferences()],
+	[
+		'PUT /v1/users/self/push-preferences',
+		(c) => c.users.updatePushPreferences({ SignerViewed: false }),
+		{ SignerViewed: false },
+	],
+	['GET /v1/accounts/{accountId}/embed-origins', (c) => c.embed.listOrigins(), undefined, 'array'],
+	[
+		'POST /v1/accounts/{accountId}/embed-origins',
+		(c) => c.embed.createOrigin('https://example.com'),
+		{ origin: 'https://example.com' },
+	],
+	[
+		'PUT /v1/accounts/{accountId}/embed-origins/{originId}',
+		(c) => c.embed.updateOrigin(id, 'https://example.com'),
+		{ origin: 'https://example.com' },
+	],
+	[
+		'DELETE /v1/accounts/{accountId}/embed-origins/{originId}',
+		(c) => c.embed.deleteOrigin(id),
+		undefined,
+		'array',
+	],
+	[
+		'POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/embed-sessions',
+		(c) => c.embed.createSession(id, id, id),
+	],
+	[
+		'POST /v1/embed/sessions/{token}/exchange',
+		(c) => c.embed.exchangeSession(id, 'https://example.com'),
+		{ parent_origin: 'https://example.com' },
+		undefined,
+		'public',
+	],
+	['GET /v1/accounts/{accountId}/envelopes', (c) => c.envelopes.list(), undefined, 'list'],
+	['POST /v1/accounts/{accountId}/envelopes', (c) => c.envelopes.create(envelope), envelope],
+	[
+		'POST /v1/accounts/{accountId}/envelopes/estimate-cost',
+		(c) => c.envelopes.estimateCost(envelope),
+		envelope,
+	],
+	['GET /v1/accounts/{accountId}/envelopes/{envelopeId}', (c) => c.envelopes.get(id)],
+	[
+		'PATCH /v1/accounts/{accountId}/envelopes/{envelopeId}',
+		(c) => c.envelopes.update(id, { message: null }),
+		{ message: null },
+	],
+	[
+		'DELETE /v1/accounts/{accountId}/envelopes/{envelopeId}',
+		(c) => c.envelopes.delete(id),
+		undefined,
+		'array',
+	],
+	[
+		'GET /v1/accounts/{accountId}/envelopes/{envelopeId}/activities',
+		(c) => c.envelopes.activities(id),
+		undefined,
+		'list',
+	],
+	[
+		'GET /v1/accounts/{accountId}/envelopes/{envelopeId}/download/{artifactName}',
+		(c) => c.envelopes.download(id, 'original'),
+		undefined,
+		'binary',
+	],
+	[
+		'PUT /v1/accounts/{accountId}/envelopes/{envelopeId}/cancel',
+		(c) => c.envelopes.cancel(id),
+		undefined,
+		'array',
+	],
+	[
+		'PUT /v1/accounts/{accountId}/envelopes/{envelopeId}/signers/{signerId}/resend',
+		(c) => c.envelopes.resendNotification(id, id),
+	],
+	[
+		'POST /v1/accounts/{accountId}/envelopes/{envelopeId}/documents',
+		(c) => c.envelopes.addDocument(id, { id, signer_ids: [id] }),
+		{ id, signer_ids: [id] },
+	],
+	[
+		'DELETE /v1/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}',
+		(c) => c.envelopes.removeDocument(id, id),
+	],
+	['GET /v1/sign/theme', (c) => c.signerDocuments.getTheme(code), undefined, undefined, 'signer'],
+	['GET /v1/sign/logo', (c) => c.signerDocuments.downloadLogo(code), undefined, 'binary', 'signer'],
+	[
+		'POST /v1/sign/certified-copy',
+		(c) => c.signerDocuments.resendCertifiedCopy(code, id),
+		{ document_id: id },
+		undefined,
+		'signer',
+	],
+	[
+		'GET /v1/signers/downloads/{token}',
+		(c) => c.signerDocuments.downloadCertifiedCopy(id),
+		undefined,
+		'binary',
+		'public',
+	],
+	[
+		'POST /v1/signers/downloads/{token}/resend',
+		(c) => c.signerDocuments.resendDownloadLink(id),
+		undefined,
+		undefined,
+		'public',
+	],
+	[
+		'POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/test',
+		(c) => c.webhooks.testEndpoint(id),
+	],
 	['GET /v1/accounts/{accountId}/contracts', (c) => c.contracts.list(), undefined, 'list'],
 	['GET /v1/accounts/{accountId}/documents/{documentId}/contract', (c) => c.contracts.get(id)],
 	[
@@ -403,10 +529,10 @@ const cases: Case[] = [
 	],
 	[
 		'GET /v1/signers/{signerId}/documents/{documentId}/download/{artifactName}',
-		(c) => c.signerDocuments.download(id, id, 'original'),
+		(c) => c.signerDocuments.download(id, id, 'original', code),
 		undefined,
 		'binary',
-		'public',
+		'signer',
 	],
 	[
 		'POST /v1/authentication/social-login',
@@ -580,6 +706,8 @@ describe('published HTTP contracts', () => {
 			);
 			const preflightsSignerDocument =
 				auth === 'signer' && /^(POST|PUT) \/v1\/documents\//.test(operation);
+			const preflightsSignerIdentity =
+				operation === 'GET /v1/signers/{signerId}/documents/{documentId}/download/{artifactName}';
 			const payload =
 				kind === 'list' || kind === 'array'
 					? [{ id }]
@@ -600,8 +728,14 @@ describe('published HTTP contracts', () => {
 					auth ? undefined : 'Bearer example-owner-token',
 				);
 				if (auth === 'signer') expect(url.searchParams.get('signer-access-code')).toBe(code);
-				if (preflightsSignerDocument && requests === 1) {
-					expect(url.pathname).toBe('/v1/sign');
+				if ((preflightsSignerDocument || preflightsSignerIdentity) && requests === 1) {
+					expect(url.pathname).toBe(
+						preflightsSignerIdentity
+							? '/v1/signers/self'
+							: operation.endsWith('/confirm-data')
+								? `/v1/documents/${id}`
+								: '/v1/sign',
+					);
 					expect(config.method).toBe('get');
 					expect(config.data).toBeUndefined();
 					return {
@@ -649,7 +783,7 @@ describe('published HTTP contracts', () => {
 				};
 			};
 			const result = await invoke(client);
-			expect(requests).toBe(preflightsSignerDocument ? 2 : 1);
+			expect(requests).toBe(preflightsSignerDocument || preflightsSignerIdentity ? 2 : 1);
 			expect(result).toEqual(
 				kind === 'void'
 					? undefined

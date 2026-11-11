@@ -3,7 +3,7 @@ import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { saveDownload } from '../lib/files';
-import { parseJsonArray, splitList } from '../lib/json';
+import { parseCreditCeiling, parseJsonArray, splitList } from '../lib/json';
 import { addSignerRefOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
@@ -62,6 +62,7 @@ const createCommand = addSignerRefOptions(
 			.default('virtual'),
 	)
 	.option('--message <message>', 'Message shown to signers')
+	.option('--max-total-credits <amount>', 'Reject the send if its credit cost exceeds this amount')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
 	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
 	.option(
@@ -73,6 +74,7 @@ const createCommand = addSignerRefOptions(
 			const payload: ICreateAssignmentPayload = {
 				method: opts.method,
 				signers: resolveAssignmentSignerRefs(opts.signers, opts.signerIds),
+				max_total_credits: parseCreditCeiling(opts.maxTotalCredits),
 			};
 			if (opts.message) payload.message = opts.message;
 			if (opts.expiresAt) payload.expires_at = opts.expiresAt;

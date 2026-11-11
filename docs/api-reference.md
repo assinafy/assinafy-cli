@@ -6,8 +6,8 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
-- Operations: 118
-- Contract SHA-256: `38cb1b376546c1db6e9eabb06fbb613a9c17ca7c22f66388de2ffbf4b6931e93`
+- Operations: 147
+- Contract SHA-256: `511261bfe294776d09e879a9e0cf4cd586542653d87d78fe3e32e125037edaac`
 
 ## Accounts
 
@@ -24,6 +24,7 @@ Retrieve a workspace account the user belongs to.
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
+| `expand` | query | string | no | `signing_features`: add which signing features the workspace can use. |
 
 #### Responses
 
@@ -45,6 +46,13 @@ Retrieve a workspace account the user belongs to.
         "limits": {
             "webhook_endpoints": 1
         },
+        "signing_features": {
+            "DigitalCertificate": true,
+            "VerificationIdDocumentFaceMatchBasic": false,
+            "WhatsappNotification": true,
+            "VerificationBypass": false,
+            "Embed": false
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -58,7 +66,15 @@ Retrieve a workspace account the user belongs to.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -68,7 +84,15 @@ Retrieve a workspace account the user belongs to.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -78,7 +102,15 @@ Retrieve a workspace account the user belongs to.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -132,6 +164,13 @@ Example:
         "limits": {
             "webhook_endpoints": 1
         },
+        "signing_features": {
+            "DigitalCertificate": true,
+            "VerificationIdDocumentFaceMatchBasic": false,
+            "WhatsappNotification": true,
+            "VerificationBypass": false,
+            "Embed": false
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -145,7 +184,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -155,7 +202,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -165,7 +220,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -226,7 +289,15 @@ Example:
             ]
         }
     ],
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -236,7 +307,33 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -246,7 +343,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -256,7 +361,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -283,7 +396,7 @@ Retrieve account theme information (branding name, colors, and logo URL).
     "data": {
         "account_name": "Account Name",
         "primary_color": "aabbcc",
-        "secondary_color": "aabbcc",
+        "secondary_color": "ffffff",
         "logo": "https://example.com/example-url-1"
     },
     "status": 200,
@@ -297,7 +410,15 @@ Retrieve account theme information (branding name, colors, and logo URL).
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -307,7 +428,128 @@ Retrieve account theme information (branding name, colors, and logo URL).
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Get account usage
+
+`GET /v1/accounts/{accountId}/usage`
+
+The workspace's plan and what is left of it, for a plan and credit meter. Nothing about prices or payments: those stay in **Get current subscription**. Not available to third-party OAuth applications (`403`), whatever their scopes: this is billing data. Assinafy's own apps can read it with the `account:read` scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The usage
+
+```json
+{
+    "data": {
+        "plan": "Pro",
+        "documents_renewal_date": "2026-12-01",
+        "balances": {
+            "documents": {
+                "balance": 100,
+                "limit": 100,
+                "spent": 0
+            },
+            "credits": {
+                "balance": 100,
+                "limit": 100,
+                "spent": 0
+            }
+        }
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -335,7 +577,15 @@ Download the account logo image binary.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -345,7 +595,15 @@ Download the account logo image binary.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -355,7 +613,15 @@ Download the account logo image binary.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -404,7 +670,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -414,7 +688,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -424,7 +706,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -459,7 +749,15 @@ Remove the account logo image.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -469,7 +767,15 @@ Remove the account logo image.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -504,6 +810,13 @@ Called with an OAuth application token, this returns exactly one workspace: the 
             "limits": {
                 "webhook_endpoints": 1
             },
+            "signing_features": {
+                "DigitalCertificate": true,
+                "VerificationIdDocumentFaceMatchBasic": false,
+                "WhatsappNotification": true,
+                "VerificationBypass": false,
+                "Embed": false
+            },
             "created_at": "2026-06-03T03:54:16Z"
         }
     ],
@@ -518,7 +831,15 @@ Called with an OAuth application token, this returns exactly one workspace: the 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -528,7 +849,15 @@ Called with an OAuth application token, this returns exactly one workspace: the 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -576,6 +905,13 @@ Example:
         "limits": {
             "webhook_endpoints": 1
         },
+        "signing_features": {
+            "DigitalCertificate": true,
+            "VerificationIdDocumentFaceMatchBasic": false,
+            "WhatsappNotification": true,
+            "VerificationBypass": false,
+            "Embed": false
+        },
         "created_at": "2026-06-03T03:54:16Z"
     },
     "status": 200,
@@ -589,7 +925,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -599,7 +943,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -609,7 +961,232 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Get the workspace notification policy
+
+`GET /v1/accounts/{accountId}/notification-policy`
+
+Which document alerts this workspace sends, set by its owners. Every member can read it; `editable` says whether the requesting user can change it. Not available to third-party OAuth applications (`403`), whatever their scopes. Assinafy's own apps can reach it.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The policy
+
+```json
+{
+    "data": {
+        "editable": true,
+        "owners_receive_all": false,
+        "events": {
+            "DocumentCompleted": true,
+            "SignerDeclined": true,
+            "DocumentCancelled": true,
+            "DocumentAboutToExpire": true,
+            "DocumentExpired": true,
+            "DocumentExpirationReset": true,
+            "DocumentProcessingFailed": true,
+            "TemplateProcessingFailed": true,
+            "SignerWhatsappFailed": true,
+            "ContractRenewalNotice": true,
+            "ContractExpiring": true,
+            "ContractExpired": true,
+            "ContractRenewed": true,
+            "SignerViewed": false,
+            "SignerSigned": true,
+            "SignerIdentityReviewRequired": true
+        }
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Update the workspace notification policy
+
+`PUT /v1/accounts/{accountId}/notification-policy`
+
+Owners only (`403` for other members). Merges the supplied fields: send only `events` keys you want to change, and/or `owners_receive_all`. An event set to `false` reaches nobody in this workspace, on any channel, whatever each member's own preferences; the identity review e-mail is the exception and is always sent, because the signer cannot continue without it. An unknown field or code, a non-boolean value or an empty body is rejected with `400` and nothing is written. Returns the full policy.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `events` (object) — Every e-mail and push alert, keyed by notification type. `false` means the workspace never sends it. New keys may be added.
+- `owners_receive_all` (boolean)
+
+Example:
+
+```json
+{
+    "events": {
+        "DocumentCompleted": true,
+        "SignerDeclined": true,
+        "DocumentCancelled": true,
+        "DocumentAboutToExpire": true,
+        "DocumentExpired": true,
+        "DocumentExpirationReset": true,
+        "DocumentProcessingFailed": true,
+        "TemplateProcessingFailed": true,
+        "SignerWhatsappFailed": true,
+        "ContractRenewalNotice": true,
+        "ContractExpiring": true,
+        "ContractExpired": true,
+        "ContractRenewed": true,
+        "SignerViewed": false,
+        "SignerSigned": true,
+        "SignerIdentityReviewRequired": true
+    },
+    "owners_receive_all": true
+}
+```
+
+#### Responses
+
+##### 200 — The updated policy
+
+```json
+{
+    "data": {
+        "editable": true,
+        "owners_receive_all": false,
+        "events": {
+            "DocumentCompleted": true,
+            "SignerDeclined": true,
+            "DocumentCancelled": true,
+            "DocumentAboutToExpire": true,
+            "DocumentExpired": true,
+            "DocumentExpirationReset": true,
+            "DocumentProcessingFailed": true,
+            "TemplateProcessingFailed": true,
+            "SignerWhatsappFailed": true,
+            "ContractRenewalNotice": true,
+            "ContractExpiring": true,
+            "ContractExpired": true,
+            "ContractRenewed": true,
+            "SignerViewed": false,
+            "SignerSigned": true,
+            "SignerIdentityReviewRequired": true
+        }
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -664,7 +1241,15 @@ Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) re
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -674,7 +1259,15 @@ Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) re
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -684,7 +1277,15 @@ Precomputed per-account document-funnel KPIs. `granularity=monthly` (default) re
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -705,7 +1306,7 @@ List the activities recorded for a document, newest first (`sort=id` for oldest 
 | `documentId` | path | string | yes | Document ID. |
 | `sort` | query | string | no | `-id` (default, newest first) or `id`. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -728,13 +1329,57 @@ List the activities recorded for a document, newest first (`sort=id` for oldest 
 }
 ```
 
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The document is not in the workspace.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -744,7 +1389,15 @@ List the activities recorded for a document, newest first (`sort=id` for oldest 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -762,12 +1415,13 @@ List documents of the workspace, most recently updated first. Every row includes
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
 | `status` | query | string | no | Status filter, e.g. `pending_signature`. |
+| `envelope_id` | query | string | no | Only the members of this envelope. Anything but text answers `400`. |
 | `method` | query | string | no | Signature method filter. |
 | `search` | query | string | no | Partial match on document.name, signer.full_name, signer.email. |
 | `tags` | query | string | no | Comma-separated tag IDs; returns documents having ALL listed tags. |
 | `sort` | query | string | no | `name` or `updated_at`, ascending; prefix with `-` for descending (`-updated_at`, the default). Other values are ignored. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -795,7 +1449,8 @@ List documents of the workspace, most recently updated first. Every row includes
             "tags": [
                 {
                     "id": "example_id_5",
-                    "name": "string"
+                    "name": "string",
+                    "color": "ff8800"
                 }
             ],
             "assignment": null,
@@ -808,6 +1463,8 @@ List documents of the workspace, most recently updated first. Every row includes
                     "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "envelope_id": null,
+            "envelope": null,
             "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
@@ -818,13 +1475,73 @@ List documents of the workspace, most recently updated first. Every row includes
 }
 ```
 
+##### 400 — `envelope_id` refused as sent: not text, an entry of `errors`.
+
+```json
+{
+    "status": 400,
+    "message": "Give envelope_id as text.",
+    "errors": [
+        {
+            "field": "envelope_id",
+            "code": "Invalid",
+            "message": "Give envelope_id as text."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -834,7 +1551,15 @@ List documents of the workspace, most recently updated first. Every row includes
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -891,7 +1616,8 @@ Example:
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -904,6 +1630,8 @@ Example:
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -919,7 +1647,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -929,7 +1665,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -939,7 +1683,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -958,9 +1710,10 @@ Search documents of the workspace, returning a compact representation (no expand
 | `accountId` | path | string | yes | Workspace account ID. |
 | `search` | query | string | no | Search term. |
 | `status` | query | string | no |  |
+| `envelope_id` | query | string | no | Only the members of this envelope. Anything but text answers `400`. |
 | `sort` | query | string | no | `name` or `updated_at`, ascending; prefix with `-` for descending (`-updated_at`, the default). Other values are ignored. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -988,7 +1741,8 @@ Search documents of the workspace, returning a compact representation (no expand
             "tags": [
                 {
                     "id": "example_id_5",
-                    "name": "string"
+                    "name": "string",
+                    "color": "ff8800"
                 }
             ],
             "assignment": null,
@@ -1001,6 +1755,8 @@ Search documents of the workspace, returning a compact representation (no expand
                     "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "envelope_id": null,
+            "envelope": null,
             "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
@@ -1011,13 +1767,73 @@ Search documents of the workspace, returning a compact representation (no expand
 }
 ```
 
+##### 400 — `envelope_id` refused as sent: not text, an entry of `errors`.
+
+```json
+{
+    "status": 400,
+    "message": "Give envelope_id as text.",
+    "errors": [
+        {
+            "field": "envelope_id",
+            "code": "Invalid",
+            "message": "Give envelope_id as text."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1027,7 +1843,15 @@ Search documents of the workspace, returning a compact representation (no expand
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1077,7 +1901,15 @@ The supported document statuses and whether a document in each status can be del
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1087,7 +1919,15 @@ The supported document statuses and whether a document in each status can be del
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1097,13 +1937,14 @@ The supported document statuses and whether a document in each status can be del
 
 Get a document by its ID. `decline_reason` is only present when the access token belongs to the document's creator. With a signer access code (`signer-access-code`), only documents the signer has been sent are found, and `assignment` holds only the signer's own items, without `signers`, `signing_urls`, `copy_receivers` or `summary`.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `documentId` | path | string | yes | Document ID. |
+| `expand` | query | array | no | `envelope_id` adds the id of the envelope the document was sent in, `envelope` its id and name; each is `null` for a document sent on its own. Send both separated by a comma. Read by the workspace only; without it the document reads as it always has. |
 
 #### Responses
 
@@ -1130,7 +1971,8 @@ Get a document by its ID. `decline_reason` is only present when the access token
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -1143,6 +1985,8 @@ Get a document by its ID. `decline_reason` is only present when the access token
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -1158,7 +2002,69 @@ Get a document by its ID. `decline_reason` is only present when the access token
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1168,7 +2074,15 @@ Get a document by its ID. `decline_reason` is only present when the access token
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1178,7 +2092,15 @@ Get a document by its ID. `decline_reason` is only present when the access token
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1186,7 +2108,7 @@ Get a document by its ID. `decline_reason` is only present when the access token
 
 `DELETE /v1/documents/{documentId}`
 
-Delete a document by its ID. Only documents in a deletable status can be removed (see GET /v1/documents/statuses).
+Delete a document by its ID. Only documents in a deletable status can be removed (see GET /v1/documents/statuses). A document of an envelope, or one taken out of it, can't be deleted while any of the envelope's documents is open: cancel the envelope (`PUT /v1/accounts/{accountId}/envelopes/{envelopeId}/cancel`) first.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -1214,7 +2136,69 @@ Delete a document by its ID. Only documents in a deletable status can be removed
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The document belongs to an envelope that is still open (`EnvelopeOpen`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — The document is certificated, or still being uploaded or processed.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1224,7 +2208,15 @@ Delete a document by its ID. Only documents in a deletable status can be removed
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1234,7 +2226,15 @@ Delete a document by its ID. Only documents in a deletable status can be removed
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1291,7 +2291,8 @@ Example:
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -1304,6 +2305,8 @@ Example:
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -1319,7 +2322,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1329,7 +2340,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1339,7 +2358,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1349,7 +2376,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1357,9 +2392,9 @@ Example:
 
 `GET /v1/documents/{documentId}/download/{artifactName}`
 
-Download a document artifact. Artifact types: original, certificated, certificate-page, pades, bundle. The pades artifact (signers' ICP-Brasil signatures + platform certification box) is only present on documents that had digital-certificate signers; `bundle` is a zip of the original, certificated and certificate-page artifacts, plus the pades artifact on documents that have one.
+Download a document artifact. With a signer access code only `original` is available (`403` otherwise): signers get the certified copy by e-mail or WhatsApp. Artifact types: original, certificated, certificate-page, pades, bundle. The pades artifact (signers' ICP-Brasil signatures + platform certification box) is only present on documents that had digital-certificate signers; `bundle` is a zip of the original, certificated and certificate-page artifacts, plus the pades artifact on documents that have one.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -1372,13 +2407,75 @@ Download a document artifact. Artifact types: original, certificated, certificat
 
 ##### 200 — The artifact binary
 
+##### 403 — A signer access code asked for an artifact other than `original`; or, with a user's token or key, a deactivated membership, a role or an OAuth scope refuses it.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 404 — The requested resource does not exist.
 
 ```json
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1388,7 +2485,15 @@ Download a document artifact. Artifact types: original, certificated, certificat
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1398,7 +2503,15 @@ Download a document artifact. Artifact types: original, certificated, certificat
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1431,6 +2544,7 @@ Verify a document by its signature hash (found on a signed document) and return 
         "signer_count": "1",
         "completed_count": 1,
         "completed_at": "2023-01-27T19:27:44Z",
+        "certificated_at": "2023-01-27T19:27:45Z",
         "verified_at": "2023-01-27T19:27:46Z",
         "is_valid": true,
         "message": ""
@@ -1446,7 +2560,15 @@ Verify a document by its signature hash (found on a signed document) and return 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1492,7 +2614,15 @@ List the tags attached to a document.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1502,7 +2632,15 @@ List the tags attached to a document.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1564,7 +2702,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1574,7 +2720,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1636,7 +2790,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1646,7 +2808,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1686,7 +2856,15 @@ Detach a single tag from a document.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1696,7 +2874,15 @@ Detach a single tag from a document.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1706,13 +2892,14 @@ Detach a single tag from a document.
 
 Download the thumbnail image of a document's first page.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `documentId` | path | string | yes | Document ID. |
+| `artifact` | query | string | no | `certificated`: the page, or the thumbnail, as it is in the signed document, with its signatures and stamps. Only for a certificated document, and only for the workspace's members and apps: `404` when the document isn't certificated or the caller uses a signer's access code. The first request for a page renders it with the pages around it, ten at a time, so it takes longer than the next ones; a request that finds the document's pages being rendered waits up to 30 seconds, then answers `503` with `Retry-After` if they still aren't ready; it answers `503` at once when the API is already rendering as many pages as it allows. Sent with `Cache-Control: no-store`. The certificate pages at the end of the signed file have no page ID and no render, and the visible seal of a document signed with a digital certificate is only in its `pades` file. Any other value is ignored. |
 
 #### Responses
 
@@ -1724,7 +2911,89 @@ Download the thumbnail image of a document's first page.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 503 — With `artifact=certificated`: another request was still rendering the page after 30 seconds, or the API was already rendering as many pages as it allows at once. Try again after the `Retry-After` seconds.
+
+```json
+{
+    "status": 503,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 304 — Not modified: the `If-None-Match` or `If-Modified-Since` sent matches the page. No body.
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1734,7 +3003,15 @@ Download the thumbnail image of a document's first page.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1744,7 +3021,15 @@ Download the thumbnail image of a document's first page.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1754,7 +3039,7 @@ Download the thumbnail image of a document's first page.
 
 Download the rendered image of a specific document page.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -1762,6 +3047,7 @@ Download the rendered image of a specific document page.
 |---|---|---|---|---|
 | `documentId` | path | string | yes | Document ID. |
 | `pageId` | path | string | yes | The page ID. |
+| `artifact` | query | string | no | `certificated`: the page, or the thumbnail, as it is in the signed document, with its signatures and stamps. Only for a certificated document, and only for the workspace's members and apps: `404` when the document isn't certificated or the caller uses a signer's access code. The first request for a page renders it with the pages around it, ten at a time, so it takes longer than the next ones; a request that finds the document's pages being rendered waits up to 30 seconds, then answers `503` with `Retry-After` if they still aren't ready; it answers `503` at once when the API is already rendering as many pages as it allows. Sent with `Cache-Control: no-store`. The certificate pages at the end of the signed file have no page ID and no render, and the visible seal of a document signed with a digital certificate is only in its `pades` file. Any other value is ignored. |
 
 #### Responses
 
@@ -1773,7 +3059,89 @@ Download the rendered image of a specific document page.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 503 — With `artifact=certificated`: another request was still rendering the page after 30 seconds, or the API was already rendering as many pages as it allows at once. Try again after the `Retry-After` seconds.
+
+```json
+{
+    "status": 503,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 304 — Not modified: the `If-None-Match` or `If-Modified-Since` sent matches the page. No body.
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1783,7 +3151,15 @@ Download the rendered image of a specific document page.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1793,7 +3169,15 @@ Download the rendered image of a specific document page.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1811,6 +3195,7 @@ Generate a new document from a template. The request is checked (roles, fields, 
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
 | `templateId` | path | string | yes | The template ID. |
+| `Idempotency-Key` | header | string | no | Any text, case-sensitive and new for each document you mean to create (a UUID, say). Retrying with the same key after a lost response answers the document the first request created, as the first response would, and creates and charges nothing, whatever the body says. A key belongs to its template and doesn't expire, so a `failed` document keeps answering it. `404` if that document was deleted; `409` with code `IdempotencyKeyInUse` if the first request is still running: try again. A request refused before its job is queued leaves its key free. |
 
 #### Request Body (required)
 
@@ -1822,6 +3207,7 @@ Fields (`application/json`):
 - `message` (string) — Optional message sent to signers.
 - `expires_at` (string) — Assignment expiration date (ISO 8601). No expiration by default. Must be at least one hour in the future. A UTC offset in the value is honored (`2026-12-31T23:59:59-03:00` is `2027-01-01T02:59:59Z`); a value without one is read as UTC, and a date alone (`2026-12-31`) means 23:59 UTC that day.
 - `tags` (array) — Tag names to attach to the new document. Names that don't exist are auto-created. The template's default-document-tags are always applied; values here are merged on top (duplicates removed).
+- `max_total_credits` (number) — Optional ceiling on what this request may spend: refused with `409` and code `CreditCeilingExceeded`, nothing charged, when its `total_credits` is above this. Send the `total_credits` of the last estimate. A value that is not a number of credits, zero or more, answers `400`; numeric text counts, as a form-encoded body sends it. If the cost rises after the request is accepted, as when the plan's documents run out, nothing is charged, the document ends `failed` and `document_processing_failed` carries the reason in `error_message`.
 
 Example:
 
@@ -1838,6 +3224,7 @@ Example:
             "notification_methods": [
                 "Email"
             ],
+            "embedded": false,
             "step": 1
         }
     ],
@@ -1852,7 +3239,8 @@ Example:
     "expires_at": "2024-07-30T23:59:00Z",
     "tags": [
         "string"
-    ]
+    ],
+    "max_total_credits": 1.5
 }
 ```
 
@@ -1881,7 +3269,8 @@ Example:
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -1894,6 +3283,8 @@ Example:
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -1903,13 +3294,77 @@ Example:
 }
 ```
 
-##### 400 — One or more fields failed validation.
+##### 400 — The request was rejected because of its current state or invalid input.
 
 ```json
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The request costs more than `max_total_credits` (`CreditCeilingExceeded`), or another request with this `Idempotency-Key` is still running (`IdempotencyKeyInUse`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "total_credits": 1.5,
+    "max_total_credits": 1,
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks a verification or notification method sent (`PlanRestricted`), or an OAuth app's token lacks `documents:write` (`InsufficientScope`); also a deactivated membership or a role.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1919,7 +3374,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -1929,7 +3392,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2002,13 +3473,75 @@ Example:
 }
 ```
 
+##### 400 — The roles, signers or methods sent cannot make a document (the same rules as creating it).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks a verification or notification method sent (`PlanRestricted`), or an OAuth app's token lacks `documents:write` (`InsufficientScope`); also a deactivated membership or a role.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The template is not in the workspace, or the workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2018,7 +3551,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2039,7 +3580,7 @@ List the workspace's assignments, oldest first. With an OAuth token the workspac
 | `accountId` | query | string | no | The workspace ID. Required unless the request uses an OAuth token. |
 | `sort` | query | string | no | `created_at` (default, oldest first), `expires_at` or `id`; prefix with `-` for descending (`-created_at`, newest first). Unknown values are ignored. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -2101,7 +3642,8 @@ List the workspace's assignments, oldest first. With an OAuth token the workspac
             "signing_urls": [
                 {
                     "signer_id": "example_id_5",
-                    "url": "https://example.com/example-url-6"
+                    "url": "https://example.com/example-url-6",
+                    "embedded": false
                 }
             ]
         }
@@ -2111,13 +3653,75 @@ List the workspace's assignments, oldest first. With an OAuth token the workspac
 }
 ```
 
+##### 400 — Neither `accountId` nor an OAuth token names the workspace.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2127,7 +3731,15 @@ List the workspace's assignments, oldest first. With an OAuth token the workspac
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2138,6 +3750,8 @@ List the workspace's assignments, oldest first. With an OAuth token the workspac
 Request signatures on a document. Use `method: virtual` to sign without input fields, or `method: collect` to place input fields on specific pages.
 
 **Digital certificate signing works only on `virtual` assignments.** A `DigitalCertificate` signer cannot sign placed fields, so a `collect` assignment with one is refused with `400` before anything is charged.
+
+A document takes one assignment: a retry after a lost response answers `400` and charges nothing. Read the document to see whether the first request went through.
 
 For **virtual**, the document may be in `uploaded`, `metadata_processing` or `metadata_ready`; it is promoted to `pending_signature` automatically once metadata processing completes. For **collect**, the document must be in `metadata_ready` (fields reference specific pages).
 
@@ -2161,6 +3775,7 @@ Fields (`application/json`):
 - `message` (string) — Text included in the invitation email.
 - `expires_at` (string) — ISO 8601; default is no expiration. Must be at least one hour in the future. A UTC offset in the value is honored (`2026-12-31T23:59:59-03:00` is `2027-01-01T02:59:59Z`); a value without one is read as UTC, and a date alone (`2026-12-31`) means 23:59 UTC that day.
 - `copy_receivers` (array) — Signer IDs that only receive a copy.
+- `max_total_credits` (number) — Optional ceiling on what this request may spend: refused with `409` and code `CreditCeilingExceeded`, nothing charged, when its `total_credits` is above this. Send the `total_credits` of the last estimate. A value that is not a number of credits, zero or more, answers `400`; numeric text counts, as a form-encoded body sends it.
 
 Example — Create without input (method: virtual, with verification & notification methods):
 
@@ -2541,23 +4156,75 @@ Example — Create with input fields (method: collect):
             {
                 "signer_id": "example_id_17",
                 "url": "https://example.com/example-url-10"
-            },
-            {
-                "signer_id": "example_id_18",
-                "url": "https://example.com/example-url-11"
             }
         ]
     }
 }
 ```
 
-##### 400 — One or more fields failed validation.
+##### 400 — The request was rejected because of its current state or invalid input.
 
 ```json
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The request sent `max_total_credits` and costs more now: the client estimates again and decides. Nothing was created or charged.
+
+```json
+{
+    "status": 409,
+    "message": "This request costs 1.5 credits, more than the max_total_credits of 1.",
+    "code": "CreditCeilingExceeded",
+    "total_credits": 1.5,
+    "max_total_credits": 1
+}
+```
+
+##### 403 — The workspace's plan lacks a verification or notification method sent (`PlanRestricted`), or an OAuth app's token lacks `documents:write` (`InsufficientScope`); also a deactivated membership or a role.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The document is not in the workspace.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2567,7 +4234,15 @@ Example — Create with input fields (method: collect):
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2577,7 +4252,15 @@ Example — Create with input fields (method: collect):
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2675,13 +4358,57 @@ Example:
 }
 ```
 
-##### 400 — One or more fields failed validation.
+##### 400 — The request was rejected because of its current state or invalid input.
 
 ```json
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks a verification or notification method sent (`PlanRestricted`), or an OAuth app's token lacks `documents:write` (`InsufficientScope`); also a deactivated membership or a role.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The document is not in the workspace.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2691,7 +4418,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2701,7 +4436,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2739,7 +4482,57 @@ Resend the signature-request notification to a signer of the assignment who has 
 
 ##### 400 — The document is not pending signature, the signer is not part of the assignment, has already signed, or waits for an earlier signing step; or the account lacks credits for the reminder.
 
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 404 — The assignment or signer was not found on this document.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -2747,7 +4540,15 @@ Resend the signature-request notification to a signer of the assignment who has 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2757,7 +4558,15 @@ Resend the signature-request notification to a signer of the assignment who has 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2806,7 +4615,15 @@ Estimate the cost of resending the signature request to a signer. The response h
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2816,7 +4633,15 @@ Estimate the cost of resending the signature request to a signer. The response h
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2908,7 +4733,8 @@ Example:
         "signing_urls": [
             {
                 "signer_id": "example_id_5",
-                "url": "https://example.com/example-url-6"
+                "url": "https://example.com/example-url-6",
+                "embedded": false
             }
         ]
     },
@@ -2923,7 +4749,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2933,7 +4767,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2943,7 +4785,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2953,7 +4803,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -2962,7 +4820,7 @@ Example:
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification`
 
 The signer's identity-document verification as the account's reviewer sees it. When the provider sends a verification to review, the account decides it with **Decide signer identity review**. The signer can still view and sign meanwhile; the review holds the document's certification instead (status `pending_identity_review` once every signer has signed).
-Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_available` is false when the provider keeps none or it could not be fetched yet. While the review is open, `images` lists the evidence images the reviewer can open with **Signer identity review image**. A verification the provider approved directly, without a review, shows no evidence here (`evidence_available` is false); its evidence is on the `signer_identity_verified` activity. Reachable with the `documents:read` OAuth scope, but the images and the decision are not available to OAuth applications (`403`): the review is made by a person in Assinafy.
+Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_available` is false when the provider keeps none or it could not be fetched yet. While the review is open, `images` lists the evidence images the reviewer can open with **Signer identity review image**. A verification the provider approved directly, without a review, shows no evidence here (`evidence_available` is false); its evidence is on the `signer_identity_verified` activity. For a document of an envelope, the signer's one check of the whole envelope, read from any of its documents they are on. Reachable with the `documents:read` OAuth scope; the images and the decision are not available to third-party OAuth applications (`403`): the review is made by a person, in Assinafy or its apps.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3022,6 +4880,24 @@ Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_avai
 }
 ```
 
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 404 — Assignment, signer or verification not found.
 
 ##### 401 — Missing or invalid credentials.
@@ -3030,7 +4906,15 @@ Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_avai
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3040,7 +4924,15 @@ Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_avai
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3048,7 +4940,7 @@ Evidence is a summary kept by Assinafy (no images or biometrics). `evidence_avai
 
 `GET /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/images/{name}`
 
-One evidence image of a signer identity verification that is `InReview`, for the account's reviewer: the document photos (or the digital document PDF) and the face photo. Fetched from the verification provider on each request and never stored by Assinafy. Available only while the review is open; once it is decided, every image returns 404. `name` must be one of the review's `images`. Not available to OAuth applications (`403`): the images are for the person reviewing.
+One evidence image of a signer identity verification that is `InReview`, for the account's reviewer: the document photos (or the digital document PDF) and the face photo. Fetched from the verification provider on each request and never stored by Assinafy. Available only while the review is open; once it is decided, every image returns 404. `name` must be one of the review's `images`. Not available to third-party OAuth applications (`403`), whatever their scopes: the images are for the person reviewing. Assinafy's own apps can open them with the `documents:read` scope, for the user signed in to them.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3065,6 +4957,24 @@ One evidence image of a signer identity verification that is `InReview`, for the
 
 ##### 200 — The image bytes (`image/jpeg`, `image/png`) or the document PDF (`application/pdf`). Sent with `Cache-Control: no-store`.
 
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 404 — Assignment, signer or verification not found, the review is not open, or there is no such image.
 
 ##### 401 — Missing or invalid credentials.
@@ -3073,7 +4983,15 @@ One evidence image of a signer identity verification that is `InReview`, for the
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3083,7 +5001,15 @@ One evidence image of a signer identity verification that is `InReview`, for the
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3091,7 +5017,7 @@ One evidence image of a signer identity verification that is `InReview`, for the
 
 `POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/identity-verification/review`
 
-Approves or rejects a signer whose identity verification is `InReview`, while the document is `pending_signature` or `pending_identity_review`. Approved: once every signer has signed and no other signer is under review, the document is certificated; the certificate states the approval by review and every difference found. Rejected: the document is cancelled (`rejected_by_user`, with the reviewer as the user) and every signer and copy receiver gets the cancellation notice; the note is never shown to them. The signer gets no message about the decision itself. The decision is also reported to the verification provider. Not available to OAuth applications (`403`): the certificate names the person who reviewed, so the decision is made in Assinafy.
+Approves or rejects a signer whose identity verification is `InReview`, while the document is `pending_signature` or `pending_identity_review`. Approved: once every signer has signed and no other signer is under review, the document is certificated; the certificate states the approval by review and every difference found. Rejected: the document is cancelled (`rejected_by_user`, with the reviewer as the user) and every signer and copy receiver gets the cancellation notice; the note is never shown to them. The signer gets no message about the decision itself. For a document of an envelope, it decides the signer's one check of the whole envelope, from any of its documents they are on, and is recorded on each of them: approving releases each once signed, and rejecting cancels the whole envelope as its cancel does, each person told once. The decision is also reported to the verification provider. Not available to third-party OAuth applications (`403`), whatever their scopes: the certificate names the person who reviewed. Assinafy's own apps can decide it with the `documents:write` scope, and the reviewer is the user signed in to them.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3167,9 +5093,59 @@ Example:
 }
 ```
 
-##### 400 — Invalid decision, the verification is not `InReview`, or the document is no longer awaiting signatures.
+##### 400 — Invalid decision, the verification is not `InReview`, or the document is no longer awaiting signatures (for a document of an envelope, none of the signer's documents of it is).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 404 — Assignment, signer or verification not found.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -3177,7 +5153,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3187,7 +5171,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3237,7 +5229,15 @@ List all WhatsApp notification messages sent for an assignment. The response inc
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3247,7 +5247,15 @@ List all WhatsApp notification messages sent for an assignment. The response inc
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3319,7 +5327,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3329,7 +5345,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3375,7 +5399,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3425,7 +5457,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3435,7 +5475,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3443,7 +5491,7 @@ Example:
 
 `PUT /v1/authentication/change-password`
 
-Change the authenticated user's password.
+Change the authenticated user's password. The body's `email` must be their own address (any letter case); any other address is refused (`403`), whether or not it has an account, and an `email` that is not text answers `400`.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -3485,7 +5533,33 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3495,7 +5569,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3505,7 +5587,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3575,7 +5665,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3587,7 +5685,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3628,7 +5734,15 @@ The authenticated user's enrolled two-factor methods and how many recovery codes
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3638,7 +5752,15 @@ The authenticated user's enrolled two-factor methods and how many recovery codes
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3673,7 +5795,7 @@ Example:
     "data": {
         "id": "example_id_29",
         "secret": "example_secret",
-        "provisioning_uri": "https://example.com/example-url-12"
+        "provisioning_uri": "https://example.com/example-url-11"
     },
     "status": 200,
     "message": ""
@@ -3686,7 +5808,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3696,7 +5826,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3750,7 +5888,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3760,7 +5906,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3770,7 +5924,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3780,7 +5942,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3830,7 +6000,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3840,7 +6018,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3850,7 +6036,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3904,7 +6098,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3914,7 +6116,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3924,7 +6134,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -3934,7 +6152,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4006,7 +6232,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4016,7 +6250,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4061,7 +6303,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4071,7 +6321,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4081,7 +6339,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4113,7 +6379,15 @@ Retrieve a masked version of the existing API key. The full key cannot be retrie
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4123,7 +6397,15 @@ Retrieve a masked version of the existing API key. The full key cannot be retrie
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4169,7 +6451,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4179,7 +6469,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4209,7 +6507,15 @@ Delete the existing API key.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4219,7 +6525,15 @@ Delete the existing API key.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4249,7 +6563,7 @@ List the contract terms tracked on the workspace's documents, most recently upda
 | `sort` | query | string | no | `end_date` or `updated_at`; prefix with `-` for descending (`-updated_at`, the default). Contracts without an end date come last either way. |
 | `expand` | query | string | no | `document` embeds each contract's document. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -4331,10 +6645,10 @@ List the contract terms tracked on the workspace's documents, most recently upda
                 "name": "Contrato de prestação de serviços.pdf",
                 "status": "certificated",
                 "artifacts": {
-                    "original": "https://example.com/example-url-13"
+                    "original": "https://example.com/example-url-12"
                 },
                 "is_closed": true,
-                "signing_url": "https://example.com/example-url-14",
+                "signing_url": "https://example.com/example-url-13",
                 "verification_code": "example_secret",
                 "verification_url": "https://example.com/example-url-4",
                 "decline_reason": null,
@@ -4348,7 +6662,7 @@ List the contract terms tracked on the workspace's documents, most recently upda
 }
 ```
 
-##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`: those keys hold text only. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
 
 ```json
 {
@@ -4375,7 +6689,15 @@ List the contract terms tracked on the workspace's documents, most recently upda
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4385,7 +6707,15 @@ List the contract terms tracked on the workspace's documents, most recently upda
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4536,7 +6866,15 @@ The contract terms tracked on a document, with `amendments`: the documents that 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4546,7 +6884,15 @@ The contract terms tracked on a document, with `amendments`: the documents that 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4554,7 +6900,7 @@ The contract terms tracked on a document, with `amendments`: the documents that 
 
 `PUT /v1/accounts/{accountId}/documents/{documentId}/contract`
 
-Creates the document's contract terms, or changes only the attributes sent (see the request body for what `null` does). `external_references`, when sent, replaces the whole list. Records a `document_contract_updated` event when the terms change; a retry that changes nothing records none. The body must be a JSON object with at least one attribute. With `parent_document_id`, the document is instead linked as an amendment, renewal or termination of that contract (or of any document in its family, resolved to the root) and the other attributes are the terms it changes; a later `PUT` on a pending amendment merges into that delta (a `null` drops a key) and `parent_document_id: null` unlinks it; every change to the link records `document_contract_amendment_updated` on this document. The delta applies to the parent once the document is certificated (at once, if it already is), in signing order (the order the documents' certifications were recorded in, fixed for each once it is; a certificated document with none recorded waits, and is placed by its certification time an hour on): instruments signed earlier apply first, one that cannot holds the later ones back, and an instrument signed before one already applied is blocked instead of applied over it. Applying records `document_contract_amended`; an applied amendment is read-only. A cancelled, declined or expired document takes no new terms and no new link; terms or a link already on one stay and can still change. Send the `updated_at` you read with the write to have it refused (`409`) if the contract or link changed meanwhile. Needs a plan with contract tracking (`403` otherwise).
+Creates the document's contract terms, or changes only the attributes sent (see the request body for what `null` does). `external_references`, when sent, replaces the whole list. Records a `document_contract_updated` event when the terms change; a retry that changes nothing records none. The body must be a JSON object with at least one attribute. With `parent_document_id`, the document is instead linked as an amendment, renewal or termination of that contract (or of any document in its family, resolved to the root) and the other attributes are the terms it changes; a later `PUT` on a pending amendment merges into that delta (a `null` drops a key) and `parent_document_id: null` unlinks it; every change to the link records `document_contract_amendment_updated` on this document. The delta applies to the parent once the document is certificated (at once, if it already is), in signing order (the order the documents' certifications were recorded in, fixed for each once it is; a certificated document with none recorded waits, and is placed by its certification time an hour on): instruments signed earlier apply first, one that cannot holds the later ones back, and an instrument signed before one already applied is blocked instead of applied over it. Applying records `document_contract_amended`; an applied amendment is read-only. A cancelled, declined or expired document takes no new terms and no new link; terms or a link already on one stay and can still change. Send the `updated_at` you read with the write to have it refused (`409`) if the contract or link changed meanwhile. Contract tracking comes with every standard plan, the free plan too; `403` when the workspace's current subscription lacks it.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -4774,7 +7120,7 @@ Example — Link an aditivo that changes the value and the end date:
 }
 ```
 
-##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`: those keys hold text only. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
 
 ```json
 {
@@ -4795,12 +7141,13 @@ Example — Link an aditivo that changes the value and the end date:
 }
 ```
 
-##### 403 — The workspace's plan does not include contract tracking.
+##### 403 — Contract tracking is not available to the workspace (`PlanRestricted`): its current subscription lacks it (a custom contract that leaves it out, or an administrator's removal), or it is turned off for the whole service. It comes with every standard plan, the free plan too.
 
 ```json
 {
     "status": 403,
-    "message": "Contract tracking is not available for your current plan."
+    "message": "Contract tracking is not available for your current plan.",
+    "code": "PlanRestricted"
 }
 ```
 
@@ -4829,7 +7176,15 @@ Example — Link an aditivo that changes the value and the end date:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4839,7 +7194,15 @@ Example — Link an aditivo that changes the value and the end date:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4857,6 +7220,7 @@ The family the document belongs to, seen from its root: the contract terms with 
 |---|---|---|---|---|
 | `accountId` | path | string | yes | Workspace account ID. |
 | `documentId` | path | string | yes | Document ID. |
+| `expand` | query | string | no | `document` embeds the root contract's document, its `name` included, so an amendment's page names its parent without a second read; each entry of `amendments` already carries its own `document_name`. Without it the answer is as before. |
 
 #### Responses
 
@@ -4948,7 +7312,15 @@ The family the document belongs to, seen from its root: the contract terms with 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4958,7 +7330,15 @@ The family the document belongs to, seen from its root: the contract terms with 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -4966,7 +7346,7 @@ The family the document belongs to, seen from its root: the contract terms with 
 
 `POST /v1/accounts/{accountId}/documents/{documentId}/contract/renew`
 
-Starts the contract's next term: `end_date` moves by `renewal_term_months` (12 when unset), or to the `end_date` sent, which must be after the current one. A `value` sent replaces the current one. Reopens an expired contract; a terminated one returns `400`. Steps `term`, so the lifecycle alerts run again for the new term. Records a `document_contract_renewed` event. Needs a plan with contract tracking (`403` otherwise). The body names the `term` the renewal starts from (the contract's current one) or the `end_date` it renews to, so a renewal answered with a `5xx` error, or whose answer was lost, is safe to send again: the repeat is refused with `400`, as the contract is then in its next term and that date is no longer after the current one (or with `409`, when it sends the `updated_at` it read).
+Starts the contract's next term: `end_date` moves by `renewal_term_months` (12 when unset), or to the `end_date` sent, which must be after the current one. A `value` sent replaces the current one. Reopens an expired contract; a terminated one returns `400`. Steps `term`, so the lifecycle alerts run again for the new term. Records a `document_contract_renewed` event. Contract tracking comes with every standard plan, the free plan too; `403` when the workspace's current subscription lacks it. The body names the `term` the renewal starts from (the contract's current one) or the `end_date` it renews to, so a renewal answered with a `5xx` error, or whose answer was lost, is safe to send again: the repeat is refused with `400`, as the contract is then in its next term and that date is no longer after the current one (or with `409`, when it sends the `updated_at` it read).
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -5044,7 +7424,7 @@ Example — Renew to a date with a new value:
 }
 ```
 
-##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`: those keys hold text only. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
 
 ```json
 {
@@ -5065,12 +7445,13 @@ Example — Renew to a date with a new value:
 }
 ```
 
-##### 403 — The workspace's plan does not include contract tracking.
+##### 403 — Contract tracking is not available to the workspace (`PlanRestricted`): its current subscription lacks it (a custom contract that leaves it out, or an administrator's removal), or it is turned off for the whole service. It comes with every standard plan, the free plan too.
 
 ```json
 {
     "status": 403,
-    "message": "Contract tracking is not available for your current plan."
+    "message": "Contract tracking is not available for your current plan.",
+    "code": "PlanRestricted"
 }
 ```
 
@@ -5100,7 +7481,15 @@ Example — Renew to a date with a new value:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5110,7 +7499,15 @@ Example — Renew to a date with a new value:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5118,7 +7515,7 @@ Example — Renew to a date with a new value:
 
 `POST /v1/accounts/{accountId}/documents/{documentId}/contract/terminate`
 
-Closes the contract: its status becomes `terminated` and the lifecycle job stops alerting on it. Records a `document_contract_terminated` event carrying the `reason`. Needs a plan with contract tracking (`403` otherwise).
+Closes the contract: its status becomes `terminated` and the lifecycle job stops alerting on it. Records a `document_contract_terminated` event carrying the `reason`. Contract tracking comes with every standard plan, the free plan too; `403` when the workspace's current subscription lacks it.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -5184,7 +7581,7 @@ Example — Terminate with a reason:
 }
 ```
 
-##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`, which the API would return as a date. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
+##### 400 — The request breaks a contract rule. `errors` has one entry per problem found: the `field` as sent (`null` when the request as a whole is refused), a stable `code` to translate, and the `message` in the platform's language; `message` at the top is the first entry's. The contract's own rules on the terms, and the external references' items, report every field that breaks one, an entry per field (its first problem); the other checks (the body, its fields, the contract's state, a renewal's or a link's conditions) stop at the first problem they find. | Code | Field | Refused when | |------|-------|--------------| | `InvalidBody` | — | The body is not a JSON object (a list, a bare value), or a `PUT` of contract terms sends no attribute. | | `UnknownField` | the attribute | The endpoint does not take the attribute; one entry per attribute. | | `NotSingleValue` | the attribute | On a `PUT` of contract terms, a list sent for a term that takes one value (every term but `metadata` and `external_references`). On a link, the same list answers the term's own code. | | `Required` | `parent_document_id`, `relation_type`, `external_references[i].system`, `external_references[i].id` | A first link without `parent_document_id` (a pending link that was removed meanwhile) or `relation_type`; an `external_references` item without `system` or `id` (`i` is its place in the list sent, from 0). | | `Invalid` | the field | The value is not of the field's type or form: `status` not one of the four; `currency` not three letters; `auto_renew` not a boolean; `owner_id` not a user id; `value` not a number; `counterparty_name` holding HTML; `metadata` not an object; `external_references` not a list, an item's `system` (`external_references[i].system`) with characters other than letters, digits, `_`, `-` and `.`, or its `id` (`external_references[i].id`) with an emoji or another 4-byte character; `parent_document_id` not text; `relation_type` not `amendment`, `renewal` or `termination`; `term` not a whole number from 1; `reason` not text. On the list: a filter sent as a list, a `status` not one of the four, `ending_within_days` not a whole number. | | `TooSmall`, `TooBig` | the field | `value` below 0 or above 9999999999999.99; `renewal_term_months` outside 1 to 600; `notice_period_days` (and the list's `ending_within_days`) outside 0 to 3650. | | `TooLong` | the field | `counterparty_name` over 255 characters, counting each emoji as stored (several characters); `counterparty_taxpayer_id` over 20; `reason` over 500; `external_references[i].system` over 64 or `external_references[i].id` over 255. | | `TooMany` | `external_references` | More than 20 items. | | `TooManyDecimals` | `value` | More than two decimal places. | | `InvalidDate` | `start_date`, `end_date`, `updated_at`; the list's `end_date_from`, `end_date_to` | Not a date as `YYYY-MM-DD` (an impossible one such as `2026-02-30` included); `updated_at` not a date and time as the API writes it (`2026-10-23T12:00:00Z`, or with an offset). | | `DateTooEarly` | `start_date`, `end_date` | Before the year 1000. | | `DateTooLate` | `end_date` | A renewal by the term would pass 9999-12-31. | | `EndBeforeStart` | `end_date` | Before `start_date`. | | `InvalidTaxpayerId` | `counterparty_taxpayer_id` | Not a valid CPF or CNPJ (formatted or not). | | `NotAMember` | `owner_id` | Not an active member of the workspace. | | `TooManyKeys` | `metadata` | More than 50 keys. | | `InvalidKey` | `metadata` | A key that is not 1 to 40 letters, digits, `_`, `-` or `.`. | | `InvalidValue` | `metadata` | A value that is not plain text of at most 500 characters. | | `NumberUnderDateKey` | `metadata` | A number under a key ending in `_at`, or `stuck_since`: those keys hold text only. | | `ListKeys` | `metadata` | Keys `0`, `1`, `2`…, which would read back as a list. | | `DuplicateReference` | `external_references` | Two items the database takes for one (accents, `ß` and `ss`); items equal case aside are merged, not refused. | | `StatusNotSettable` | `status` | A tracked contract sent `expired` or `terminated`, or a closed one sent `draft` or `active`: a contract is closed by terminating it and reopened by renewing it. | | `CannotReturnToDraft` | `status` | An `active` contract sent `draft`. | | `ExpiredNeedsPastEndDate` | `end_date` | New terms with status `expired` and no `end_date` before today. | | `TerminatedNeedsEndDate` | `end_date` | New terms with status `terminated` and no `end_date`. | | `UnsignableDocument` | — | New terms, or a first link, on a cancelled, declined or expired document. Terms or a link already on one stay editable. | | `DocumentIsAmendment` | — | Terms of its own for a document linked as an amendment: its terms are the changes it makes. | | `DocumentHasOwnTerms` | — | A link for a document that tracks a contract of its own: a document is a contract or an amendment, never both. | | `ParentHasNoTerms` | `parent_document_id` | The parent named has no contract terms, nor amends a contract that has. | | `ParentTerminated` | `parent_document_id` | The parent contract is terminated. | | `NoTermChanged` | — | An `amendment` that changes no term, also by dropping its last one. A `renewal` or `termination` may change none. | | `TermNotAllowed` | the term | A term the relation type cannot change: a `renewal` changes only `end_date` and `value`, a `termination` only `end_date`. | | `AmendmentApplied` | — | The amendment applied when its document was signed and can no longer change. | | `TermOrEndDateRequired` | — | A renewal sends neither `term` nor `end_date`. | | `TermMismatch` | `term` | Not the contract's current term: the renewal already happened. | | `ContractTerminated` | — | A renewal of a terminated contract. | | `EndDateRequired` | `end_date` | A renewal by the term, or a `renewal` link without `end_date`, of a contract without an end date. | | `EndDateNotAfterCurrent` | `end_date` | A renewal, or a `renewal` link, to a date not after the current end date. | | `AlreadyTerminated` | — | A termination of a contract already terminated. | A body that is not valid JSON is refused before it reaches these endpoints, with the platform's `400` and no `errors`. A link is also checked against what applying it today would give the parent, so a delta the contract would refuse comes back with the contract's own codes.
 
 ```json
 {
@@ -5205,12 +7602,13 @@ Example — Terminate with a reason:
 }
 ```
 
-##### 403 — The workspace's plan does not include contract tracking.
+##### 403 — Contract tracking is not available to the workspace (`PlanRestricted`): its current subscription lacks it (a custom contract that leaves it out, or an administrator's removal), or it is turned off for the whole service. It comes with every standard plan, the free plan too.
 
 ```json
 {
     "status": 403,
-    "message": "Contract tracking is not available for your current plan."
+    "message": "Contract tracking is not available for your current plan.",
+    "code": "PlanRestricted"
 }
 ```
 
@@ -5240,7 +7638,15 @@ Example — Terminate with a reason:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5250,7 +7656,2469 @@ Example — Terminate with a reason:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+## Embedded Signing
+
+### List embed origins
+
+`GET /v1/accounts/{accountId}/embed-origins`
+
+List the origins allowed to embed the workspace's signing pages, oldest first. Returns `403` with code `PlanRestricted` when the workspace's plan does not include embedded signing. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Responses
+
+##### 200 — The allowed origins
+
+```json
+{
+    "data": [
+        {
+            "id": "example_id_35",
+            "origin": "https://example.com/example-url-14",
+            "created_at": "2026-11-04T12:05:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Add embed origin
+
+`POST /v1/accounts/{accountId}/embed-origins`
+
+Allow one more origin to embed the workspace's signing pages. An origin is an exact `scheme://host[:port]`: `https` (or `http` for `localhost` and `192.0.2.1` only), with no path, query, fragment, credentials or wildcard. The host is lowercased and a trailing `/` and the default port are dropped. Returns `400` when the origin is invalid, already registered, or the workspace already has 10 origins. Returns `403` with code `PlanRestricted` when the workspace's plan does not include embedded signing. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `origin` (string, required)
+
+Example:
+
+```json
+{
+    "origin": "https://example.com/example-url-14"
+}
+```
+
+#### Responses
+
+##### 200 — The origin added
+
+```json
+{
+    "data": {
+        "id": "example_id_35",
+        "origin": "https://example.com/example-url-14",
+        "created_at": "2026-11-04T12:05:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Update embed origin
+
+`PUT /v1/accounts/{accountId}/embed-origins/{originId}`
+
+Replace one allowed origin with another, keeping its `id`. The same rules as **Add embed origin** apply. Returns `400` when the new origin is invalid or another entry already has it. Returns `403` with code `PlanRestricted` when the workspace's plan does not include embedded signing. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `originId` | path | string | yes | The embed origin ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `origin` (string, required)
+
+Example:
+
+```json
+{
+    "origin": "https://example.com/example-url-14"
+}
+```
+
+#### Responses
+
+##### 200 — The updated origin
+
+```json
+{
+    "data": {
+        "id": "example_id_35",
+        "origin": "https://example.com/example-url-14",
+        "created_at": "2026-11-04T12:05:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Remove embed origin
+
+`DELETE /v1/accounts/{accountId}/embed-origins/{originId}`
+
+Stop allowing an origin to embed the workspace's signing pages. Removing the last origin disables embedding: new sessions return `409` with code `embed_origins_missing`. Returns `403` with code `PlanRestricted` when the workspace's plan does not include embedded signing. Not available to OAuth applications.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `originId` | path | string | yes | The embed origin ID. |
+
+#### Responses
+
+##### 200 — Origin removed
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Create an embed session
+
+`POST /v1/documents/{documentId}/assignments/{assignmentId}/signers/{signerId}/embed-sessions`
+
+Mint a single-use embed URL for a signer created with `embedded: true`. Load the URL in an iframe on one of the workspace's embed origins within 5 minutes; opening it spends the token, so mint a fresh one each time the signer opens the page. The signer's access code is never returned. Refused with `400` (`embed_not_enabled_for_signer`) for a signer that is not embedded, `409` when the signer already finished (`already_signed`), the document is still being uploaded or processed (`document_not_ready`: retry in a moment), the document can no longer be signed or the signer's step has not started (`document_unavailable`), or the workspace has no embed origin (`embed_origins_missing`), `403` with code `PlanRestricted` when the plan does not include embedded signing, and `429` after 30 sessions for one signer in an hour.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `documentId` | path | string | yes | Document ID. |
+| `assignmentId` | path | string | yes | The assignment ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — The embed session
+
+```json
+{
+    "data": {
+        "url": "https://example.com/example-url-15",
+        "expires_at": "2026-11-04T12:05:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — The request was rejected because of its current state or invalid input.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The document, assignment or signer was not found.
+
+##### 409 — The signer can not sign right now (`already_signed`, `document_not_ready`, `document_unavailable`), or the workspace has no embed origin (`embed_origins_missing`).
+
+##### 429 — More than 30 sessions for this signer in the last hour.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Exchange an embed session
+
+`POST /v1/embed/sessions/{token}/exchange`
+
+Called by Assinafy's embed page, not by integrations. Public: the token is the credential. Trades a session token for the signer's access code, once; the token is spent even when the call is refused with `409`. An unknown, expired or already used token returns `410` with code `embed_session_invalid`. Returns `409` when the signer or document can no longer sign.
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `token` | path | string | yes | The 64-character session token from the embed URL. |
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `parent_origin` (string) — The origin of the page hosting the iframe, recorded for audit.
+
+Example:
+
+```json
+{
+    "parent_origin": "https://example.com/example-url-14"
+}
+```
+
+#### Responses
+
+##### 200 — The signing session
+
+```json
+{
+    "data": {
+        "signer_access_code": "example_secret",
+        "signer_id": "example_id_35",
+        "document_id": "example_id_36",
+        "verification_method": "Email",
+        "embed_origins": [
+            "https://example.com/example-url-14"
+        ]
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 409 — The signer or document can not sign right now (`already_signed`, `document_not_ready`, `document_unavailable`).
+
+##### 410 — Unknown, expired or already used token (`embed_session_invalid`).
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+## Envelopes
+
+### List envelopes
+
+`GET /v1/accounts/{accountId}/envelopes`
+
+The workspace's envelopes, the most recent first: each with its documents in order, their statuses and signers, and the counts by status.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
+| `search` | query | string | no | Part of the envelope's name. |
+| `status` | query | string | no | `open`: envelopes with a document still open; `closed`: every document signed, declined, cancelled, expired or failed. |
+
+#### Responses
+
+##### 200 — The workspace's envelopes
+
+```json
+{
+    "data": [
+        {
+            "resource": "envelope",
+            "id": "example_id_37",
+            "name": "Contrato de prestação de serviços",
+            "message": "Segue o contrato e seus anexos.",
+            "documents": [
+                {
+                    "id": "example_id_3",
+                    "position": 1,
+                    "name": "contrato.pdf",
+                    "status": "pending_signature",
+                    "artifacts": {
+                        "original": "https://example.com/example-url-16",
+                        "thumbnail": "https://example.com/example-url-17"
+                    },
+                    "signers": [
+                        {
+                            "id": "example_id_11",
+                            "full_name": "Example User",
+                            "email": "user10@example.com",
+                            "whatsapp_phone_number": "+5500000000000",
+                            "completed": false,
+                            "signed_at": "2026-11-06T14:30:00Z"
+                        }
+                    ]
+                }
+            ],
+            "counts": {
+                "certificated": 1,
+                "pending_signature": 2
+            },
+            "signing_urls": [
+                {
+                    "signer_id": "example_id_5",
+                    "url": "https://example.com/example-url-6",
+                    "embedded": false
+                }
+            ],
+            "created_at": "2026-11-04T12:00:00Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — A filter refused as sent, an entry of `errors` each: `search` (not text), `status` (other than `open` or `closed`).
+
+```json
+{
+    "status": 400,
+    "message": "Give status as open or closed.",
+    "errors": [
+        {
+            "field": "status",
+            "code": "Invalid",
+            "message": "Give status as open or closed."
+        }
+    ]
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:read` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Create envelope
+
+`POST /v1/accounts/{accountId}/envelopes`
+
+Send several documents to the same signers at once. Each document gets its own assignment and keeps its own status, certificate and downloads; one invitation goes to each signer, through the methods sent for them, for all the documents they are on, from the first of them. A send that fails is recorded on that signer's request (`notification_history`) and doesn't undo the envelope: `200` means the envelope was created, not that every invitation was delivered. The envelope is charged as one document, whatever its documents, each signer's notifications and identity check once for the whole envelope, and each digital-certificate signature on every document it is made on. Every document must be uploaded and processed (`metadata_ready`) with no assignment, and every listed signer must be on at least one document. Each document is signed on its virtual page or, with `collect`, on the fields placed on its pages, as on an assignment; a digital-certificate signer signs only virtual documents, alone on each. Needs the Envelopes feature on the workspace's plan (`403` with code `PlanRestricted` otherwise). A refused request creates and charges nothing; `errors` names every field at fault.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `Idempotency-Key` | header | string | no | Any text, case-sensitive and new for each envelope you mean to create (a UUID, say). Retrying with the same key after a lost response answers the envelope the first request created, and creates and charges nothing, whatever the body says. A key belongs to its workspace and doesn't expire. `409` with code `IdempotencyKeyInUse` if the first request is still running: try again. An empty value counts as no key, as on template documents. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required) — What the invitation calls what is being signed, in place of a document's name. `<` is refused (`400`).
+- `message` (string | null) — Optional message sent to every signer; their invitation adds the names of the documents they are on.
+- `max_total_credits` (number) — Optional ceiling on what this request may spend, as on an assignment: refused with `409` and code `CreditCeilingExceeded`, nothing created or charged, when the envelope's total credits are above it. A value that is not a number of credits, zero or more, answers `400`; numeric text counts, as a form-encoded body sends it. The estimate ignores it.
+- `signers` (array, required) — Every signer of the envelope, once, by id: up to 20. They all sign at once: an envelope takes no `step`.
+- `documents` (array, required) — The documents, in the order the envelope lists them: up to 20.
+
+Example:
+
+```json
+{
+    "name": "Contrato de prestação de serviços",
+    "message": "Segue o contrato e seus anexos.",
+    "max_total_credits": 1.5,
+    "signers": [
+        {
+            "id": "example_id_11",
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "embedded": true
+        }
+    ],
+    "documents": [
+        {
+            "id": "example_id_3",
+            "method": "virtual",
+            "entries": [
+                {
+                    "page_id": "example_id_5",
+                    "fields": [
+                        {
+                            "signer_id": "example_id_5",
+                            "field_id": "example_id_5",
+                            "display_settings": {
+                                "left": 69,
+                                "top": 282,
+                                "width": 421,
+                                "height": 45.86,
+                                "fontFamily": "Arial",
+                                "fontSize": 22,
+                                "backgroundColor": "#D5EBFF"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "signer_ids": [
+                "example_id_11"
+            ],
+            "expires_at": "2026-12-31T23:59:59Z",
+            "copy_receiver_ids": [
+                "example_id_38"
+            ]
+        }
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — The created envelope
+
+```json
+{
+    "data": {
+        "resource": "envelope",
+        "id": "example_id_37",
+        "name": "Contrato de prestação de serviços",
+        "message": "Segue o contrato e seus anexos.",
+        "documents": [
+            {
+                "id": "example_id_3",
+                "position": 1,
+                "name": "contrato.pdf",
+                "status": "pending_signature",
+                "artifacts": {
+                    "original": "https://example.com/example-url-16",
+                    "thumbnail": "https://example.com/example-url-17"
+                },
+                "signers": [
+                    {
+                        "id": "example_id_11",
+                        "full_name": "Example User",
+                        "email": "user10@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "completed": false,
+                        "signed_at": "2026-11-06T14:30:00Z"
+                    }
+                ]
+            }
+        ],
+        "counts": {
+            "certificated": 1,
+            "pending_signature": 2
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-6",
+                "embedded": false
+            }
+        ],
+        "created_at": "2026-11-04T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Refused as sent; nothing was created or charged. Each field at fault is an entry of `errors` (a list refused as a whole is not read item by item), an item of a list named by its index (`documents[1].signer_ids`): `name`; `message` (not text); `signers` and `documents` (missing, empty, not a list, or more than 20 signers or 20 documents; `documents` also when its documents hold more than 2,000 fields between them, a virtual document's being one per signer, or more than 100 copy receivers); `signers[i].id` (missing, listed twice, not a signer of the workspace, or on no document); `signers[i].verification_method` (not a code); `signers[i].notification_methods` (not a list of codes); `signers[i].step` (sent at all); `documents[i].id` (missing, listed twice, or a document that can't take the assignment: not found, not `metadata_ready`, or already assigned); `documents[i].method` (other than `virtual` or `collect`); `documents[i].entries` (missing for `collect`, or not a list of pages with fields naming their `signer_id`); `documents[i].expires_at` (not text, a number or null); `documents[i].signer_ids` (missing, not a list of ids, a signer not listed once in `signers`, for `collect` not exactly the signers on its fields, or a digital-certificate signer on a `collect` document or with another signer). A page or field the assignment doesn't find on a `collect` document, a method code the platform doesn't know, a verification and notification that don't pair, a signer without the e-mail or WhatsApp number their method needs, an `embedded` other than `true`, `false`, `1` or `0` (`null` reads as left out, as on an assignment) or set for a signer verified other than by Bypass, Email or WhatsApp, a balance too low for the envelope, an `expires_at` or `copy_receiver_ids` the assignment refuses, and a document another request assigned or put back into processing meanwhile answer `400` with `message` only, as on an assignment.
+
+```json
+{
+    "status": 400,
+    "message": "This signer is on no document.",
+    "errors": [
+        {
+            "field": "signers[1].id",
+            "code": "Invalid",
+            "message": "This signer is on no document."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks the Envelopes feature, or a signer's method or embedded signing the plan lacks (`PlanRestricted`); or an OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The envelope costs more than `max_total_credits` (`CreditCeilingExceeded`), or another request with this `Idempotency-Key` is still running (`IdempotencyKeyInUse`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "total_credits": 1.5,
+    "max_total_credits": 1,
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Estimate envelope cost
+
+`POST /v1/accounts/{accountId}/envelopes/estimate-cost`
+
+What creating the envelope would cost, creating and charging nothing. Takes the creation body and checks it as creation does (`max_total_credits` aside); answers as an assignment's estimate: the envelope counts as one document (`documents` is 1, an extra one when the plan's allowance doesn't cover it), each signer's notifications and identity check count once for the whole envelope, and each digital-certificate signature on every document it is made on, as creation charges them.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string, required) — What the invitation calls what is being signed, in place of a document's name. `<` is refused (`400`).
+- `message` (string | null) — Optional message sent to every signer; their invitation adds the names of the documents they are on.
+- `max_total_credits` (number) — Optional ceiling on what this request may spend, as on an assignment: refused with `409` and code `CreditCeilingExceeded`, nothing created or charged, when the envelope's total credits are above it. A value that is not a number of credits, zero or more, answers `400`; numeric text counts, as a form-encoded body sends it. The estimate ignores it.
+- `signers` (array, required) — Every signer of the envelope, once, by id: up to 20. They all sign at once: an envelope takes no `step`.
+- `documents` (array, required) — The documents, in the order the envelope lists them: up to 20.
+
+Example:
+
+```json
+{
+    "name": "Contrato de prestação de serviços",
+    "message": "Segue o contrato e seus anexos.",
+    "max_total_credits": 1.5,
+    "signers": [
+        {
+            "id": "example_id_11",
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "embedded": true
+        }
+    ],
+    "documents": [
+        {
+            "id": "example_id_3",
+            "method": "virtual",
+            "entries": [
+                {
+                    "page_id": "example_id_5",
+                    "fields": [
+                        {
+                            "signer_id": "example_id_5",
+                            "field_id": "example_id_5",
+                            "display_settings": {
+                                "left": 69,
+                                "top": 282,
+                                "width": 421,
+                                "height": 45.86,
+                                "fontFamily": "Arial",
+                                "fontSize": 22,
+                                "backgroundColor": "#D5EBFF"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "signer_ids": [
+                "example_id_11"
+            ],
+            "expires_at": "2026-12-31T23:59:59Z",
+            "copy_receiver_ids": [
+                "example_id_38"
+            ]
+        }
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — Cost estimate and balances
+
+```json
+{
+    "data": {
+        "documents": 1,
+        "credits": 0.9,
+        "needs_extra_document": true,
+        "extra_document_cost": 1,
+        "total_credits": 1.9,
+        "breakdown": [
+            {
+                "code": "NotificationWhatsapp",
+                "name": "Whatsapp Notification",
+                "cost": 0.9,
+                "quantity": 2,
+                "unit_cost": 0.45
+            }
+        ],
+        "document_balance": 0,
+        "credit_balance": 10,
+        "has_sufficient_resources": true,
+        "blocking_reason": null,
+        "message": null
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Refused on the same fields as creation, in `errors`, and with `message` alone for a method the platform does not know or a pairing it refuses. What creation checks while it creates each document (a signer's missing contact, a page or field not found, the balance) is not checked here: `has_sufficient_resources` says what the balance allows.
+
+```json
+{
+    "status": 400,
+    "message": "Add at least one item to documents.",
+    "errors": [
+        {
+            "field": "documents",
+            "code": "Required",
+            "message": "Add at least one item to documents."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks the Envelopes feature, or a signer's method or embedded signing the plan lacks (`PlanRestricted`); or an OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Get envelope
+
+`GET /v1/accounts/{accountId}/envelopes/{envelopeId}`
+
+One envelope of the workspace: its documents in order, each with its status and signers, and the counts by status.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+
+#### Responses
+
+##### 200 — The envelope
+
+```json
+{
+    "data": {
+        "resource": "envelope",
+        "id": "example_id_37",
+        "name": "Contrato de prestação de serviços",
+        "message": "Segue o contrato e seus anexos.",
+        "documents": [
+            {
+                "id": "example_id_3",
+                "position": 1,
+                "name": "contrato.pdf",
+                "status": "pending_signature",
+                "artifacts": {
+                    "original": "https://example.com/example-url-16",
+                    "thumbnail": "https://example.com/example-url-17"
+                },
+                "signers": [
+                    {
+                        "id": "example_id_11",
+                        "full_name": "Example User",
+                        "email": "user10@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "completed": false,
+                        "signed_at": "2026-11-06T14:30:00Z"
+                    }
+                ]
+            }
+        ],
+        "counts": {
+            "certificated": 1,
+            "pending_signature": 2
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-6",
+                "embedded": false
+            }
+        ],
+        "created_at": "2026-11-04T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:read` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Delete envelope
+
+`DELETE /v1/accounts/{accountId}/envelopes/{envelopeId}`
+
+Delete an envelope once every document of it is closed: certificated, declined, cancelled, expired or failed. Before that it answers `409` with code `EnvelopeOpen`: cancel it first. The envelope is gone: it is no longer listed and reads `404`, and a create retried with its `Idempotency-Key` no longer answers it. Its documents stay as ordinary documents, with their certificates, downloads and webhooks; `GET /v1/documents/{documentId}?expand=envelope_id` reads null for them.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+
+#### Responses
+
+##### 200 — Envelope deleted
+
+```json
+{
+    "data": [],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — A document of the envelope is still open (`EnvelopeOpen`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Update envelope
+
+`PATCH /v1/accounts/{accountId}/envelopes/{envelopeId}`
+
+Rename the envelope, change its message or put its documents in a new order; send only what changes. Nothing is sent to anyone: the reads and every notice sent from then on (a reminder, a cancel, a document added) use the new name, message and order. The message is also each document's assignment `message`. Works on a closed envelope too. A refused request changes nothing; `errors` names every field at fault.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `name` (string) — What the invitation calls what is being signed. `<` is refused (`400`).
+- `message` (string | null) — The message sent to every signer from now on; null for none.
+- `document_ids` (array) — Every document of the envelope, each once, in the new order; `position` follows it. An envelope listing no document takes no order.
+
+Example:
+
+```json
+{
+    "name": "Contrato de prestação de serviços",
+    "message": "Segue o contrato e seus anexos.",
+    "document_ids": [
+        "example_id_3",
+        "example_id_39"
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — The envelope as changed
+
+```json
+{
+    "data": {
+        "resource": "envelope",
+        "id": "example_id_37",
+        "name": "Contrato de prestação de serviços",
+        "message": "Segue o contrato e seus anexos.",
+        "documents": [
+            {
+                "id": "example_id_3",
+                "position": 1,
+                "name": "contrato.pdf",
+                "status": "pending_signature",
+                "artifacts": {
+                    "original": "https://example.com/example-url-16",
+                    "thumbnail": "https://example.com/example-url-17"
+                },
+                "signers": [
+                    {
+                        "id": "example_id_11",
+                        "full_name": "Example User",
+                        "email": "user10@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "completed": false,
+                        "signed_at": "2026-11-06T14:30:00Z"
+                    }
+                ]
+            }
+        ],
+        "counts": {
+            "certificated": 1,
+            "pending_signature": 2
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-6",
+                "embedded": false
+            }
+        ],
+        "created_at": "2026-11-04T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Refused as sent; nothing changed. Each field at fault is an entry of `errors`: `name` (empty, not text, over 255 characters, or holding `<`), `message` (not text), `document_ids` (empty, or not a list of every document of the envelope, each once).
+
+```json
+{
+    "status": 400,
+    "message": "List each of the envelope's documents once, in their new order.",
+    "errors": [
+        {
+            "field": "document_ids",
+            "code": "Invalid",
+            "message": "List each of the envelope's documents once, in their new order."
+        }
+    ]
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### List envelope activities
+
+`GET /v1/accounts/{accountId}/envelopes/{envelopeId}/activities`
+
+The envelope's trail: the activities of every document it has had, one taken out included (not one deleted, whose own list answers 404), newest first (`sort=id` for oldest first), each naming its document (`document_id`, `document_name`). Each entry is otherwise a document activity, as `GET /v1/documents/{documentId}/activities` answers it. Paged: 20 per page by default; the `X-Pagination-Total-Count`, `X-Pagination-Page-Count`, `X-Pagination-Current-Page` and `X-Pagination-Per-Page` headers describe the full list, and a page past the end returns an empty `data`.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+| `sort` | query | string | no | `-id` (default, newest first) or `id`. |
+| `page` | query | integer | no | Page number. |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
+
+#### Responses
+
+##### 200 — The envelope's activities
+
+```json
+{
+    "data": [
+        {
+            "document_id": "example_id_40",
+            "document_name": "Contrato.pdf",
+            "id": 4,
+            "event": "assignment_created",
+            "message": "Assignment created by John Smith.",
+            "payload": null,
+            "origin": null,
+            "created_at": "2022-07-19T19:28:13Z"
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:read` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Download envelope artifacts
+
+`GET /v1/accounts/{accountId}/envelopes/{envelopeId}/download/{artifactName}`
+
+One zip, named after the envelope, of the chosen artifact of every document of it, in order. Each file is named after its document's position (`1 - contract.pdf`); `bundle` gives each document a folder of its bundle's files (`1 - contract/`). `certificated`, `certificate-page`, `pades` and `bundle` include only the documents certified so far, and `pades` only those that have one; `404` when no document has the artifact. The artifacts are those of `GET /v1/documents/{documentId}/download/{artifactName}`.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+| `artifactName` | path | string | yes | Artifact type. |
+
+#### Responses
+
+##### 200 — The zip
+
+##### 403 — An OAuth app's token lacks `documents:read` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Cancel envelope
+
+`PUT /v1/accounts/{accountId}/envelopes/{envelopeId}/cancel`
+
+Cancels every document of the envelope that can still be cancelled, the way deleting a pending document cancels it: the owner, its signers and its copy receivers are told. A document already closed, one every signer has signed (its certification queued), or one being certificated, is left as it is. A notice that fails doesn't stop the other documents. Safe to repeat: a second call cancels nothing and answers each document's status.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+
+#### Responses
+
+##### 200 — What happened to each document, in the envelope's order
+
+```json
+{
+    "data": [
+        {
+            "id": "example_id_3",
+            "status": "rejected_by_user",
+            "cancelled": true
+        }
+    ],
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Remind envelope signer
+
+`PUT /v1/accounts/{accountId}/envelopes/{envelopeId}/signers/{signerId}/resend`
+
+Reminds a signer of the whole envelope at once: one message, the envelope's invitation sent again from their first link, listing the documents they still have to sign and, by e-mail, those they already signed. Paid notification methods are charged once for it, for each message that goes out. Each document they still have to sign records a `signature_requested` event, as the invitation does.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+| `signerId` | path | string | yes | The signer ID. |
+
+#### Responses
+
+##### 200 — Reminder result
+
+```json
+{
+    "data": {
+        "is_sent": true,
+        "envelope_id": "example_id_5",
+        "signer_id": "example_id_5"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — The signer has nothing left to sign in the envelope: every document of theirs is signed or closed; or the account lacks credits for the reminder.
+
+```json
+{
+    "status": 400,
+    "message": "This signer has nothing left to sign in this envelope."
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The envelope was not found, or the signer is not one of its signers.
+
+```json
+{
+    "status": 404,
+    "message": "Signer not found."
+}
+```
+
+##### 409 — The envelope is closed: every document of it is signed, declined, cancelled, expired or failed (`EnvelopeClosed`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Add document to envelope
+
+`POST /v1/accounts/{accountId}/envelopes/{envelopeId}/documents`
+
+Add a document to an open envelope for some of its signers. The document is checked as on creation: a `metadata_ready` document of the workspace with no assignment, signed on its virtual page or, with `collect`, on the fields placed in `entries`, with its own `expires_at` and `copy_receiver_ids`. An envelope holds up to 20 documents. It charges only its digital-certificate signatures, the envelope having paid for its document and its signers' notifications and identity checks when it was sent, and goes last in the envelope's order; a signer whose identity check the envelope approved is verified on it too. Each chosen signer is sent the envelope's invitation again, through the methods and with the link of their first invitation, now listing the new document, even once the document that invitation was sent from is taken out; the other signers hear nothing. The signers are the envelope's own: no one new joins once it was sent. Needs the Envelopes feature on the workspace's plan, as creating does. A refused request creates and charges nothing; `errors` names every field at fault.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `max_total_credits` (number) — Optional ceiling on what this request may spend, as on an assignment: refused with `409` and code `CreditCeilingExceeded`, nothing created or charged, when the document costs more on its own. A value that is not a number of credits, zero or more, answers `400`; numeric text counts, as a form-encoded body sends it.
+- `id` (string, required) — A `metadata_ready` document of the workspace with no assignment.
+- `method` (string) — As on an assignment: `virtual` (the default), signed on its virtual page, or `collect`, signed on the fields placed in `entries`.
+- `entries` (array) — Required for `collect`, as on an assignment: the fields placed on each page of the document. Its signers are the ones on its fields, exactly its `signer_ids`.
+- `signer_ids` (array, required) — The signers of this document, each listed once: on creation, signers listed in `signers`; when added, signers of the envelope's documents.
+- `expires_at` (object) — This document's expiration, read as on an assignment, at least one hour in the future. Text is read as a date: ISO 8601 is the format to send (a UTC offset in the value is honored, a value without one is read as UTC, and a date alone means 23:59 UTC that day), and text that is a number is Unix time. A number is Unix time in seconds, its fraction dropped. Null, 0, an empty text or leaving it out means no expiration; a value that can't be read as a date answers `400`.
+- `copy_receiver_ids` (array) — Signer IDs that only receive a copy of this document, as on an assignment.
+
+Example:
+
+```json
+{
+    "max_total_credits": 1.5,
+    "id": "example_id_3",
+    "method": "virtual",
+    "entries": [
+        {
+            "page_id": "example_id_5",
+            "fields": [
+                {
+                    "signer_id": "example_id_5",
+                    "field_id": "example_id_5",
+                    "display_settings": {
+                        "left": 69,
+                        "top": 282,
+                        "width": 421,
+                        "height": 45.86,
+                        "fontFamily": "Arial",
+                        "fontSize": 22,
+                        "backgroundColor": "#D5EBFF"
+                    }
+                }
+            ]
+        }
+    ],
+    "signer_ids": [
+        "example_id_11"
+    ],
+    "expires_at": "2026-12-31T23:59:59Z",
+    "copy_receiver_ids": [
+        "example_id_38"
+    ]
+}
+```
+
+#### Responses
+
+##### 200 — The envelope with the document added
+
+```json
+{
+    "data": {
+        "resource": "envelope",
+        "id": "example_id_37",
+        "name": "Contrato de prestação de serviços",
+        "message": "Segue o contrato e seus anexos.",
+        "documents": [
+            {
+                "id": "example_id_3",
+                "position": 1,
+                "name": "contrato.pdf",
+                "status": "pending_signature",
+                "artifacts": {
+                    "original": "https://example.com/example-url-16",
+                    "thumbnail": "https://example.com/example-url-17"
+                },
+                "signers": [
+                    {
+                        "id": "example_id_11",
+                        "full_name": "Example User",
+                        "email": "user10@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "completed": false,
+                        "signed_at": "2026-11-06T14:30:00Z"
+                    }
+                ]
+            }
+        ],
+        "counts": {
+            "certificated": 1,
+            "pending_signature": 2
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-6",
+                "embedded": false
+            }
+        ],
+        "created_at": "2026-11-04T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — Refused as sent; nothing was created or charged. Each field at fault is an entry of `errors`: `id` (missing, or a document that can't take the assignment: not found, not `metadata_ready`, or already assigned); `method` (other than `virtual` or `collect`); `entries` (missing for `collect`, or not a list of pages with fields naming their `signer_id`); `signer_ids` (missing, not a list of ids, listed twice, not a signer of the envelope's documents, for `collect` not exactly the signers on its fields, or a digital-certificate signer on a `collect` document or with another signer); `expires_at` (not text, a number or null); a null `field` when the envelope already has 20 documents, or would hold more than 2,000 fields (a virtual document's being one per signer) or more than 100 copy receivers with this one. A page or field the assignment doesn't find on a `collect` document, a balance too low, an `expires_at` or `copy_receiver_ids` the assignment refuses, and a document another request assigned or put back into processing meanwhile answer `400` with `message` only, as on an assignment.
+
+```json
+{
+    "status": 400,
+    "message": "Each of a document's signers must be listed once in the envelope's signers.",
+    "errors": [
+        {
+            "field": "signer_ids",
+            "code": "Invalid",
+            "message": "Each of a document's signers must be listed once in the envelope's signers."
+        }
+    ]
+}
+```
+
+##### 403 — The workspace's plan lacks the Envelopes feature, or a signer's method or embedded signing the plan lacks (`PlanRestricted`); or an OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — Every document of the envelope is closed (`EnvelopeClosed`), or the document costs more than `max_total_credits` on its own (`CreditCeilingExceeded`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "total_credits": 1.5,
+    "max_total_credits": 1,
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Take document out of envelope
+
+`DELETE /v1/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}`
+
+Take an open document out of the envelope: it is cancelled as cancelling the envelope cancels it, its owner, signers and copy receivers told in a notice naming the envelope, and it is no longer listed; the other documents carry on. Out of the envelope, `GET /v1/documents/{documentId}?expand=envelope_id` reads null for it; a signer whose invitation link was sent from it keeps reaching the envelope's other documents with that link, so it can't be deleted on its own (`409` with code `EnvelopeOpen`) until every document of the envelope is closed. A document that is not in the envelope, or was taken out already, answers `404`.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `envelopeId` | path | string | yes | The envelope ID. |
+| `documentId` | path | string | yes | Document ID. |
+
+#### Responses
+
+##### 200 — The envelope without the document
+
+```json
+{
+    "data": {
+        "resource": "envelope",
+        "id": "example_id_37",
+        "name": "Contrato de prestação de serviços",
+        "message": "Segue o contrato e seus anexos.",
+        "documents": [
+            {
+                "id": "example_id_3",
+                "position": 1,
+                "name": "contrato.pdf",
+                "status": "pending_signature",
+                "artifacts": {
+                    "original": "https://example.com/example-url-16",
+                    "thumbnail": "https://example.com/example-url-17"
+                },
+                "signers": [
+                    {
+                        "id": "example_id_11",
+                        "full_name": "Example User",
+                        "email": "user10@example.com",
+                        "whatsapp_phone_number": "+5500000000000",
+                        "completed": false,
+                        "signed_at": "2026-11-06T14:30:00Z"
+                    }
+                ]
+            }
+        ],
+        "counts": {
+            "certificated": 1,
+            "pending_signature": 2
+        },
+        "signing_urls": [
+            {
+                "signer_id": "example_id_5",
+                "url": "https://example.com/example-url-6",
+                "embedded": false
+            }
+        ],
+        "created_at": "2026-11-04T12:00:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 403 — An OAuth app's token lacks `documents:write` (`InsufficientScope`). Also a member deactivated in the workspace, a workspace scheduled for deletion, or an OAuth token of another workspace.
+
+```json
+{
+    "status": 403,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The document is closed, signed by every signer (its certification queued) or being certificated, and can no longer be cancelled (`DocumentClosed`).
+
+```json
+{
+    "status": 409,
+    "code": "PlanRestricted",
+    "message": "Bad request.",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5308,7 +10176,15 @@ To find the fields a sender can place on a document or template, list with `incl
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5318,7 +10194,15 @@ To find the fields a sender can place on a document or template, list with `incl
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5386,7 +10270,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5396,7 +10288,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5406,7 +10306,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5455,7 +10363,15 @@ Retrieve a single field definition.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5465,7 +10381,15 @@ Retrieve a single field definition.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5475,7 +10399,15 @@ Retrieve a single field definition.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5542,7 +10474,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5552,7 +10492,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5562,7 +10510,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5599,7 +10555,15 @@ Delete a field definition.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5609,7 +10573,15 @@ Delete a field definition.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5619,7 +10591,15 @@ Delete a field definition.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5629,7 +10609,7 @@ Delete a field definition.
 
 Validate an input value against a field definition. Typically called with a signer access code during the signing flow.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5668,13 +10648,93 @@ Example:
 }
 ```
 
+##### 400 — The request was rejected because of its current state or invalid input.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The field is not one of the workspace, or the workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5684,7 +10744,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5694,7 +10762,7 @@ Example:
 
 Validate multiple input values at once. The request body is a JSON array of `{field_id, value}` objects.
 
-**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header) or signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -5709,7 +10777,7 @@ Example:
 ```json
 [
     {
-        "field_id": "example_id_35",
+        "field_id": "example_id_41",
         "value": "1111111111111"
     }
 ]
@@ -5723,7 +10791,7 @@ Example:
 {
     "data": [
         {
-            "field_id": "example_id_35",
+            "field_id": "example_id_41",
             "type": "cpf",
             "success": false,
             "error_message": "Invalid CPF."
@@ -5734,13 +10802,93 @@ Example:
 }
 ```
 
+##### 400 — The request was rejected because of its current state or invalid input.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The field is not one of the workspace, or the workspace does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5750,7 +10898,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5785,7 +10941,15 @@ List the types a workspace can create field definitions with (`POST /v1/accounts
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5795,7 +10959,15 @@ List the types a workspace can create field definitions with (`POST /v1/accounts
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5841,7 +11013,15 @@ Which owner-facing document notifications the authenticated user receives by e-m
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5851,7 +11031,15 @@ Which owner-facing document notifications the authenticated user receives by e-m
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5933,7 +11121,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5943,7 +11139,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -5953,7 +11157,191 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Get my push notification preferences
+
+`GET /v1/users/self/push-preferences`
+
+Which document alerts the authenticated user receives as push notifications on their phones, separate from the e-mail preferences. Every key is always returned; everything defaults to `true`. New keys may be added. Not available to third-party OAuth applications (`403`), whatever their scopes: these are the user's personal settings. Assinafy's own apps can reach it.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Responses
+
+##### 200 — The current preferences
+
+```json
+{
+    "data": {
+        "SignerViewed": true,
+        "SignerSigned": true,
+        "DocumentCompleted": true,
+        "SignerDeclined": true,
+        "DocumentAboutToExpire": true,
+        "DocumentExpired": true,
+        "SignerIdentityReviewRequired": true,
+        "SignerWhatsappFailed": true
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Update my push notification preferences
+
+`PUT /v1/users/self/push-preferences`
+
+Merges the supplied map into the authenticated user's push preferences. Send only the keys you want to change — omitted keys keep their current value. Setting a key to `false` stops that push for this user in every account they belong to; e-mail is not affected. Returns the full map. An unknown code, a non-boolean value, or an empty body is rejected with 400 and nothing is written. Not available to third-party OAuth applications (`403`), whatever their scopes: these are the user's personal settings. Assinafy's own apps can reach it.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Request Body (required)
+
+Fields (`application/json`):
+
+- `SignerViewed` (boolean) — A signer opened the document for the first time.
+- `SignerSigned` (boolean) — A signer signed the document.
+- `DocumentCompleted` (boolean) — Every signer has signed and the document is certified.
+- `SignerDeclined` (boolean) — A signer declined to sign.
+- `DocumentAboutToExpire` (boolean) — The signature deadline is approaching.
+- `DocumentExpired` (boolean) — The signature deadline passed.
+- `SignerIdentityReviewRequired` (boolean) — A signer's identity awaits the sender's review. The e-mail for this is always sent.
+- `SignerWhatsappFailed` (boolean) — A WhatsApp notification to a signer could not be delivered.
+
+Example:
+
+```json
+{
+    "SignerViewed": true,
+    "SignerSigned": true,
+    "DocumentCompleted": true,
+    "SignerDeclined": true,
+    "DocumentAboutToExpire": true,
+    "DocumentExpired": true,
+    "SignerIdentityReviewRequired": true,
+    "SignerWhatsappFailed": true
+}
+```
+
+#### Responses
+
+##### 200 — The updated preferences
+
+```json
+{
+    "data": {
+        "SignerViewed": true,
+        "SignerSigned": true,
+        "DocumentCompleted": true,
+        "SignerDeclined": true,
+        "DocumentAboutToExpire": true,
+        "DocumentExpired": true,
+        "SignerIdentityReviewRequired": true,
+        "SignerWhatsappFailed": true
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6007,7 +11395,15 @@ The authenticated user's document-funnel KPIs summed across all accounts they cu
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6017,7 +11413,15 @@ The authenticated user's document-funnel KPIs summed across all accounts they cu
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6027,7 +11431,15 @@ The authenticated user's document-funnel KPIs summed across all accounts they cu
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6067,7 +11479,15 @@ Returns the profile of the user owning the access token. Not available to OAuth 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6077,7 +11497,15 @@ Returns the profile of the user owning the access token. Not available to OAuth 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6104,6 +11532,8 @@ Implements the RFC 6749 §5.1/§5.2 token-endpoint body contract in
      *         identifier exactly. No refresh token is issued; the caller re-exchanges from
      *         the user's own token instead of holding unattended API access.
 
+Replaying a refresh token already rotated ends the whole authorization. For Assinafy's own apps it ends that device's session.
+
 **Authentication:** none (public endpoint).
 
 #### Request Body (required)
@@ -6128,7 +11558,7 @@ Example:
 {
     "grant_type": "authorization_code",
     "code": "string",
-    "redirect_uri": "https://example.com/example-url-15",
+    "redirect_uri": "https://example.com/example-url-18",
     "code_verifier": "string",
     "refresh_token": "example_secret",
     "client_id": "example_id_5",
@@ -6182,7 +11612,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6190,7 +11628,7 @@ Example:
 
 `POST /v1/oauth/revoke`
 
-Revokes an access or refresh token. Every token outcome always returns 200 — including a token that does not exist, is already revoked, or is malformed — so the endpoint can never be used to probe whether a token exists. The one exception is failed client authentication, which returns 401.
+Revokes an access or refresh token. A refresh token ends the whole authorization; for Assinafy's own apps, it ends that device's session, and the authorization stays. Every token outcome always returns 200 — including a token that does not exist, is already revoked, or is malformed — so the endpoint can never be used to probe whether a token exists. The one exception is failed client authentication, which returns 401.
 
 **Authentication:** none (public endpoint).
 
@@ -6233,7 +11671,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6264,7 +11710,15 @@ Claims about the user who authorized this token. Requires the openid scope; name
 {
     "status": 403,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6274,7 +11728,15 @@ Claims about the user who authorized this token. Requires the openid scope; name
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6284,7 +11746,15 @@ Claims about the user who authorized this token. Requires the openid scope; name
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6328,7 +11798,15 @@ RFC 9728. Identifies this API as a protected resource, the
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6373,7 +11851,8 @@ Retrieve a publicly shared document by ID. Public endpoint.
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -6386,6 +11865,8 @@ Retrieve a publicly shared document by ID. Public endpoint.
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -6401,7 +11882,15 @@ Retrieve a publicly shared document by ID. Public endpoint.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6411,7 +11900,15 @@ Retrieve a publicly shared document by ID. Public endpoint.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6454,7 +11951,7 @@ Example:
     "data": {
         "document": {
             "resource": "document",
-            "id": "example_id_36",
+            "id": "example_id_42",
             "name": "Contract.pdf",
             "page_count": 3,
             "created_by": "Jane Doe"
@@ -6473,7 +11970,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6483,7 +11988,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6493,7 +12006,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6506,6 +12027,24 @@ Return the signer identified by the signer access code, including the `has_signa
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — The signer
 
@@ -6529,13 +12068,57 @@ Return the signer identified by the signer access code, including the `has_signa
 }
 ```
 
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Called with an OAuth application token instead of the access code.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 401 — Missing or invalid credentials.
 
 ```json
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6545,7 +12128,178 @@ Return the signer identified by the signer access code, including the `has_signa
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Workspace brand for the signing page
+
+`GET /v1/sign/theme`
+
+The brand of the workspace that sent the document: its name, its colors (`primary_color` is the button background, `secondary_color` the button text, 6-digit hex without `#`) and the address of its logo, or `null` when it has none. The logo address carries no access code: append `signer-access-code` to it, as to every signer call. Available before verification and after the document is deleted, so every screen of the signing page can carry the brand. Uses the signer access code.
+
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
+
+#### Responses
+
+##### 200 — The brand
+
+```json
+{
+    "data": {
+        "account_name": "Account Name",
+        "primary_color": "aabbcc",
+        "secondary_color": "ffffff",
+        "logo": "https://example.com/example-url-1"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Workspace logo for the signing page
+
+`GET /v1/sign/logo`
+
+The logo image of the workspace that sent the document. Available before verification and after the document is deleted. Uses the signer access code.
+
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
+
+#### Responses
+
+##### 200 — The logo image
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The workspace has no logo.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6555,13 +12309,31 @@ Return the signer identified by the signer access code, including the `has_signa
 
 Current state of the signer's identity document verification. Backfills a pending decision from the provider. Uses the signer access code.
 
-**One live session per signer:** `can_start` is true before a provider session exists, and again once that session is Expired -- the capture link lapsed before anything was submitted, so the signer may open a new one. Once a session is Pending, In Review, Approved, Declined or Abandoned it is false. A signer who reaches Declined or Abandoned cannot restart here; the account must start a whole new process (new document, new assignment).
+**One live session per signer:** `can_start` is true before a provider session exists, and again once that session is Expired -- the capture link lapsed before anything was submitted, so the signer may open a new one. Once a session is Pending, In Review, Approved, Declined or Abandoned it is false. A signer who reaches Declined or Abandoned cannot restart here; the account must start a whole new process (new document, new assignment). With the code of a document of an envelope, this is the signer's one check for the whole envelope, whichever of their codes of it asks.
 
 **In review:** the signer continues -- views, confirms their data and signs -- while the account reviews the result. The document is certificated only after the account approves every signer under review; if it rejects one, the document is cancelled and every signer receives the cancellation notice.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — Verification state
 
@@ -6570,12 +12342,30 @@ Current state of the signer's identity document verification. Backfills a pendin
     "data": {
         "can_start": false,
         "status": "Pending",
-        "url": "https://example.com/example-url-16",
+        "url": "https://example.com/example-url-19",
         "expires_at": "2026-10-07T21:18:47Z",
         "completed_at": "2026-08-10T20:32:00Z"
     },
     "status": 200,
     "message": ""
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6585,7 +12375,15 @@ Current state of the signer's identity document verification. Backfills a pendin
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6595,7 +12393,15 @@ Current state of the signer's identity document verification. Backfills a pendin
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6605,7 +12411,7 @@ Current state of the signer's identity document verification. Backfills a pendin
 
 Records the signer's biometric-processing consent and opens a provider session. Returns the hosted verification URL to redirect to. Uses the signer access code.
 
-**One live session per signer:** this succeeds when no session exists yet, or when the last one Expired (the capture link lapsed before anything was submitted); the expired session is replaced by a new one. Otherwise -- Pending, In Review, Approved, Declined or Abandoned -- it returns `400`. A resend never destroys or replaces a live provider session, and the account is billed once per signer at assignment creation, never again on a restart. Recovering from a Declined or Abandoned verification means the account must start a whole new process (new document, new assignment).
+**One live session per signer:** this succeeds when no session exists yet, or when the last one Expired (the capture link lapsed before anything was submitted); the expired session is replaced by a new one. Otherwise -- Pending, In Review, Approved, Declined or Abandoned -- it returns `400`. A resend never destroys or replaces a live provider session, and the account is billed once per signer at assignment creation, never again on a restart. Recovering from a Declined or Abandoned verification means the account must start a whole new process (new document, new assignment). With the code of a document of an envelope, it starts the signer's one check for the whole envelope: one session, whichever of their codes of it is used, billed once with the envelope.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -6625,13 +12431,31 @@ Example:
 
 #### Responses
 
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 200 — Session created
 
 ```json
 {
     "data": {
         "id": "example_id_20",
-        "url": "https://example.com/example-url-16",
+        "url": "https://example.com/example-url-19",
         "expires_at": "2026-10-07T21:18:47Z"
     },
     "status": 200,
@@ -6639,7 +12463,23 @@ Example:
 }
 ```
 
-##### 400 — Consent missing, or this signer already has a verification session that is not Expired.
+##### 400 — Consent missing, this signer already has a verification session that is not Expired (with the code of a document of an envelope, on any of their documents of it) or can no longer verify (with the code of a document of an envelope, also once no document of it, not taken out, awaits their signature), another start of the signer's envelope check is still running (`Identity verification is already being started for this signer. Try again shortly.`), the signer has no full name, or the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6647,7 +12487,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6657,7 +12505,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6665,7 +12521,7 @@ Example:
 
 `GET /v1/signers/{signerId}/document`
 
-Return the document and the signer's assignment items, scoped to the signer access code. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed).
+Return the document and the signer's assignment items, scoped to the signer access code. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed). Once the signer is done (signed, or the document was declined, cancelled, expired or failed; for a document of an envelope, with every document of the envelope they are on) for more than 30 minutes, or the workspace was deleted, the code is closed: this returns only `id`, `name`, `status`, `current_signer` and `certified_copy`, with `is_signer_access_closed: true` (and `envelope`, when asked for), and the signer's other endpoints answer `410`. `certified_copy` says whether the signer can ask for the certified copy again (`POST /v1/sign/certified-copy`): `available`, the `notification_method` it goes on and, for WhatsApp, `resends_left`. Unlike `GET /v1/sign`, this answers before a certificate or identity-check signer confirms their data, so their link learns its envelope here.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -6674,6 +12530,7 @@ Return the document and the signer's assignment items, scoped to the signer acce
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `signerId` | path | string | yes | The signer ID. |
+| `expand` | query | array | no | `envelope` adds the envelope the code belongs to, its id and name, also once the code is closed and when the code's own document was taken out (the code still reaches the rest); `null` for a link outside an envelope or whose envelope was deleted. Without it the document reads as it always has. |
 
 #### Responses
 
@@ -6682,6 +12539,26 @@ Return the document and the signer's assignment items, scoped to the signer acce
 ```json
 {
     "data": {
+        "current_signer": {
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "completed": false,
+            "resource": "signer",
+            "id": "example_id_14",
+            "full_name": "Example User",
+            "email": "user3@example.com",
+            "whatsapp_phone_number": "+5500000000000",
+            "government_id": "00000000000",
+            "has_accepted_terms": false
+        },
+        "is_signer_access_closed": false,
+        "certified_copy": {
+            "available": false,
+            "notification_method": "Email",
+            "resends_left": null
+        },
         "resource": "document",
         "id": "example_id_3",
         "account_id": "example_id_4",
@@ -6700,7 +12577,8 @@ Return the document and the signer's assignment items, scoped to the signer acce
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -6713,6 +12591,8 @@ Return the document and the signer's assignment items, scoped to the signer acce
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -6728,7 +12608,33 @@ Return the document and the signer's assignment items, scoped to the signer acce
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6738,7 +12644,15 @@ Return the document and the signer's assignment items, scoped to the signer acce
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6748,7 +12662,15 @@ Return the document and the signer's assignment items, scoped to the signer acce
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6756,7 +12678,7 @@ Return the document and the signer's assignment items, scoped to the signer acce
 
 `GET /v1/sign`
 
-Retrieve the document a signer has been invited to sign, using the signer access code. Marks the document as viewed. The assignment carries only this signer's items, and leaves out the other signers, their signing links (`signing_urls`), the copy receivers and the signing `summary`. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed). Returns 409 while the document is still being prepared (retry with backoff).
+Retrieve the document a signer has been invited to sign, using the signer access code. Marks the document as viewed. The assignment carries only this signer's items, and leaves out the other signers, their signing links (`signing_urls`), the copy receivers and the signing `summary`. The response adds `current_signer`: this signer, with their `verification_method`, `notification_methods` and `completed` (whether they have already signed). Returns 409 while the document is still being prepared (retry with backoff). Once the signer is done (signed, or the document was declined, cancelled, expired or failed; for a document of an envelope, with every document of the envelope they are on) for more than 30 minutes, or the workspace was deleted, the code is closed: this returns only `id`, `name`, `status`, `current_signer` and `certified_copy`, with `is_signer_access_closed: true` (and `envelope`, when asked for), and the signer's other endpoints answer `410`. `certified_copy` says whether the signer can ask for the certified copy again (`POST /v1/sign/certified-copy`): `available`, the `notification_method` it goes on and, for WhatsApp, `resends_left`.
 
 **Signers whose verification method is `DigitalCertificate`** must have confirmed their data *and* accepted the terms before this returns the document; otherwise it is `400`. Both are satisfied in one call to `PUT /v1/documents/{documentId}/signers/confirm-data` with `has_accepted_terms: true`, so send that before this endpoint — the `has_accepted_terms` query parameter here is too late to open the gate. `PUT /v1/signers/accept-terms` also works and is never gated.
 
@@ -6767,6 +12689,8 @@ Retrieve the document a signer has been invited to sign, using the signer access
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `has_accepted_terms` | query | boolean | no | Set true to record terms acceptance. |
+| `expand` | query | array | no | `envelope` adds the envelope the code belongs to, its id and name, also once the code is closed and when the code's own document was taken out (the code still reaches the rest); `null` for a link outside an envelope or whose envelope was deleted. Without it the document reads as it always has. |
+| `document_id` | query | string | no | With the code of a document of an envelope: another document of that envelope the signer is on, to open in place of the code's own; the code's e-mail or WhatsApp verification is carried there, once. A value that is no document id (a list, or empty) answers `400`. Ignored with any other code. |
 
 #### Responses
 
@@ -6775,6 +12699,26 @@ Retrieve the document a signer has been invited to sign, using the signer access
 ```json
 {
     "data": {
+        "current_signer": {
+            "verification_method": "Email",
+            "notification_methods": [
+                "Email"
+            ],
+            "completed": false,
+            "resource": "signer",
+            "id": "example_id_14",
+            "full_name": "Example User",
+            "email": "user3@example.com",
+            "whatsapp_phone_number": "+5500000000000",
+            "government_id": "00000000000",
+            "has_accepted_terms": false
+        },
+        "is_signer_access_closed": false,
+        "certified_copy": {
+            "available": false,
+            "notification_method": "Email",
+            "resends_left": null
+        },
         "resource": "document",
         "id": "example_id_3",
         "account_id": "example_id_4",
@@ -6793,7 +12737,8 @@ Retrieve the document a signer has been invited to sign, using the signer access
         "tags": [
             {
                 "id": "example_id_5",
-                "name": "string"
+                "name": "string",
+                "color": "ff8800"
             }
         ],
         "assignment": null,
@@ -6806,6 +12751,8 @@ Retrieve the document a signer has been invited to sign, using the signer access
                 "download_url": "https://example.com/example-url-5"
             }
         ],
+        "envelope_id": null,
+        "envelope": null,
         "has_contract": true,
         "created_at": "2026-06-03T03:54:16Z",
         "updated_at": "2026-06-03T03:54:16Z"
@@ -6815,9 +12762,59 @@ Retrieve the document a signer has been invited to sign, using the signer access
 }
 ```
 
-##### 400 — A digital-certificate signer has not yet confirmed their data or accepted the terms.
+##### 400 — A digital-certificate signer has not yet confirmed their data or accepted the terms, the signer's step has not started yet (sequential signing), or, with the code of a document of an envelope, `document_id` is no document id.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — `document_id` names a document outside the code's envelope, or one the signer is not on; or the workspace deleted the document while the code is still open.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 409 — The document is not ready to be viewed yet.
+
+```json
+{
+    "status": 409,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6825,7 +12822,15 @@ Retrieve the document a signer has been invited to sign, using the signer access
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6835,7 +12840,15 @@ Retrieve the document a signer has been invited to sign, using the signer access
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6843,7 +12856,7 @@ Retrieve the document a signer has been invited to sign, using the signer access
 
 `POST /v1/documents/{documentId}/assignments/{assignmentId}`
 
-Sign a document with input fields (collect method): submit the signer's item values, completing their items. Signing again after the signer has signed changes nothing and returns the current assignment. For **virtual** assignments the signer must first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`, otherwise this returns `400` (Signer data must be confirmed before signing). Signers whose verification method is `DigitalCertificate` cannot use this endpoint — their signature must be produced through `POST /v1/signers/certificate/start` + `/complete`, and this returns `400`. The request body is a JSON array of item entries. Uses the signer access code.
+Sign a document with input fields (collect method): submit the signer's item values, completing their items. Signing again after the signer has signed changes nothing and returns the current assignment. For **virtual** assignments the signer must first confirm their data via `PUT /v1/documents/{documentId}/signers/confirm-data`, otherwise this returns `400` (Signer data must be confirmed before signing). Signers whose verification method is `DigitalCertificate` cannot use this endpoint — their signature must be produced through `POST /v1/signers/certificate/start` + `/complete`, and this returns `400`. The request body is a JSON array of item entries. Uses the signer access code. With the code of a document of an envelope, it acts on the signer's request on the document the route names, if that document is in the same envelope, carrying the code's e-mail or WhatsApp verification there.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -6871,6 +12884,24 @@ Example:
 
 #### Responses
 
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 200 — Signing result
 
 ```json
@@ -6881,11 +12912,59 @@ Example:
 }
 ```
 
-##### 400 — Signer data must be confirmed before signing (virtual assignments), the signer must sign with a digital certificate through the digital certificate endpoints, or an entry names a page, field or item that is not one of this signer's. Nothing is signed when an entry is refused.
+##### 400 — Signer data must be confirmed before signing (virtual assignments), the signer must sign with a digital certificate through the digital certificate endpoints, an entry names a page, field or item that is not one of this signer's, or the signer's step has not started yet (sequential signing). Nothing is signed when an entry is refused.
 
-##### 404 — The assignment is not the one the access code belongs to.
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The assignment is not the one of the signer's request: the access code's own or, with the code of a document of an envelope, the one on the document the route names; or the route names a document outside the code's envelope, or one the signer is not on.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 409 — The document is not ready to be signed yet.
+
+```json
+{
+    "status": 409,
+    "message": "Bad request.",
+    "code": "PlanRestricted",
+    "data": null,
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6893,7 +12972,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6903,7 +12990,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6911,7 +13006,7 @@ Example:
 
 `PUT /v1/documents/{documentId}/assignments/{assignmentId}/reject`
 
-The signer declines to sign the document, giving a reason. Uses the signer access code.
+The signer declines to sign the document, giving a reason. Uses the signer access code. With the code of a document of an envelope, it acts on the signer's request on the document the route names, if that document is in the same envelope, carrying the code's e-mail or WhatsApp verification there.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -6938,6 +13033,24 @@ Example:
 
 #### Responses
 
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 200 — Assignment declined
 
 ```json
@@ -6948,7 +13061,41 @@ Example:
 }
 ```
 
-##### 404 — The assignment is not the one this access code was issued for.
+##### 400 — `decline_reason` is missing or longer than 2000 characters, the assignment or the document is no longer pending, or the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The assignment is not the one of the signer's request: the access code's own or, with the code of a document of an envelope, the one on the document the route names; or the route names a document outside the code's envelope, or one the signer is not on.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -6956,7 +13103,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6966,7 +13121,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -6974,7 +13137,7 @@ Example:
 
 `PUT /v1/signers/documents/sign-multiple`
 
-Sign several documents in one request, for a signer with multiple pending documents. Each document must be prepared for the **virtual** signature method. Uses the signer access code.
+Sign several documents in one request, for a signer with multiple pending documents. Each document must be prepared for the **virtual** signature method. A listed document the signer already signed is left as it is. Uses the signer access code.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -6989,13 +13152,31 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_37",
-        "example_id_38"
+        "example_id_43",
+        "example_id_44"
     ]
 }
 ```
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — Signing result
 
@@ -7007,9 +13188,41 @@ Example:
 }
 ```
 
-##### 400 — A listed document is not a virtual document of this signer, is not pending signature, or waits for an earlier signing step.
+##### 400 — A listed document is not a virtual document of this signer, is not pending signature, waits for an earlier signing step, or, for the code of a document of an envelope, is not part of that envelope.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 404 — A listed document ID does not exist in the workspace. The message names the unknown IDs.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -7017,7 +13230,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7027,7 +13248,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7051,14 +13280,32 @@ Example:
 ```json
 {
     "document_ids": [
-        "example_id_37",
-        "example_id_38"
+        "example_id_43",
+        "example_id_44"
     ],
     "decline_reason": "Unfavorable terms."
 }
 ```
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — Decline result
 
@@ -7070,9 +13317,41 @@ Example:
 }
 ```
 
-##### 400 — A listed document is not this signer's, is not pending signature, or waits for an earlier signing step. Nothing is declined.
+##### 400 — A listed document is not this signer's, is not pending signature, waits for an earlier signing step, or, for the code of a document of an envelope, is not part of that envelope. Nothing is declined.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 404 — A listed document ID does not exist in the workspace. The message names the unknown IDs.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -7080,7 +13359,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7090,7 +13377,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7098,7 +13393,7 @@ Example:
 
 `POST /v1/verify`
 
-Submit the verification code (OTP) sent to the signer to unlock the signing flow. Uses the signer access code.
+Submit the verification code (OTP) sent to the signer to unlock the signing flow. Uses the signer access code. 5 wrong codes within 15 minutes of the first one lock the request until those 15 minutes end: every attempt, the right code included, returns `429`. A right code clears the count. With the code of a document of an envelope, the code of the signer's envelope invitation is accepted too, and wrong codes on any of their documents of the envelope count together.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -7118,22 +13413,67 @@ Example:
 
 #### Responses
 
-##### 200 — Code verified
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
 
 ```json
 {
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 200 — Code verified. `data` is an empty list.
+
+```json
+{
+    "data": [],
     "status": 200,
     "message": ""
 }
 ```
 
-##### 400 — One or more fields failed validation.
+##### 400 — The code is wrong, or the signer's step has not started yet (sequential signing).
 
 ```json
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 429 — Too many wrong codes. Try again once 15 minutes have passed since the first one.
+
+```json
+{
+    "status": 429,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7143,7 +13483,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7153,7 +13501,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7161,7 +13517,7 @@ Example:
 
 `PUT /v1/documents/{documentId}/signers/confirm-data`
 
-The signer confirms or updates their data before signing. Uses the signer access code.
+The signer confirms or updates their data before signing. Uses the signer access code. With the code of a document of an envelope, it acts on the signer's request on the document the route names, if that document is in the same envelope, carrying the code's e-mail or WhatsApp verification there. The code's own document, taken out of its envelope, takes the confirmation too while a document of the envelope still awaits signatures: it signs nothing (that document stays cancelled) and opens the reads a certificate or identity-check signer's method gates, so the signer reaches the documents left.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter).
 
@@ -7175,37 +13531,83 @@ The signer confirms or updates their data before signing. Uses the signer access
 
 Fields (`application/json`):
 
-- `full_name` (string)
-- `email` (string)
-- `government_id` (string) — Signer's CPF/CNPJ; digits only on save.
+- `email` (string) — Required when the signer is verified or notified by e-mail. Saved when the signer has none; otherwise it must be theirs.
+- `whatsapp_phone_number` (string) — Required when the signer is verified or notified by WhatsApp. Saved when the signer has none; otherwise it must be theirs.
+- `has_accepted_terms` (boolean) — `true` also records that the signer accepted the terms of use.
 
 Example:
 
 ```json
 {
-    "full_name": "Example User",
-    "email": "user10@example.com",
-    "government_id": "00000000000"
+    "email": "user11@example.com",
+    "whatsapp_phone_number": "+5500000000000",
+    "has_accepted_terms": true
 }
 ```
 
 #### Responses
 
-##### 200 — Data confirmed
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
 
 ```json
 {
-    "data": {
-        "resource": "signer",
-        "id": "example_id_14",
-        "full_name": "Example User",
-        "email": "user3@example.com",
-        "whatsapp_phone_number": "+5500000000000",
-        "government_id": "00000000000",
-        "has_accepted_terms": false
-    },
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The route names a document the code doesn't reach: outside the code's envelope, or one the signer is not on.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 200 — Data confirmed. `data` is an empty list.
+
+```json
+{
+    "data": [],
     "status": 200,
     "message": ""
+}
+```
+
+##### 400 — An e-mail or WhatsApp number the signer's methods need is missing, invalid or not theirs, or the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7215,7 +13617,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7225,7 +13635,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7239,12 +13657,53 @@ Record that the signer accepted the terms of use. Uses the signer access code.
 
 #### Responses
 
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 200 — Terms accepted
 
 ```json
 {
+    "data": {
+        "full_name": "Example User",
+        "email": "user3@example.com",
+        "has_accepted_terms": true
+    },
     "status": 200,
     "message": ""
+}
+```
+
+##### 400 — The signer's verification is not done yet (e.g. the e-mail code), or the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7254,7 +13713,15 @@ Record that the signer accepted the terms of use. Uses the signer access code.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7264,7 +13731,15 @@ Record that the signer accepted the terms of use. Uses the signer access code.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7293,16 +13768,51 @@ Example:
 
 #### Responses
 
-##### 200 — Signature stored
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
 
 ```json
 {
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 200 — Signature stored. `data` is an empty list.
+
+```json
+{
+    "data": [],
     "status": 200,
     "message": ""
 }
 ```
 
-##### 400 — The image is not a PNG or JPEG file, or it is blank.
+##### 400 — The image is not a PNG or JPEG file, or it is blank; or the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -7310,7 +13820,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7320,7 +13838,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7340,6 +13866,24 @@ Download the signer's stored signature/initials image. Uses the signer access co
 
 #### Responses
 
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 200 — The signature image
 
 ##### 404 — The requested resource does not exist.
@@ -7348,7 +13892,33 @@ Download the signer's stored signature/initials image. Uses the signer access co
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7358,7 +13928,15 @@ Download the signer's stored signature/initials image. Uses the signer access co
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7368,7 +13946,15 @@ Download the signer's stored signature/initials image. Uses the signer access co
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7376,7 +13962,7 @@ Download the signer's stored signature/initials image. Uses the signer access co
 
 `GET /v1/signers/{signerId}/documents`
 
-List the documents a signer is party to. Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed, and each assignment leaves out `signing_urls`.
+List the documents a signer is party to. Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed (for the code of a document of an envelope, only that envelope's documents), and each assignment leaves out `signing_urls`.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7385,10 +13971,29 @@ List the documents a signer is party to. Accepts either the signer access code o
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `signerId` | path | string | yes | The signer ID. |
+| `envelope_id` | query | string | no | Only the members of this envelope. Anything but text answers `400`. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — The signer's documents
 
@@ -7414,7 +14019,8 @@ List the documents a signer is party to. Accepts either the signer access code o
             "tags": [
                 {
                     "id": "example_id_5",
-                    "name": "string"
+                    "name": "string",
+                    "color": "ff8800"
                 }
             ],
             "assignment": null,
@@ -7427,6 +14033,8 @@ List the documents a signer is party to. Accepts either the signer access code o
                     "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "envelope_id": null,
+            "envelope": null,
             "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
@@ -7437,7 +14045,50 @@ List the documents a signer is party to. Accepts either the signer access code o
 }
 ```
 
-##### 403 — The access code belongs to another signer.
+##### 403 — The access code belongs to another signer; or, with a user's token or key, a role, a membership or an OAuth scope refuses it.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The signer is not in the caller's workspace.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code, the signer's step has not started yet (sequential signing); or `envelope_id` is not text, an entry of `errors`.
+
+```json
+{
+    "status": 400,
+    "message": "This signer is in a pending step and has not been notified yet."
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -7445,7 +14096,15 @@ List the documents a signer is party to. Accepts either the signer access code o
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7455,7 +14114,15 @@ List the documents a signer is party to. Accepts either the signer access code o
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7463,7 +14130,7 @@ List the documents a signer is party to. Accepts either the signer access code o
 
 `GET /v1/signers/{signerId}/documents/search`
 
-Search the documents a signer is party to (compact representation). Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed, and each assignment leaves out `signing_urls`.
+Search the documents a signer is party to (compact representation). Accepts either the signer access code or the account's own credentials (API key or bearer token) — with account credentials, the signer must belong to that account's workspace. With the signer access code, `signerId` must be the code's own signer (otherwise `403`), only documents whose signing step has been reached are listed (for the code of a document of an envelope, only that envelope's documents), and each assignment leaves out `signing_urls`.
 
 **Authentication:** signer access code (`signer-access-code` query or body parameter) or Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7472,9 +14139,28 @@ Search the documents a signer is party to (compact representation). Accepts eith
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `signerId` | path | string | yes | The signer ID. |
+| `envelope_id` | query | string | no | Only the members of this envelope. Anything but text answers `400`. |
 | `search` | query | string | no | Search term. |
 
 #### Responses
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
 
 ##### 200 — Matching documents
 
@@ -7500,7 +14186,8 @@ Search the documents a signer is party to (compact representation). Accepts eith
             "tags": [
                 {
                     "id": "example_id_5",
-                    "name": "string"
+                    "name": "string",
+                    "color": "ff8800"
                 }
             ],
             "assignment": null,
@@ -7513,6 +14200,8 @@ Search the documents a signer is party to (compact representation). Accepts eith
                     "download_url": "https://example.com/example-url-5"
                 }
             ],
+            "envelope_id": null,
+            "envelope": null,
             "has_contract": true,
             "created_at": "2026-06-03T03:54:16Z",
             "updated_at": "2026-06-03T03:54:16Z"
@@ -7523,7 +14212,50 @@ Search the documents a signer is party to (compact representation). Accepts eith
 }
 ```
 
-##### 403 — The access code belongs to another signer.
+##### 403 — The access code belongs to another signer; or, with a user's token or key, a role, a membership or an OAuth scope refuses it.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The signer is not in the caller's workspace.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code, the signer's step has not started yet (sequential signing); or `envelope_id` is not text, an entry of `errors`.
+
+```json
+{
+    "status": 400,
+    "message": "This signer is in a pending step and has not been notified yet."
+}
+```
 
 ##### 401 — Missing or invalid credentials.
 
@@ -7531,7 +14263,15 @@ Search the documents a signer is party to (compact representation). Accepts eith
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7541,17 +14281,25 @@ Search the documents a signer is party to (compact representation). Accepts eith
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
-### Download signer's document artifact
+### Download the document to sign
 
 `GET /v1/signers/{signerId}/documents/{documentId}/download/{artifactName}`
 
-Download an artifact of a document the signer is party to. Public (signer-link) endpoint. Artifact types: original, certificated, certificate-page, pades, bundle. The pades artifact (signers' ICP-Brasil signatures + platform certification box) is only present on documents that had digital-certificate signers; `bundle` is a zip of the original, certificated and certificate-page artifacts, plus the pades artifact on documents that have one.
+The original of a document the signer still has to sign, with their access code (`signer-access-code`). Only `original` is available (`403` otherwise): the certified copy is sent to the signer by e-mail or WhatsApp. A request without an access code, such as a link from an older completion e-mail, is redirected (`302`) to the expired-link page, with a `?token=` the page can ask for the certified copy with when the signer and document match a completed signature request.
 
-**Authentication:** none (public endpoint).
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
 
 #### Parameters
 
@@ -7559,19 +14307,101 @@ Download an artifact of a document the signer is party to. Public (signer-link) 
 |---|---|---|---|---|
 | `signerId` | path | string | yes | The signer ID. |
 | `documentId` | path | string | yes | Document ID. |
-| `artifactName` | path | string | yes | Artifact type. |
+| `artifactName` | path | string | yes | Artifact type. Only `original`. |
 
 #### Responses
 
 ##### 200 — The artifact binary
 
-##### 404 — The requested resource does not exist.
+##### 302 — No access code: redirected to the expired-link page.
+
+##### 403 — An artifact other than `original`.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 404 — The signer or the document is not the code's, or the code doesn't reach the document.
 
 ```json
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 410 — With a signer access code: the code is closed, because its signer finished (for a document of an envelope, every document of it they are on) more than 30 minutes ago. It still shows the signer's status and asks for the certified copy (`GET /v1/sign`).
+
+```json
+{
+    "status": 410,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — With a signer access code: the signer's step has not started yet (sequential signing).
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7581,7 +14411,273 @@ Download an artifact of a document the signer is party to. Public (signer-link) 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Send the certified copy again
+
+`POST /v1/sign/certified-copy`
+
+Sends the signer their certified document again, with a download link valid for 30 minutes. It goes on the channel of the signature request (e-mail when the request used e-mail, otherwise WhatsApp) and only to the e-mail or number the signing messages went to, never to a changed signer record. Works with the signer's access code after they signed, including once the code is closed and after the workspace is deleted. E-mail: once every 2 minutes and 10 times in 24 hours. WhatsApp: once per signature request; after that the signer must ask the sender. `certified_copy` on `GET /v1/sign` says whether it is available.
+
+**Authentication:** signer access code (`signer-access-code` query or body parameter).
+
+#### Request Body
+
+Fields (`application/json`):
+
+- `document_id` (string) — With the code of a document of an envelope: another document of that envelope the signer is on, whose certified copy to send, in place of the code's own. A value that is no document id (a list, or empty) answers `400`. Ignored with any other code.
+
+Example:
+
+```json
+{
+    "document_id": "example_id_3"
+}
+```
+
+#### Responses
+
+##### 200 — Sent
+
+```json
+{
+    "data": {
+        "available": true,
+        "notification_method": "Email",
+        "resends_left": null,
+        "sent_to": "j***@example.com"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — `document_id` names a document outside the code's envelope, or one the signer is not on.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 409 — The signer has not signed, the document is not certified yet, or the request has no e-mail or WhatsApp to send to (ask the sender).
+
+```json
+{
+    "status": 409,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 429 — E-mail: asked again within 2 minutes or more than 10 times in 24 hours. WhatsApp: already re-sent once (ask the sender).
+
+```json
+{
+    "status": 429,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — The message could not be sent; nothing was used up, so it can be asked again.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 400 — The signer's step has not started yet (sequential signing), or, with the code of a document of an envelope, `document_id` is no document id.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Download the certified copy from a sent link
+
+`GET /v1/signers/downloads/{token}`
+
+The link in the completion and re-send messages. Valid 7 days in the completion message and 30 minutes when re-sent. Add `/pades` for the PAdES version on documents that have one. An expired or unknown link is redirected (`302`) to the expired-link page; for a known link the redirect carries `?token=`, with which the page can ask for a new one (`POST /v1/signers/downloads/{token}/resend`).
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `token` | path | string | yes | The link token. |
+
+#### Responses
+
+##### 200 — The certified PDF
+
+##### 302 — Expired or unknown link: redirected to the expired-link page.
+
+##### 404 — `/pades` on a document that has no PAdES version.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Send the certified copy again from an expired link
+
+`POST /v1/signers/downloads/{token}/resend`
+
+Used by the page an expired download link leads to. Works with the link's token even after it expired, and on the same terms as `POST /v1/sign/certified-copy`: the request's channel, only the e-mail or number of the signing, the same limits. Copy receivers' links have no signature request (`409`).
+
+**Authentication:** none (public endpoint).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `token` | path | string | yes | The link token. |
+
+#### Responses
+
+##### 200 — Sent
+
+```json
+{
+    "data": {
+        "available": true,
+        "notification_method": "Email",
+        "resends_left": null,
+        "sent_to": "j***@example.com"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — Unknown link.
+
+##### 409 — Nothing can be sent from here (copy receiver, Bypass signer, no recorded contact, or the document is not certified): ask the sender.
+
+##### 429 — E-mail: asked again within 2 minutes or more than 10 times in 24 hours. WhatsApp: already re-sent once.
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7602,7 +14698,7 @@ List the signers of a workspace.
 | `accountId` | path | string | yes | Workspace account ID. |
 | `search` | query | string | no | Filter by full_name or email. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -7632,7 +14728,15 @@ List the signers of a workspace.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7642,7 +14746,15 @@ List the signers of a workspace.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7706,7 +14818,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7716,7 +14836,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7726,7 +14854,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7771,7 +14907,15 @@ Retrieve a signer's information.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7781,7 +14925,15 @@ Retrieve a signer's information.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7791,7 +14943,15 @@ Retrieve a signer's information.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7803,7 +14963,7 @@ Update a signer's information. Only the fields sent change; send just the ones y
 
 **Clearing a field:** `null` or `"` clears `email`, `whatsapp_phone_number` and `government_id` (`whatsapp_phone_number` is stored as `null` either way; the other two keep the value sent). `full_name` cannot be cleared.
 
-**Verification integrity:** `email` / `whatsapp_phone_number` cannot be changed while the signer has verified that channel on an in-flight (not yet certificated) document — the response is `400` naming the offending document(s). Already-certificated documents do not block updates. Changing a channel that has *unverified* in-flight requests rotates their access/verification codes (invalidating previously sent links/OTPs); use the resend endpoint to redeliver. `full_name` can always be updated.
+**Verification integrity:** `email` / `whatsapp_phone_number` cannot be changed while the signer has verified that channel on an in-flight (not yet certificated) document — the response is `400` naming the offending document(s). Already-certificated documents do not block updates, except a document of an envelope while another of the signer's documents of it is in flight. Changing a channel that has *unverified* in-flight requests, or unverified requests on a document of an envelope while another of the signer's documents of it is in flight, rotates their access/verification codes (invalidating previously sent links/OTPs); use the resend endpoint to redeliver. `full_name` can always be updated.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -7819,8 +14979,8 @@ Update a signer's information. Only the fields sent change; send just the ones y
 Fields (`application/json`):
 
 - `full_name` (string)
-- `email` (string) — Can't be changed or cleared while the signer has verified it on an in-flight document (`400`).
-- `whatsapp_phone_number` (string) — E.164; normalized on save, and compared after normalizing, so the same number in another format is not a change. Can't be changed or cleared while the signer has verified it on an in-flight document (`400`).
+- `email` (string) — Can't be changed or cleared while the signer has verified it on an in-flight document, or on a document of an envelope while another of their documents of it is in flight (`400`).
+- `whatsapp_phone_number` (string) — E.164; normalized on save, and compared after normalizing, so the same number in another format is not a change. Can't be changed or cleared while the signer has verified it on an in-flight document, or on a document of an envelope while another of their documents of it is in flight (`400`).
 - `government_id` (string) — Signer's CPF (11 digits) or CNPJ (14 characters; may be alphanumeric). Formatting is accepted and the value is normalized on save.
 
 Example:
@@ -7854,13 +15014,21 @@ Example:
 }
 ```
 
-##### 400 — One or more fields failed validation.
+##### 400 — The request was rejected because of its current state or invalid input.
 
 ```json
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7870,7 +15038,33 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 403 — Authenticated but not allowed to perform this action.
+
+```json
+{
+    "status": 403,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7880,7 +15074,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7890,7 +15092,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7927,7 +15137,15 @@ Delete a signer.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7937,7 +15155,15 @@ Delete a signer.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7947,7 +15173,15 @@ Delete a signer.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -7995,7 +15229,15 @@ List the tags of a workspace.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8005,7 +15247,15 @@ List the tags of a workspace.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8064,7 +15314,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8074,7 +15332,15 @@ Example:
 {
     "status": 409,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8084,7 +15350,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8094,7 +15368,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8154,7 +15436,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8164,7 +15454,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8174,7 +15472,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8184,7 +15490,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8224,7 +15538,15 @@ Delete a tag. Pass `?force=true` to detach it from any documents/templates it is
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8234,7 +15556,15 @@ Delete a tag. Pass `?force=true` to detach it from any documents/templates it is
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8244,7 +15574,15 @@ Delete a tag. Pass `?force=true` to detach it from any documents/templates it is
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8275,7 +15613,7 @@ The `status` field of a template is one of:
 | `accountId` | path | string | yes | Workspace account ID. |
 | `search` | query | string | no | Search term. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Records per page (max 100). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -8286,7 +15624,7 @@ The `status` field of a template is one of:
     "data": [
         {
             "resource": "template",
-            "id": "example_id_39",
+            "id": "example_id_45",
             "name": "template.pdf",
             "document_name": null,
             "message": null,
@@ -8297,7 +15635,7 @@ The `status` field of a template is one of:
                     "number": 1,
                     "height": 2100,
                     "width": 1275,
-                    "download_url": "https://example.com/example-url-15",
+                    "download_url": "https://example.com/example-url-18",
                     "fields": [
                         {
                             "id": "example_id_5",
@@ -8347,7 +15685,15 @@ The `status` field of a template is one of:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8357,7 +15703,15 @@ The `status` field of a template is one of:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8391,8 +15745,8 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
         "is_active": true,
         "is_held": false,
         "held_since": null,
-        "url": "https://example.com/example-url-17",
-        "email": "user11@example.com",
+        "url": "https://example.com/example-url-20",
+        "email": "user12@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -8406,7 +15760,15 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8416,7 +15778,15 @@ Retrieve the account's oldest webhook endpoint — which events it is subscribed
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8452,8 +15822,8 @@ Example:
         "document_prepared"
     ],
     "is_active": true,
-    "url": "https://example.com/example-url-17",
-    "email": "user11@example.com"
+    "url": "https://example.com/example-url-20",
+    "email": "user12@example.com"
 }
 ```
 
@@ -8471,8 +15841,8 @@ Example:
         "is_active": true,
         "is_held": false,
         "held_since": null,
-        "url": "https://example.com/example-url-17",
-        "email": "user11@example.com",
+        "url": "https://example.com/example-url-20",
+        "email": "user12@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -8486,7 +15856,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8496,7 +15874,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8506,7 +15892,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8538,8 +15932,8 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
         "is_active": true,
         "is_held": false,
         "held_since": null,
-        "url": "https://example.com/example-url-17",
-        "email": "user11@example.com",
+        "url": "https://example.com/example-url-20",
+        "email": "user12@example.com",
         "updated_at": "2023-05-10T14:58:24Z"
     },
     "status": 200,
@@ -8553,7 +15947,15 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8563,7 +15965,15 @@ Deactivate the account's oldest webhook endpoint. While inactive, no events are 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8598,7 +16008,15 @@ List all available event types that can be subscribed to via webhooks. Requires 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8608,7 +16026,15 @@ List all available event types that can be subscribed to via webhooks. Requires 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8631,7 +16057,7 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
 | `from` | query | integer | no | Unix timestamp — only entries after this time. |
 | `to` | query | integer | no | Unix timestamp — only entries before this time. |
 | `page` | query | integer | no | Page number. |
-| `per-page` | query | integer | no | Items per page (default: 20). |
+| `per-page` | query | integer | no | Records per page: 20 by default, at most 50; a larger value answers 50 a page. |
 
 #### Responses
 
@@ -8642,17 +16068,18 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
     "data": [
         {
             "resource": "activity_dispatching_history",
-            "id": "example_id_40",
+            "id": "example_id_46",
             "event": "document_ready",
             "activity_id": 456,
-            "endpoint_id": "example_id_41",
-            "endpoint": "https://example.com/example-url-18",
+            "endpoint_id": "example_id_47",
+            "endpoint": "https://example.com/example-url-21",
             "payload": null,
             "delivered": true,
-            "webhook_id": "example_id_42",
+            "webhook_id": "example_id_48",
             "attempt": 2,
             "kind": "scheduled",
             "will_retry": true,
+            "duration_ms": 184,
             "http_status": 200,
             "response_body": "OK",
             "error": null,
@@ -8671,7 +16098,15 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8681,7 +16116,15 @@ Retrieve the delivery history for webhooks sent to the account's endpoints — u
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8708,17 +16151,18 @@ Sends the entry's event to the entry's endpoint once, now, even while the endpoi
 {
     "data": {
         "resource": "activity_dispatching_history",
-        "id": "example_id_40",
+        "id": "example_id_46",
         "event": "document_ready",
         "activity_id": 456,
-        "endpoint_id": "example_id_41",
-        "endpoint": "https://example.com/example-url-18",
+        "endpoint_id": "example_id_47",
+        "endpoint": "https://example.com/example-url-21",
         "payload": null,
         "delivered": true,
-        "webhook_id": "example_id_42",
+        "webhook_id": "example_id_48",
         "attempt": 2,
         "kind": "scheduled",
         "will_retry": true,
+        "duration_ms": 184,
         "http_status": 200,
         "response_body": "OK",
         "error": null,
@@ -8736,7 +16180,15 @@ Sends the entry's event to the entry's endpoint once, now, even while the endpoi
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8746,7 +16198,15 @@ Sends the entry's event to the entry's endpoint once, now, even while the endpoi
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8756,7 +16216,15 @@ Sends the entry's event to the entry's endpoint once, now, even while the endpoi
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8766,7 +16234,15 @@ Sends the entry's event to the entry's endpoint once, now, even while the endpoi
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8794,10 +16270,10 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
     "data": [
         {
             "resource": "activity_event_subscription",
-            "id": "example_id_41",
+            "id": "example_id_47",
             "name": "ERP",
-            "url": "https://example.com/example-url-19",
-            "email": "user12@example.com",
+            "url": "https://example.com/example-url-22",
+            "email": "user13@example.com",
             "events": [
                 "document_ready",
                 "signer_signed_document"
@@ -8821,7 +16297,15 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8831,7 +16315,15 @@ List the account's webhook endpoints, oldest first. Requires the `account:read` 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8864,8 +16356,8 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-19",
-    "email": "user12@example.com",
+    "url": "https://example.com/example-url-22",
+    "email": "user13@example.com",
     "events": [
         "document_ready",
         "signer_signed_document"
@@ -8885,10 +16377,10 @@ Example:
     "data": {
         "secret": "example_secret",
         "resource": "activity_event_subscription",
-        "id": "example_id_41",
+        "id": "example_id_47",
         "name": "ERP",
-        "url": "https://example.com/example-url-19",
-        "email": "user12@example.com",
+        "url": "https://example.com/example-url-22",
+        "email": "user13@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
@@ -8911,7 +16403,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8921,7 +16421,15 @@ Example:
 {
     "status": 403,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8931,7 +16439,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8941,7 +16457,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8978,7 +16502,15 @@ Stop delivering events to the endpoint registered with `url` and free its slot, 
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8988,7 +16520,15 @@ Stop delivering events to the endpoint registered with `url` and free its slot, 
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -8998,7 +16538,15 @@ Stop delivering events to the endpoint registered with `url` and free its slot, 
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9008,7 +16556,15 @@ Stop delivering events to the endpoint registered with `url` and free its slot, 
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9035,10 +16591,10 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 {
     "data": {
         "resource": "activity_event_subscription",
-        "id": "example_id_41",
+        "id": "example_id_47",
         "name": "ERP",
-        "url": "https://example.com/example-url-19",
-        "email": "user12@example.com",
+        "url": "https://example.com/example-url-22",
+        "email": "user13@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
@@ -9061,7 +16617,15 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9071,7 +16635,15 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9081,7 +16653,15 @@ Retrieve one webhook endpoint. Requires the `account:read` OAuth scope.
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9115,8 +16695,8 @@ Example:
 
 ```json
 {
-    "url": "https://example.com/example-url-19",
-    "email": "user12@example.com",
+    "url": "https://example.com/example-url-22",
+    "email": "user13@example.com",
     "events": [
         "document_ready"
     ],
@@ -9135,10 +16715,10 @@ Example:
     "data": {
         "secret": "example_secret",
         "resource": "activity_event_subscription",
-        "id": "example_id_41",
+        "id": "example_id_47",
         "name": "ERP",
-        "url": "https://example.com/example-url-19",
-        "email": "user12@example.com",
+        "url": "https://example.com/example-url-22",
+        "email": "user13@example.com",
         "events": [
             "document_ready",
             "signer_signed_document"
@@ -9161,7 +16741,15 @@ Example:
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9171,7 +16759,15 @@ Example:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9181,7 +16777,15 @@ Example:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9191,7 +16795,15 @@ Example:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9228,7 +16840,15 @@ Stop delivering events to an endpoint and free its slot. Requires the `webhooks:
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9238,7 +16858,15 @@ Stop delivering events to an endpoint and free its slot. Requires the `webhooks:
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9248,7 +16876,15 @@ Stop delivering events to an endpoint and free its slot. Requires the `webhooks:
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9287,7 +16923,15 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9297,7 +16941,15 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9307,7 +16959,15 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9317,7 +16977,15 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9325,7 +16993,7 @@ Return the secret used to sign deliveries to this endpoint (see **Webhook Payloa
 
 `POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/secret/rotate`
 
-Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away. Returns `400` when signing is disabled. Requires the `webhooks:write` OAuth scope.
+Replace the endpoint's signing secret and return the new one. The old secret stops working immediately, so update your receiver right away; or send `keep_previous: true` to keep it signing deliveries beside the new one for 24 hours (`previous_secret_expires_at`): during that time `webhook-signature` carries both signatures, so your receiver can switch to the new secret without failing verification. Only the secret just replaced is kept: rotating again within those 24 hours stops the one kept before. Two rotations sent at once take effect one after the other, each answering the secret it set. Returns `400` when signing is disabled or `keep_previous` is not a boolean. Requires the `webhooks:write` OAuth scope.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -9336,6 +17004,20 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 | `accountId` | path | string | yes | Workspace account ID. |
 | `endpointId` | path | string | yes | The webhook endpoint ID. |
 
+#### Request Body
+
+Fields (`application/json`):
+
+- `keep_previous` (boolean) — `true`: the replaced secret keeps signing for 24 hours. Default `false`: it stops at once.
+
+Example:
+
+```json
+{
+    "keep_previous": false
+}
+```
+
 #### Responses
 
 ##### 200 — The new secret
@@ -9343,6 +17025,7 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 ```json
 {
     "data": {
+        "previous_secret_expires_at": "2026-10-30T15:00:00Z",
         "secret": "example_secret"
     },
     "status": 200,
@@ -9356,7 +17039,15 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 {
     "status": 400,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9366,7 +17057,15 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 {
     "status": 404,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9376,7 +17075,15 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 {
     "status": 401,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```
 
@@ -9386,6 +17093,116 @@ Replace the endpoint's signing secret and return the new one. The old secret sto
 {
     "status": 500,
     "message": "Bad request.",
-    "data": null
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+### Send a test delivery
+
+`POST /v1/accounts/{accountId}/webhooks/endpoints/{endpointId}/test`
+
+Sends the endpoint one `webhook_test` event now, signed and sent like any delivery, and returns the entry of that attempt (`kind: manual`, also listed in the delivery history). It goes to this endpoint only, whatever events it subscribes to, and also while the endpoint is paused or inactive; it neither lifts a pause nor counts toward one. The endpoint has 10 seconds to answer. Its `payload` and `origin` are `null`; the endpoint object carries its id, name, url, events and status, never its secret. No endpoint can subscribe to `webhook_test`, and it is not listed in `GET /webhooks/event-types`. Its `payload` and `origin` are `null`; the endpoint object carries its id, name, url, events and status, never its secret. No endpoint can subscribe to `webhook_test`, and it is not listed in `GET /webhooks/event-types`. The event names the endpoint as its `subject` and `object` and carries nothing about the workspace beyond `account_id`: no billing and no members. Up to 10 tests per user every 10 minutes. Requires the `webhooks:write` OAuth scope.
+
+**Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
+
+#### Parameters
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `accountId` | path | string | yes | Workspace account ID. |
+| `endpointId` | path | string | yes | The webhook endpoint ID. |
+
+#### Responses
+
+##### 200 — The entry of the test delivery
+
+```json
+{
+    "data": {
+        "resource": "activity_dispatching_history",
+        "id": "example_id_46",
+        "event": "document_ready",
+        "activity_id": 456,
+        "endpoint_id": "example_id_47",
+        "endpoint": "https://example.com/example-url-21",
+        "payload": null,
+        "delivered": true,
+        "webhook_id": "example_id_48",
+        "attempt": 2,
+        "kind": "scheduled",
+        "will_retry": true,
+        "duration_ms": 184,
+        "http_status": 200,
+        "response_body": "OK",
+        "error": null,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T10:30:00Z"
+    },
+    "status": 200,
+    "message": ""
+}
+```
+
+##### 404 — The requested resource does not exist.
+
+```json
+{
+    "status": 404,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 429 — Rate limit exceeded.
+
+##### 401 — Missing or invalid credentials.
+
+```json
+{
+    "status": 401,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
+##### 500 — Unexpected server error.
+
+```json
+{
+    "status": 500,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
 }
 ```

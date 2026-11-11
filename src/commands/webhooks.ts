@@ -320,7 +320,8 @@ const endpointsSecretCommand = new Command('secret')
 	});
 
 const endpointsRotateSecretCommand = new Command('rotate-secret')
-	.description('Replace the endpoint signing secret; the old one stops working immediately')
+	.description('Replace the endpoint signing secret')
+	.option('--keep-previous', 'Keep the replaced secret signing for 24 hours')
 	.argument('<endpointId>', 'Endpoint ID')
 	.option('-y, --yes', 'Skip the confirmation prompt')
 	.action(async (endpointId, opts, command) => {
@@ -328,16 +329,18 @@ const endpointsRotateSecretCommand = new Command('rotate-secret')
 			const accountId = requireAccountId(config);
 			if (
 				!(await confirmDestructive(
-					`Rotate the signing secret of ${endpointId}? The current secret stops working immediately.`,
+					`Rotate the signing secret of ${endpointId}? ${opts.keepPrevious ? 'The current secret stays valid for 24 hours.' : 'The current secret stops working immediately.'}`,
 					Boolean(opts.yes),
 				))
 			)
 				return;
 			const result = await withSpinner('Rotating secret', config, () =>
-				client.webhooks.rotateEndpointSecret(endpointId, accountId),
+				client.webhooks.rotateEndpointSecret(endpointId, accountId, {
+					keep_previous: opts.keepPrevious,
+				}),
 			);
 			printSuccess('Signing secret rotated', config);
-			printData(result, config, (r) => r.secret);
+			printData(result, config);
 		});
 	});
 
@@ -375,6 +378,16 @@ export const verifyCommand = new Command('verify')
 	});
 
 const endpointsCommand = new Command('endpoints')
+	.addCommand(
+		new Command('test')
+			.description('Send one webhook_test, even if inactive or paused')
+			.argument('<endpointId>', 'Webhook endpoint ID')
+			.action(async (id, _opts, command) => {
+				await runWithClient(command, async ({ client, config }) => {
+					printData(await client.webhooks.testEndpoint(id, requireAccountId(config)), config);
+				});
+			}),
+	)
 	.description('Manage webhook endpoints and their signing secrets')
 	.addCommand(endpointsListCommand)
 	.addCommand(endpointsCreateCommand)

@@ -76,7 +76,7 @@ export class SignerResource extends BaseResource {
 		);
 	}
 
-	/** Update a signer. Fails if the signer has active assignments. */
+	/** Update supplied fields; verified channels on in-flight documents cannot change. */
 	async update(
 		signerId: string,
 		payload: IUpdateSignerPayload,
@@ -87,7 +87,7 @@ export class SignerResource extends BaseResource {
 		if (payload.full_name !== undefined && !payload.full_name.trim()) {
 			throw new ValidationError('Signer full name cannot be blank');
 		}
-		if (payload.email !== undefined) requireEmail(payload.email);
+		if (payload.email != null && payload.email !== '') requireEmail(payload.email);
 		return this.call('Failed to update signer', () =>
 			this.http.put(`/accounts/${id}/signers/${sid}`, normaliseSignerPayload(payload, true)),
 		);
@@ -108,13 +108,13 @@ export class SignerResource extends BaseResource {
 		try {
 			const lower = email.toLowerCase();
 			for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
-				const { data, meta } = await this.list({ search: email, per_page: 100, page }, accountId);
+				const { data, meta } = await this.list({ search: email, per_page: 50, page }, accountId);
 				const match = data.find((s) => (s.email ?? '').toLowerCase() === lower);
 				if (match) return match;
 				if (!data.length) return null;
 				if (meta?.last_page !== undefined) {
 					if (page >= meta.last_page) return null;
-				} else if (data.length < 100) {
+				} else if (data.length < 50) {
 					return null;
 				}
 			}
@@ -137,7 +137,8 @@ function normaliseSignerPayload(
 	const normalised: Record<string, unknown> = {
 		full_name: payload.full_name,
 		email: payload.email,
-		whatsapp_phone_number: payload.whatsapp_phone_number ?? payload.phone,
+		whatsapp_phone_number:
+			payload.whatsapp_phone_number !== undefined ? payload.whatsapp_phone_number : payload.phone,
 	};
 
 	if (payload.government_id !== undefined) {
@@ -153,5 +154,7 @@ function normaliseSignerPayload(
 		normalised.metadata = payload.metadata;
 	}
 
-	return stripEmpty(normalised);
+	return useGovernmentId
+		? Object.fromEntries(Object.entries(normalised).filter(([, value]) => value !== undefined))
+		: stripEmpty(normalised);
 }

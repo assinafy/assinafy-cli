@@ -17,6 +17,8 @@ Commands:
                                         accounts
   notification-preferences|preferences  Manage owner-facing email notification
                                         preferences
+  push-preferences                      Manage mobile push notification
+                                        preferences
   help [command]                        display help for command
 ```
 
@@ -82,5 +84,44 @@ Merge one or more owner-facing email notification preferences
 
 Options:
   --set <json>  JSON object mapping notification codes to booleans
+  -h, --help    display help for command
+```
+
+### `assinafy users push-preferences`
+
+```text
+Usage: assinafy users push-preferences [options] [command]
+
+Manage mobile push notification preferences
+
+Options:
+  -h, --help        display help for command
+
+Commands:
+  get               Read push preferences
+  update [options]  Merge push preference booleans
+  help [command]    display help for command
+```
+
+#### `assinafy users push-preferences get`
+
+```text
+Usage: assinafy users push-preferences get [options]
+
+Read push preferences
+
+Options:
+  -h, --help  display help for command
+```
+
+#### `assinafy users push-preferences update`
+
+```text
+Usage: assinafy users push-preferences update [options]
+
+Merge push preference booleans
+
+Options:
+  --set <json>  Partial map of notification codes to booleans
   -h, --help    display help for command
 ```

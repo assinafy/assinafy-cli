@@ -11,15 +11,76 @@ Options:
   -h, --help                display help for command
 
 Commands:
+  usage <id>                Read plan allowances and balances
+  notification-policy       Workspace-wide notification rules
   create [options]          Create a workspace (account)
   list                      List workspaces you can access
-  get <id>                  Show a workspace by ID
+  get [options] <id>        Show a workspace by ID
   theme <id>                Show public branding for a workspace
   stats [options] <id>      Show document KPIs for a workspace
   logo                      Manage a workspace logo
   update [options] <id>     Update a workspace
   delete|rm [options] <id>  Delete a workspace
   help [command]            display help for command
+```
+
+### `assinafy workspaces usage`
+
+```text
+Usage: assinafy workspaces usage [options] <id>
+
+Read plan allowances and balances
+
+Arguments:
+  id          Account/workspace ID
+
+Options:
+  -h, --help  display help for command
+```
+
+### `assinafy workspaces notification-policy`
+
+```text
+Usage: assinafy workspaces notification-policy [options] [command]
+
+Workspace-wide notification rules
+
+Options:
+  -h, --help             display help for command
+
+Commands:
+  get <id>               Read the policy
+  update [options] <id>  Merge policy fields (workspace owners only)
+  help [command]         display help for command
+```
+
+#### `assinafy workspaces notification-policy get`
+
+```text
+Usage: assinafy workspaces notification-policy get [options] <id>
+
+Read the policy
+
+Arguments:
+  id          Account/workspace ID
+
+Options:
+  -h, --help  display help for command
+```
+
+#### `assinafy workspaces notification-policy update`
+
+```text
+Usage: assinafy workspaces notification-policy update [options] <id>
+
+Merge policy fields (workspace owners only)
+
+Arguments:
+  id             Account/workspace ID
+
+Options:
+  --data <json>  Partial JSON: events and/or owners_receive_all
+  -h, --help     display help for command
 ```
 
 ### `assinafy workspaces create`
@@ -57,10 +118,12 @@ Usage: assinafy workspaces get [options] <id>
 Show a workspace by ID
 
 Arguments:
-  id          Account/workspace ID
+  id                   Account/workspace ID
 
 Options:
-  -h, --help  display help for command
+  --expand <relation>  Include signing feature flags (choices:
+                       "signing_features")
+  -h, --help           display help for command
 ```
 
 ### `assinafy workspaces theme`

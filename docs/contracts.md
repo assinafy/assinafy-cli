@@ -16,7 +16,7 @@ Commands:
                                     amendment link
   set [options] <documentId>        Set terms or link an amendment; null clears,
                                     omitted fields stay unchanged
-  related <documentId>              Read the root contract and every linked
+  related [options] <documentId>    Read the root contract and every linked
                                     instrument
   renew [options] <documentId>      Start the next term using the current term
                                     or a later end_date
@@ -89,10 +89,11 @@ Usage: assinafy contracts related [options] <documentId>
 Read the root contract and every linked instrument
 
 Arguments:
-  documentId  Contract or amendment document ID
+  documentId           Contract or amendment document ID
 
 Options:
-  -h, --help  display help for command
+  --expand <relation>  Include document details (choices: "document")
+  -h, --help           display help for command
 ```
 
 ### `assinafy contracts renew`

@@ -95,7 +95,11 @@ it.each(['get', 'related'] as const)('exposes contract %s through the SDK', asyn
 		.spyOn(ContractResource.prototype, method)
 		.mockResolvedValue({ document_id: 'document' } as never);
 	await run([method, 'document']);
-	expect(call).toHaveBeenCalledWith('document', 'account');
+	expect(call).toHaveBeenCalledWith(
+		'document',
+		'account',
+		...(method === 'related' ? [{ expand: undefined }] : []),
+	);
 });
 
 it.each(['renew', 'terminate'] as const)(

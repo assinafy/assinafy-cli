@@ -11,10 +11,15 @@ Options:
   -h, --help                                             display help for command
 
 Commands:
+  theme [options]                                        Read the signing workspace brand
+  logo [options]                                         Download the signing workspace logo
+  certified-copy [options]                               Send a new certified-copy link to the original signing contact
+  download-copy [options]                                Download a PDF using a certified-copy link token
+  resend-download-link [options]                         Send a new link using an expired download token
   document [options] <signerId>                          Fetch the signer's current document
   documents [options] <signerId>                         List the signer's documents
   search [options] <signerId> <query>                    Search the signer's documents
-  download [options] <signerId> <documentId> <artifact>  Download a signer document artifact
+  download [options] <signerId> <documentId> <artifact>  Download the original with a signer code; use download-copy for certified files
   self [options]                                         Fetch the signer's own profile
   identity-status [options]                              Fetch biometric verification status and the private capture URL
   identity-start [options]                               Open a biometric verification session with the signer’s explicit consent
@@ -33,6 +38,75 @@ Commands:
   help [command]                                         display help for command
 ```
 
+### `assinafy signer theme`
+
+```text
+Usage: assinafy signer theme [options]
+
+Read the signing workspace brand
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  -h, --help            display help for command
+```
+
+### `assinafy signer logo`
+
+```text
+Usage: assinafy signer logo [options]
+
+Download the signing workspace logo
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  -o, --output <path>   Output file path
+  --force               Overwrite the output file if it already exists
+  -h, --help            display help for command
+```
+
+### `assinafy signer certified-copy`
+
+```text
+Usage: assinafy signer certified-copy [options]
+
+Send a new certified-copy link to the original signing contact
+
+Options:
+  --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --document-id <id>    Another document in the same envelope
+  -h, --help            display help for command
+```
+
+### `assinafy signer download-copy`
+
+```text
+Usage: assinafy signer download-copy [options]
+
+Download a PDF using a certified-copy link token
+
+Options:
+  --download-token <token>  Private certified-copy link token (env:
+                            ASSINAFY_DOWNLOAD_TOKEN)
+  -o, --output <path>       Output file path
+  --force                   Overwrite the output file if it already exists
+  --artifact <name>         PDF artifact (choices: "certificated", "pades",
+                            default: "certificated")
+  -h, --help                display help for command
+```
+
+### `assinafy signer resend-download-link`
+
+```text
+Usage: assinafy signer resend-download-link [options]
+
+Send a new link using an expired download token
+
+Options:
+  --download-token <token>  Private certified-copy link token (env:
+                            ASSINAFY_DOWNLOAD_TOKEN)
+  -h, --help                display help for command
+```
+
 ### `assinafy signer document`
 
 ```text
@@ -45,6 +119,7 @@ Arguments:
 
 Options:
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
+  --expand <relation>   Include the envelope (choices: "envelope")
   -h, --help            display help for command
 ```
 
@@ -59,6 +134,7 @@ Arguments:
   signerId              Signer ID
 
 Options:
+  --envelope <id>       Filter by envelope ID
   --access-code <code>  Signer access code (omit to use your API key or token)
                         (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --page <n>            Page number to fetch
@@ -80,6 +156,7 @@ Arguments:
   query                 Search text
 
 Options:
+  --envelope <id>       Filter by envelope ID
   --access-code <code>  Signer access code (omit to use your API key or token)
                         (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
@@ -90,7 +167,7 @@ Options:
 ```text
 Usage: assinafy signer download [options] <signerId> <documentId> <artifact>
 
-Download a signer document artifact
+Download the original with a signer code; use download-copy for certified files
 
 Arguments:
   signerId              Signer ID
@@ -99,7 +176,7 @@ Arguments:
                         bundle
 
 Options:
-  --access-code <code>  Optional signer identity preflight code (env:
+  --access-code <code>  Signer access code (required by the current API) (env:
                         ASSINAFY_SIGNER_ACCESS_CODE)
   -o, --output <path>   Output file path
   --force               Overwrite the output file if it already exists
@@ -176,6 +253,7 @@ Usage: assinafy signer certificate-start [options]
 Start an ICP-Brasil A1/A3 signature and return the Web PKI token
 
 Options:
+  --document-id <id>    Select a document of the same envelope
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   -h, --help            display help for command
 ```
@@ -188,6 +266,7 @@ Usage: assinafy signer certificate-complete [options]
 Complete an ICP-Brasil A1/A3 signature after Web PKI has signed the token
 
 Options:
+  --document-id <id>           Select a document of the same envelope
   --access-code <code>         Signer access code (env:
                                ASSINAFY_SIGNER_ACCESS_CODE)
   --certificate-token <token>  Operation token returned by certificate-start
@@ -257,8 +336,10 @@ Usage: assinafy signer assignment [options]
 Fetch the assignment as the signer sees it
 
 Options:
+  --document-id <id>    Select another document of the same envelope
   --access-code <code>  Signer access code (env: ASSINAFY_SIGNER_ACCESS_CODE)
   --accept-terms        Pass has_accepted_terms=true
+  --expand <relation>   Include the envelope (choices: "envelope")
   -h, --help            display help for command
 ```
 

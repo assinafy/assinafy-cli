@@ -73,6 +73,11 @@ for (const api of [cjsApi, esmApi]) {
 		fail('SDK entry point is missing OAuthResource');
 	if (!(client.contracts instanceof api.ContractResource))
 		fail('SDK entry point is missing ContractResource');
+	if (
+		!(client.envelopes instanceof api.EnvelopeResource) ||
+		!(client.embed instanceof api.EmbedResource)
+	)
+		fail('SDK entry point is missing envelope or embed resources');
 }
 
 const consumer = mkdtempSync(path.join(tmpdir(), 'assinafy-sdk-consumer-'));
@@ -117,8 +122,14 @@ try {
 	}
 	writeFileSync(
 		path.join(consumer, 'index.ts'),
-		`import { type AssinafyClient, type IContract, type IContractAmendment, type PaginatedResult, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload } from '@assinafy/cli/api';
+		`import { type AssinafyClient, type IContract, type IContractAmendment, type PaginatedResult, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload, type IDocumentEnvelope, type IEmbedSession, type ISigningDocument, type INotificationPolicy } from '@assinafy/cli/api';
 declare const client: AssinafyClient;
+const envelope: Promise<IDocumentEnvelope> = client.envelopes.create({ name: 'Example', signers: [{ id: 'signer', embedded: true }], documents: [{ id: 'document', signer_ids: ['signer'] }], max_total_credits: 0 }, { idempotencyKey: 'example-operation' });
+const embed: Promise<IEmbedSession> = client.embed.createSession('document', 'assignment', 'signer');
+const signing: Promise<ISigningDocument> = client.signerDocuments.getAssignment('example-code', undefined, { document_id: 'document', expand: 'envelope' });
+const policy: Promise<INotificationPolicy> = client.workspaces.updateNotificationPolicy('account', { owners_receive_all: false });
+const copy: Promise<Buffer> = client.signerDocuments.downloadCertifiedCopy('example-download-token');
+void [envelope, embed, signing, policy, copy, client.users.updatePushPreferences({ SignerViewed: false })];
 const contract: Promise<IContract | IContractAmendment> = client.contracts.set('document1', { status: 'draft', value: null, auto_renew: false });
 const contractList: Promise<PaginatedResult<IContract>> = client.contracts.list({ status: ['active', 'expired'], ending_within_days: 0 });
 const renewal: Promise<IContract> = client.contracts.renew('document1', { term: 1 });

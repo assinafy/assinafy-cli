@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Command, Option } from '@commander-js/extra-typings';
 import type { IDocumentStatsParams, IUpdateWorkspacePayload } from '../api';
 import { readBinary, saveDownload } from '../lib/files';
+import { parseJsonObject } from '../lib/json';
 import { addDownloadOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { confirmDestructive } from '../lib/prompts';
@@ -56,10 +57,15 @@ const listCommand = new Command('list')
 const getCommand = new Command('get')
 	.description('Show a workspace by ID')
 	.argument('<id>', 'Account/workspace ID')
-	.action(async (id, _opts, command) => {
+	.addOption(
+		new Option('--expand <relation>', 'Include signing feature flags').choices([
+			'signing_features',
+		] as const),
+	)
+	.action(async (id, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
 			const workspace = await withSpinner('Fetching workspace', config, () =>
-				client.workspaces.get(id),
+				client.workspaces.get(id, { expand: opts.expand }),
 			);
 			printData(workspace, config, (w) => renderKeyValue(w as unknown as Record<string, unknown>));
 		});
@@ -201,7 +207,50 @@ const deleteCommand = new Command('delete')
 		});
 	});
 
+const usageCommand = new Command('usage')
+	.description('Read plan allowances and balances')
+	.argument('<id>', 'Account/workspace ID')
+	.action(async (id, _opts, command) => {
+		await runWithClient(command, async ({ client, config }) => {
+			printData(await client.workspaces.usage(id), config);
+		});
+	});
+const policyCommand = new Command('notification-policy')
+	.description('Workspace-wide notification rules')
+	.addCommand(
+		new Command('get')
+			.description('Read the policy')
+			.argument('<id>', 'Account/workspace ID')
+			.action(async (id, _opts, command) => {
+				await runWithClient(command, async ({ client, config }) => {
+					printData(await client.workspaces.getNotificationPolicy(id), config);
+				});
+			}),
+	)
+	.addCommand(
+		new Command('update')
+			.description('Merge policy fields (workspace owners only)')
+			.argument('<id>', 'Account/workspace ID')
+			.requiredOption('--data <json>', 'Partial JSON: events and/or owners_receive_all')
+			.action(async (id, opts, command) => {
+				await runWithClient(command, async ({ client, config }) => {
+					printData(
+						await client.workspaces.updateNotificationPolicy(
+							id,
+							parseJsonObject(
+								opts.data,
+								'--data',
+							) as import('../api').IUpdateNotificationPolicyPayload,
+						),
+						config,
+					);
+				});
+			}),
+	);
+
 export const workspacesCommand = new Command('workspaces')
+	.addCommand(usageCommand)
+	.addCommand(policyCommand)
 	.alias('accounts')
 	.description('Manage workspaces (accounts)')
 	.addCommand(createCommand)

@@ -98,9 +98,9 @@ const updateCommand = new Command('update')
 		await runWithClient(command, async ({ client, config }) => {
 			const accountId = requireAccountId(config);
 			const payload: IUpdateSignerPayload = {};
-			if (opts.name) payload.full_name = opts.name;
-			if (opts.email) payload.email = opts.email;
-			if (opts.phone) payload.whatsapp_phone_number = opts.phone;
+			if (opts.name !== undefined) payload.full_name = opts.name;
+			if (opts.email !== undefined) payload.email = opts.email;
+			if (opts.phone !== undefined) payload.whatsapp_phone_number = opts.phone;
 			if (opts.cpf) payload.cpf = opts.cpf;
 			if (opts.governmentId !== undefined) payload.government_id = opts.governmentId;
 			const signer = await withSpinner('Updating signer', config, () =>

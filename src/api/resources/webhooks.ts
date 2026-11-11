@@ -61,6 +61,14 @@ function validateWebhookFields(payload: IWebhookEndpointUpdatePayload, requireHt
 }
 
 export class WebhookResource extends BaseResource {
+	/** Sends a webhook_test even to an inactive/held endpoint; does not change its state. */
+	async testEndpoint(endpointId: string, accountId?: string): Promise<IWebhookDispatch> {
+		const id = this.accountId(accountId);
+		const eid = this.requireId(endpointId, 'Endpoint ID');
+		return this.call('Failed to send webhook test', () =>
+			this.http.post(`/accounts/${id}/webhooks/endpoints/${eid}/test`),
+		);
+	}
 	/**
 	 * `PUT /accounts/{accountId}/webhooks/subscriptions` — create or replace the
 	 * account's oldest webhook endpoint. Use the endpoint methods for accounts
@@ -204,17 +212,24 @@ export class WebhookResource extends BaseResource {
 
 	/**
 	 * `POST …/endpoints/{endpointId}/secret/rotate` — replace the signing secret.
-	 * The old secret stops working immediately. Requires `webhooks:write` for OAuth.
+	 * Set keep_previous to retain the replaced secret for 24 hours. Requires webhooks:write.
 	 */
 	async rotateEndpointSecret(
 		endpointId: string,
 		accountId?: string,
+		options: { keep_previous?: boolean } = {},
 	): Promise<IWebhookEndpointSecret> {
 		const id = this.accountId(accountId);
 		const eid = this.requireId(endpointId, 'Endpoint ID');
+		if (options.keep_previous !== undefined && typeof options.keep_previous !== 'boolean') {
+			throw new ValidationError('keep_previous must be a boolean');
+		}
 		this.logger.info('Rotating webhook endpoint secret');
 		return this.call('Failed to rotate webhook endpoint secret', () =>
-			this.http.post(`/accounts/${id}/webhooks/endpoints/${eid}/secret/rotate`),
+			this.http.post(
+				`/accounts/${id}/webhooks/endpoints/${eid}/secret/rotate`,
+				options.keep_previous === undefined ? undefined : { keep_previous: options.keep_previous },
+			),
 		);
 	}
 

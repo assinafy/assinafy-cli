@@ -1,4 +1,4 @@
-import { Command } from '@commander-js/extra-typings';
+import { Command, Option } from '@commander-js/extra-typings';
 import type {
 	IContractListParams,
 	IRenewContractPayload,
@@ -84,9 +84,17 @@ const setCommand = new Command('set')
 const relatedCommand = new Command('related')
 	.description('Read the root contract and every linked instrument')
 	.argument('<documentId>', 'Contract or amendment document ID')
-	.action(async (documentId, _opts, command) => {
+	.addOption(
+		new Option('--expand <relation>', 'Include document details').choices(['document'] as const),
+	)
+	.action(async (documentId, opts, command) => {
 		await runWithClient(command, async ({ client, config }) => {
-			printData(await client.contracts.related(documentId, requireAccountId(config)), config);
+			printData(
+				await client.contracts.related(documentId, requireAccountId(config), {
+					expand: opts.expand,
+				}),
+				config,
+			);
 		});
 	});
 

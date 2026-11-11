@@ -13,7 +13,13 @@ import { requireDocumentArtifactName, stripEmpty } from '../api/utils';
 import { requireAccountId } from '../lib/client';
 import { CliError, errorMessage } from '../lib/errors';
 import { defaultArtifactFilename, saveDownload } from '../lib/files';
-import { parseInteger, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
+import {
+	parseCreditCeiling,
+	parseInteger,
+	parseJsonArray,
+	parseJsonObject,
+	splitList,
+} from '../lib/json';
 import { addDownloadOptions, addListOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
@@ -83,11 +89,12 @@ const listCommand = addListOptions(
 				'collect',
 			] as const),
 		)
-		.option('--tags <ids>', 'Comma-separated tag IDs (AND semantics)'),
+		.option('--tags <ids>', 'Comma-separated tag IDs (AND semantics)')
+		.option('--envelope <id>', 'Filter by envelope ID'),
 ).action(async (opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
-		const params: IDocumentListParams = { ...listParams(opts) };
+		const params: IDocumentListParams = { ...listParams(opts), envelope_id: opts.envelope };
 		if (opts.status) params.status = opts.status;
 		if (opts.method) params.method = opts.method;
 		if (opts.tags) params.tags = opts.tags;
@@ -102,11 +109,12 @@ const searchCommand = addListOptions(
 	new Command('search')
 		.description('Lightweight document search (type-ahead)')
 		.argument('[query]', 'Search text (alias for --search)')
-		.option('--status <status>', 'Filter by document status'),
+		.option('--status <status>', 'Filter by document status')
+		.option('--envelope <id>', 'Filter by envelope ID'),
 ).action(async (query, opts, command) => {
 	await runWithClient(command, async ({ client, config }) => {
 		const accountId = requireAccountId(config);
-		const params: IDocumentSearchParams = { ...listParams(opts) };
+		const params: IDocumentSearchParams = { ...listParams(opts), envelope_id: opts.envelope };
 		if (query) params.search = query;
 		if (opts.status) params.status = opts.status;
 		const result = await withSpinner('Searching documents', config, () =>
@@ -119,23 +127,40 @@ const searchCommand = addListOptions(
 const getCommand = new Command('get')
 	.description('Show details for a document')
 	.argument('<id>', 'Document ID')
-	.action(async (id, _opts, command) => {
-		await runWithClient(command, async ({ client, config }) => {
-			const doc = await withSpinner('Fetching document', config, () =>
-				client.documents.details(id),
-			);
-			printData(doc, config, (d) =>
-				renderKeyValue({
-					id: d.id,
-					name: d.name,
-					status: d.status,
-					account_id: d.account_id,
-					created_at: d.created_at,
-					updated_at: d.updated_at,
-					is_closed: d.is_closed,
-				}),
-			);
-		});
+	.addOption(
+		new Option('--access-code <code>', 'Read as a signer instead of the owner').env(
+			'ASSINAFY_SIGNER_ACCESS_CODE',
+		),
+	)
+	.addOption(
+		new Option('--expand <relation>', 'Include envelope details').choices([
+			'envelope',
+			'envelope_id',
+			'envelope,envelope_id',
+		] as const),
+	)
+	.action(async (id, opts, command) => {
+		await (opts.accessCode === undefined ? runWithClient : runWithPublicClient)(
+			command,
+			async ({ client, config }) => {
+				const doc = await withSpinner('Fetching document', config, () =>
+					opts.accessCode === undefined
+						? client.documents.details(id, { expand: opts.expand })
+						: client.documents.getAsSigner(id, opts.accessCode),
+				);
+				printData(doc, config, (d) =>
+					renderKeyValue({
+						id: d.id,
+						name: d.name,
+						status: d.status,
+						account_id: d.account_id,
+						created_at: d.created_at,
+						updated_at: d.updated_at,
+						is_closed: d.is_closed,
+					}),
+				);
+			},
+		);
 	});
 
 const renameCommand = new Command('rename')
@@ -156,56 +181,95 @@ const downloadCommand = addDownloadOptions(
 	new Command('download')
 		.description('Download a document artifact')
 		.argument('<id>', 'Document ID')
+		.addOption(
+			new Option('--access-code <code>', 'Read as a signer instead of the owner').env(
+				'ASSINAFY_SIGNER_ACCESS_CODE',
+			),
+		)
 		.option(
 			'--artifact <name>',
 			'original | certificated | certificate-page | pades | bundle',
 			'certificated',
 		),
 ).action(async (id, opts, command) => {
-	await runWithClient(command, async ({ client, config }) => {
-		const artifact = requireDocumentArtifactName(opts.artifact);
-		await saveDownload(config, {
-			message: 'Downloading document',
-			download: () => client.documents.download(id, artifact),
-			output: opts.output,
-			defaultName: defaultArtifactFilename(id, artifact),
-			force: opts.force,
-			data: { artifact },
-		});
-	});
+	await (opts.accessCode === undefined ? runWithClient : runWithPublicClient)(
+		command,
+		async ({ client, config }) => {
+			const artifact = requireDocumentArtifactName(opts.artifact);
+			await saveDownload(config, {
+				message: 'Downloading document',
+				download: () =>
+					client.documents.download(id, artifact, { signerAccessCode: opts.accessCode }),
+				output: opts.output,
+				defaultName: defaultArtifactFilename(id, artifact),
+				force: opts.force,
+				data: { artifact },
+			});
+		},
+	);
 });
 
 const thumbnailCommand = addDownloadOptions(
 	new Command('thumbnail')
 		.description('Download the document thumbnail (JPEG)')
-		.argument('<id>', 'Document ID'),
+		.addOption(
+			new Option('--artifact <name>', 'Use the signed PDF').choices(['certificated'] as const),
+		)
+		.argument('<id>', 'Document ID')
+		.addOption(
+			new Option('--access-code <code>', 'Read as a signer instead of the owner').env(
+				'ASSINAFY_SIGNER_ACCESS_CODE',
+			),
+		),
 ).action(async (id, opts, command) => {
-	await runWithClient(command, async ({ client, config }) => {
-		await saveDownload(config, {
-			message: 'Downloading thumbnail',
-			download: () => client.documents.thumbnail(id),
-			output: opts.output,
-			defaultName: defaultArtifactFilename(id, 'thumbnail'),
-			force: opts.force,
-		});
-	});
+	await (opts.accessCode === undefined ? runWithClient : runWithPublicClient)(
+		command,
+		async ({ client, config }) => {
+			await saveDownload(config, {
+				message: 'Downloading thumbnail',
+				download: () =>
+					client.documents.thumbnail(id, {
+						artifact: opts.artifact,
+						signerAccessCode: opts.accessCode,
+					}),
+				output: opts.output,
+				defaultName: defaultArtifactFilename(id, 'thumbnail'),
+				force: opts.force,
+			});
+		},
+	);
 });
 
 const downloadPageCommand = addDownloadOptions(
 	new Command('download-page')
 		.description('Download a single document page (JPEG)')
+		.addOption(
+			new Option('--artifact <name>', 'Use the signed PDF').choices(['certificated'] as const),
+		)
 		.argument('<id>', 'Document ID')
+		.addOption(
+			new Option('--access-code <code>', 'Read as a signer instead of the owner').env(
+				'ASSINAFY_SIGNER_ACCESS_CODE',
+			),
+		)
 		.argument('<pageId>', 'Page ID'),
 ).action(async (id, pageId, opts, command) => {
-	await runWithClient(command, async ({ client, config }) => {
-		await saveDownload(config, {
-			message: 'Downloading page',
-			download: () => client.documents.downloadPage(id, pageId),
-			output: opts.output,
-			defaultName: `${id}-page-${pageId}.jpg`,
-			force: opts.force,
-		});
-	});
+	await (opts.accessCode === undefined ? runWithClient : runWithPublicClient)(
+		command,
+		async ({ client, config }) => {
+			await saveDownload(config, {
+				message: 'Downloading page',
+				download: () =>
+					client.documents.downloadPage(id, pageId, {
+						artifact: opts.artifact,
+						signerAccessCode: opts.accessCode,
+					}),
+				output: opts.output,
+				defaultName: `${id}-page-${pageId}.jpg`,
+				force: opts.force,
+			});
+		},
+	);
 });
 
 const activitiesCommand = addSortableListOptions(
@@ -308,6 +372,8 @@ const tagsRemoveCommand = new Command('tags-remove')
 	});
 
 const createFromTemplateCommand = new Command('create-from-template')
+	.option('--idempotency-key <key>', 'Creation key for recovering a lost response')
+	.option('--max-total-credits <amount>', 'Reject creation if its credit cost exceeds this amount')
 	.description('Create a document from a template')
 	.argument('<templateId>', 'Template ID')
 	.requiredOption(
@@ -327,6 +393,8 @@ const createFromTemplateCommand = new Command('create-from-template')
 				| ITemplateEditorField[]
 				| undefined;
 			const options = stripEmpty({
+				idempotencyKey: opts.idempotencyKey,
+				max_total_credits: parseCreditCeiling(opts.maxTotalCredits),
 				name: opts.name,
 				message: opts.message,
 				expires_at: opts.expiresAt,

@@ -2,7 +2,7 @@
 
 *Português · [Read in English](README.en.md)*
 
-CLI e SDK TypeScript para as 118 operações publicadas da [API Assinafy](https://api.assinafy.com.br/v1/docs): documentos, signatários, assinaturas, templates, contratos, OAuth e webhooks.
+CLI e SDK TypeScript para as 147 operações publicadas da [API Assinafy](https://api.assinafy.com.br/v1/docs): documentos, signatários, assinaturas, templates, contratos, envelopes, assinatura incorporada, OAuth e webhooks.
 
 ## Instalação
 
@@ -73,7 +73,7 @@ O PDF deve ser não vazio e ter no máximo 25 MiB. Persista o ID antes de aguard
 ```bash
 assinafy assignments estimate-cost "$DOCUMENT_ID" --signer-ids "$SIGNER_ID" --json
 assinafy assignments create "$DOCUMENT_ID" \
-  --signer-ids "$SIGNER_ID" --message 'Revise e assine' --json
+  --signer-ids "$SIGNER_ID" --message 'Revise e assine' --max-total-credits 0 --json
 ```
 
 Leia custo, saldo e bloqueios antes da escrita. A operação pode consumir créditos e enviar convites. `notification_methods: []` assume Email em produção; informe o canal para escolhê-lo explicitamente.
@@ -156,6 +156,14 @@ console.log(result.document.id, result.assignment.id, result.signer_ids);
 
 Respostas envelopadas resolvem para `data`; listas paginadas retornam `{ data, meta? }`; binários retornam `Buffer`. `ValidationError`, `ApiError`, `NetworkError` e `PartialWorkflowError` preservam dados úteis sem carregar a configuração Axios com segredos. A [referência do SDK](docs/sdk-reference.md) descreve todos os recursos, aliases, tipos, payloads e erros.
 
+## Envelopes, assinatura incorporada e notificações
+
+`envelopes estimate-cost|create` envia até 20 documentos para até 20 signatários. Faça upload e aguarde cada PDF primeiro; use `max_total_credits` e uma chave de idempotência na criação. Cada documento mantém sua própria assinatura e certificado. Veja o [fluxo completo de envelopes](docs/sdk-reference.md#envelopes-clientenvelopes).
+
+`embed origins` cadastra a origem HTTPS da aplicação; `embed session` gera a URL privada de uso único para um signatário `embedded: true`. Email e WhatsApp continuam exigindo OTP. Integre o iframe no frontend e mantenha a chave de API no backend. Veja [assinatura incorporada](docs/sdk-reference.md#embedded-signing-clientembed).
+
+`workspaces usage` informa saldo e plano; `workspaces notification-policy` controla alertas da conta e `users push-preferences` controla push no celular. `signer certified-copy` reenvia a cópia certificada ao contato original; `download-copy` usa `ASSINAFY_DOWNLOAD_TOKEN`.
+
 ## Templates, contratos e webhooks
 
 - Templates: `templates list` e `documents create-from-template`; papéis recebem IDs existentes ou descritores inline.
@@ -164,7 +172,7 @@ Respostas envelopadas resolvem para `data`; listas paginadas retornam `{ data, m
 
 ## Referências e desenvolvimento
 
-- [Referência HTTP](docs/api-reference.md): parâmetros e requisições/respostas de todas as 118 operações publicadas.
+- [Referência HTTP](docs/api-reference.md): parâmetros e requisições/respostas de todas as 147 operações publicadas.
 - [Referência do SDK](docs/sdk-reference.md): métodos, helpers, compatibilidade e fluxos adicionais.
 - [Comandos](docs/README.md): documentos, signatários, assignments, signer, OAuth, auth, workspaces, usuários, templates, contratos, tags, fields, webhooks e configuração.
 - [Segurança](SECURITY.md), [contribuição](CONTRIBUTING.md) e [releases](docs/releasing.md).

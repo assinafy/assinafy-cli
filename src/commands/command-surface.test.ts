@@ -78,6 +78,7 @@ describe('current API command coverage', () => {
 			'self',
 			'stats',
 			'notification-preferences',
+			'push-preferences',
 		]);
 		expect(authCommand.commands.some((command) => command.name() === 'link-social-login')).toBe(
 			true,

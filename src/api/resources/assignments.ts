@@ -19,6 +19,7 @@ import {
 	requireExpiration,
 	requireSort,
 	stripEmpty,
+	validateCreditCeiling,
 	validateDigitalCertificateMethod,
 	validateSignerOptions,
 	validateSigningSteps,
@@ -44,6 +45,7 @@ export function buildAssignmentPayload(
 		throw new ValidationError('method must be virtual or collect');
 	}
 	const signers = extractSignerRefs(payload);
+	validateCreditCeiling(payload.max_total_credits);
 	// The docs mark `signers` "Required for virtual" only, but the API prices per signer in both
 	// modes and answers a signer-less body with
 	// 400 "Pelo menos um signatários precisa ser informado." A collect estimate needs them too.
@@ -70,6 +72,7 @@ export function buildAssignmentPayload(
 			payload.expires_at === undefined ? undefined : requireExpiration(payload.expires_at),
 		copy_receivers: payload.copy_receivers,
 		entries: payload.entries,
+		max_total_credits: payload.max_total_credits,
 	});
 }
 
@@ -91,7 +94,13 @@ function extractSignerRefs(payload: ICreateAssignmentPayload): SignerReference[]
 function normaliseSignerRef(
 	ref: SignerReference,
 	options: { allowSignersWithoutId?: boolean },
-): { id?: string; verification_method?: string; notification_methods?: string[]; step?: number } {
+): {
+	id?: string;
+	verification_method?: string;
+	notification_methods?: string[];
+	step?: number;
+	embedded?: boolean;
+} {
 	if (typeof ref === 'string') {
 		if (!ref) throw new ValidationError('Signer ID cannot be empty');
 		return { id: ref };
@@ -103,6 +112,7 @@ function normaliseSignerRef(
 			verification_method?: string;
 			notification_methods?: string[];
 			step?: number;
+			embedded?: boolean;
 		};
 		const id = input.id ?? input.signer_id;
 		validateSignerOptions(input);
@@ -111,6 +121,7 @@ function normaliseSignerRef(
 			verification_method: input.verification_method,
 			notification_methods: input.notification_methods,
 			step: input.step,
+			embedded: input.embedded,
 		});
 
 		if (typeof id === 'string' && id.length > 0) {

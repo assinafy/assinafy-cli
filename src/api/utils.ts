@@ -1,3 +1,4 @@
+import { validateHeaderValue } from 'node:http';
 import axios, { type AxiosRequestConfig } from 'axios';
 import { ApiError, AssinafyError, NetworkError, ValidationError } from './errors.js';
 import type {
@@ -195,7 +196,18 @@ export function validateSignerOptions(input: {
 	verification_method?: unknown;
 	notification_methods?: unknown;
 	step?: unknown;
+	embedded?: unknown;
 }): void {
+	if (input.embedded !== undefined && typeof input.embedded !== 'boolean') {
+		throw new ValidationError('embedded must be a boolean');
+	}
+	if (
+		input.embedded === true &&
+		input.verification_method !== undefined &&
+		!['Email', 'Whatsapp'].includes(input.verification_method as string)
+	) {
+		throw new ValidationError('Embedded signing requires Email or Whatsapp verification');
+	}
 	if (
 		input.verification_method !== undefined &&
 		!VERIFICATION_METHODS.includes(input.verification_method as AssignmentVerificationMethod)
@@ -231,6 +243,43 @@ export function validateSignerOptions(input: {
 	}
 	if (input.step !== undefined && !Number.isInteger(input.step)) {
 		throw new ValidationError('step must be an integer');
+	}
+}
+
+/** A zero ceiling is meaningful: reject non-finite or negative costs before a send. */
+export function validateCreditCeiling(value: number | undefined): void {
+	if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+		throw new ValidationError('max_total_credits must be a finite non-negative number');
+	}
+}
+
+export function idempotencyHeaders(key: string | undefined): Record<string, string> | undefined {
+	if (key === undefined) return undefined;
+	if (typeof key !== 'string' || !key.trim()) {
+		throw new ValidationError('idempotencyKey must be nonblank text');
+	}
+	try {
+		validateHeaderValue('Idempotency-Key', key);
+	} catch {
+		throw new ValidationError('idempotencyKey must be a valid HTTP header value');
+	}
+	return { 'Idempotency-Key': key };
+}
+
+/** Shared guard for partial notification maps; the API owns future event names. */
+export function validateBooleanMap(payload: unknown, allowed: readonly string[]): void {
+	if (
+		!payload ||
+		typeof payload !== 'object' ||
+		Array.isArray(payload) ||
+		!Object.keys(payload).length
+	) {
+		throw new ValidationError('At least one notification preference is required');
+	}
+	for (const [key, value] of Object.entries(payload)) {
+		if (!allowed.includes(key))
+			throw new ValidationError(`Unknown notification preference: ${key}`);
+		if (typeof value !== 'boolean') throw new ValidationError(`${key} must be a boolean`);
 	}
 }
 

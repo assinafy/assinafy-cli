@@ -2,7 +2,13 @@ import { Command, Option } from '@commander-js/extra-typings';
 import type { IUploadAndRequestSignaturesSigner } from '../api';
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
-import { collect, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
+import {
+	collect,
+	parseCreditCeiling,
+	parseJsonArray,
+	parseJsonObject,
+	splitList,
+} from '../lib/json';
 import { printData, printSuccess } from '../lib/output';
 import { runWithClient } from '../lib/run';
 import { withSpinner } from '../lib/spinner';
@@ -62,6 +68,10 @@ export const sendCommand = new Command('send')
 			.conflicts('signers'),
 	)
 	.addOption(new Option('--signers <json>', 'JSON array of signer objects').conflicts('signer'))
+	.option(
+		'--max-total-credits <amount>',
+		'Reject the assignment if its credit cost exceeds this amount',
+	)
 	.option('--message <message>', 'Message shown to signers')
 	.option('--expires-at <iso8601>', 'Expiration timestamp')
 	.option('--copy-receivers <csv>', 'Comma-separated signer IDs to receive a copy of the document')
@@ -79,6 +89,7 @@ export const sendCommand = new Command('send')
 				waitForReady: opts.wait,
 			};
 			if (opts.message) params.message = opts.message;
+			params.maxTotalCredits = parseCreditCeiling(opts.maxTotalCredits);
 			if (opts.expiresAt) params.expiresAt = opts.expiresAt;
 			const cc = splitList(opts.copyReceivers);
 			if (cc) params.copyReceivers = cc;

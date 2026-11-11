@@ -66,11 +66,17 @@ export class ContractResource extends BaseResource {
 	}
 
 	/** Read the root contract and its amendments from any document in that family. */
-	async related(documentId: string, accountId?: string): Promise<IContract> {
+	async related(
+		documentId: string,
+		accountId?: string,
+		params: { expand?: 'document' } = {},
+	): Promise<IContract> {
 		const id = this.accountId(accountId);
 		const did = this.requireId(documentId, 'Document ID');
 		return this.call('Failed to get related contracts', () =>
-			this.http.get(`/accounts/${id}/documents/${did}/contract/related`),
+			this.http.get(`/accounts/${id}/documents/${did}/contract/related`, {
+				params: cleanParams(params),
+			}),
 		);
 	}
 

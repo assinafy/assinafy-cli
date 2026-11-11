@@ -36,7 +36,8 @@ function mockHttp(calls: CapturedCall[] = []): AxiosInstance {
 	return {
 		get: async (url: string, config?: CapturedCall['config']) => {
 			calls.push({ method: 'GET', url, config });
-			if (url === '/sign') return ok({ id: 'doc', assignment: { id: 'assignment' } });
+			if (url === '/sign' || url === '/documents/doc')
+				return ok({ id: 'doc', assignment: { id: 'assignment' } });
 			return ok([]);
 		},
 		post: async (url: string, body?: unknown, config?: CapturedCall['config']) => {
@@ -535,7 +536,7 @@ describe('SignerResource', () => {
 			resource.create({ full_name: 'Ana', email: 'ana@example.com' }),
 		).resolves.toMatchObject({ id: 'existing' });
 		expect(get).toHaveBeenLastCalledWith('/accounts/acc/signers', {
-			params: { search: 'ana@example.com', 'per-page': 100, page: 2 },
+			params: { search: 'ana@example.com', 'per-page': 50, page: 2 },
 		});
 		expect(calls).toHaveLength(0);
 	});
@@ -1249,7 +1250,7 @@ describe('SignerDocumentsResource', () => {
 		await signerDocs.uploadSignature('code-1', Buffer.from([1]), { reuse: true });
 		expect(calls[0]).toMatchObject({
 			method: 'GET',
-			url: '/sign',
+			url: '/documents/doc',
 			config: { params: { 'signer-access-code': 'code-1' } },
 		});
 		expect(calls[1]).toMatchObject({

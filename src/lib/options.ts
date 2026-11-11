@@ -5,7 +5,7 @@ import { type Command, Option, type OptionValues } from '@commander-js/extra-typ
  *
  * Written as a generic passthrough so commander's option typing is preserved.
  */
-function addPaginationOptions<
+export function addPaginationOptions<
 	Args extends unknown[],
 	Opts extends OptionValues,
 	Globals extends OptionValues,

@@ -38,6 +38,8 @@ Options:
   -h, --help                            display help for command
 
 Commands:
+  test <endpointId>                     Send one webhook_test, even if inactive
+                                        or paused
   list|ls [options]                     List webhook endpoints, oldest first
   create [options]                      Register a webhook endpoint (1 per
                                         account, up to 3 on paid plans)
@@ -51,9 +53,22 @@ Commands:
   secret <endpointId>                   Print the endpoint signing secret
                                         (signing must be enabled; not available
                                         via OAuth)
-  rotate-secret [options] <endpointId>  Replace the endpoint signing secret; the
-                                        old one stops working immediately
+  rotate-secret [options] <endpointId>  Replace the endpoint signing secret
   help [command]                        display help for command
+```
+
+#### `assinafy webhooks endpoints test`
+
+```text
+Usage: assinafy webhooks endpoints test [options] <endpointId>
+
+Send one webhook_test, even if inactive or paused
+
+Arguments:
+  endpointId  Webhook endpoint ID
+
+Options:
+  -h, --help  display help for command
 ```
 
 #### `assinafy webhooks endpoints list`
@@ -171,14 +186,15 @@ Options:
 ```text
 Usage: assinafy webhooks endpoints rotate-secret [options] <endpointId>
 
-Replace the endpoint signing secret; the old one stops working immediately
+Replace the endpoint signing secret
 
 Arguments:
-  endpointId  Endpoint ID
+  endpointId       Endpoint ID
 
 Options:
-  -y, --yes   Skip the confirmation prompt
-  -h, --help  display help for command
+  --keep-previous  Keep the replaced secret signing for 24 hours
+  -y, --yes        Skip the confirmation prompt
+  -h, --help       display help for command
 ```
 
 ### `assinafy webhooks register`

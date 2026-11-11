@@ -1,16 +1,15 @@
-import { ValidationError } from '../errors.js';
 import {
 	type IDocumentStatsParams,
 	type IDocumentStatsRow,
 	type INotificationPreferences,
+	type IPushPreferences,
 	type IUpdateNotificationPreferencesPayload,
 	type IUserSelfResponse,
 	NOTIFICATION_PREFERENCE_CODES,
+	PUSH_PREFERENCE_CODES,
 } from '../types.js';
-import { documentStatsParams } from '../utils.js';
+import { documentStatsParams, validateBooleanMap } from '../utils.js';
 import { BaseResource } from './base.js';
-
-const NOTIFICATION_PREFERENCES = new Set<string>(NOTIFICATION_PREFERENCE_CODES);
 
 /** Authenticated user profile, statistics, and notification preferences. */
 export class UsersResource extends BaseResource {
@@ -37,24 +36,23 @@ export class UsersResource extends BaseResource {
 	async updateNotificationPreferences(
 		payload: IUpdateNotificationPreferencesPayload,
 	): Promise<INotificationPreferences> {
-		if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-			throw new ValidationError('Notification preferences must be an object');
-		}
-		const entries = Object.entries(payload);
-		if (entries.length === 0) {
-			throw new ValidationError('At least one notification preference is required');
-		}
-		for (const [key, value] of entries) {
-			if (!NOTIFICATION_PREFERENCES.has(key)) {
-				throw new ValidationError(`Unknown notification preference: ${key}`);
-			}
-			if (typeof value !== 'boolean') {
-				throw new ValidationError(`${key} must be a boolean`);
-			}
-		}
+		validateBooleanMap(payload, NOTIFICATION_PREFERENCE_CODES);
 
 		return this.call('Failed to update notification preferences', () =>
 			this.http.put('/users/self/notification-preferences', payload),
+		);
+	}
+
+	async getPushPreferences(): Promise<IPushPreferences> {
+		return this.call('Failed to fetch push preferences', () =>
+			this.http.get('/users/self/push-preferences'),
+		);
+	}
+
+	async updatePushPreferences(payload: Partial<IPushPreferences>): Promise<IPushPreferences> {
+		validateBooleanMap(payload, PUSH_PREFERENCE_CODES);
+		return this.call('Failed to update push preferences', () =>
+			this.http.put('/users/self/push-preferences', payload),
 		);
 	}
 }

@@ -1,19 +1,22 @@
 import { ValidationError } from '../errors.js';
 import type {
 	DocumentArtifactName,
+	IAccountTheme,
 	ICertificateCompleteResponse,
 	ICertificateStartResponse,
-	IDocumentDetailsResponse,
+	ICertifiedCopyResponse,
 	IDocumentListItem,
 	IDocumentListResponse,
 	IEmptyResult,
 	IIdentityVerificationSession,
 	IIdentityVerificationState,
 	ISigner,
+	ISignerDocumentDetailsResponse,
 	ISignerDocumentListParams,
 	ISignerSelf,
 	ISignerTermsAcceptance,
 	ISignFieldEntry,
+	ISigningDocument,
 	IStartIdentityVerificationPayload,
 	IStatusResponse,
 	IVerifySignerCodePayload,
@@ -30,15 +33,19 @@ import { BaseResource } from './base.js';
 /**
  * Signer-side endpoints use `signer-access-code` from the private signing link.
  * Explicit `listAsOwner`/`searchAsOwner` use workspace credentials, and artifact
- * downloads are public with an optional signer-identity preflight.
+ * downloads strip owner headers; the current API requires a signer code for originals.
  */
 export class SignerDocumentsResource extends BaseResource {
 	/** `GET /signers/{signer_id}/document?signer-access-code=…` */
-	async getCurrent(signerId: string, signerAccessCode: string): Promise<IDocumentDetailsResponse> {
+	async getCurrent(
+		signerId: string,
+		signerAccessCode: string,
+		params: { expand?: 'envelope' } = {},
+	): Promise<ISigningDocument> {
 		const sid = this.requireId(signerId, 'Signer ID');
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to fetch current signer document', () =>
-			this.http.get(`/signers/${sid}/document`, signerAccessConfig(code)),
+			this.http.get(`/signers/${sid}/document`, signerAccessConfig(code, params)),
 		);
 	}
 
@@ -69,9 +76,10 @@ export class SignerDocumentsResource extends BaseResource {
 		signerId: string,
 		search: string,
 		signerAccessCode: string,
+		params: Omit<ISignerDocumentListParams, 'search'> = {},
 	): Promise<IDocumentListResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
-		return this.searchDocuments(signerId, signerAccessConfig(code, { search }));
+		return this.searchDocuments(signerId, signerAccessConfig(code, { ...params, search }));
 	}
 
 	/**
@@ -79,8 +87,12 @@ export class SignerDocumentsResource extends BaseResource {
 	 * credentials instead of a signer access code. The signer must belong to that
 	 * workspace.
 	 */
-	async searchAsOwner(signerId: string, search: string): Promise<IDocumentListResponse> {
-		return this.searchDocuments(signerId, { params: cleanParams({ search }) });
+	async searchAsOwner(
+		signerId: string,
+		search: string,
+		params: Omit<ISignerDocumentListParams, 'search'> = {},
+	): Promise<IDocumentListResponse> {
+		return this.searchDocuments(signerId, { params: cleanParams({ ...params, search }) });
 	}
 
 	private listDocuments(signerId: string, config: Parameters<typeof this.http.get>[1]) {
@@ -98,9 +110,9 @@ export class SignerDocumentsResource extends BaseResource {
 	}
 
 	/**
-	 * Public `GET /signers/{signer_id}/documents/{document_id}/download/{artifact}`.
-	 * When an access code is supplied, the SDK first verifies that it belongs to
-	 * the requested signer for callers that want that additional check.
+	 * `GET /signers/{signer_id}/documents/{document_id}/download/{artifact}`.
+	 * The current API permits only originals with a signer code. Other forms are
+	 * retained for compatibility; use downloadCertifiedCopy for completed PDFs.
 	 */
 	async download(
 		signerId: string,
@@ -227,12 +239,20 @@ export class SignerDocumentsResource extends BaseResource {
 	 * Returns `{ token }` for the signer's Web PKI client. This production route
 	 * is used by Assinafy's signing frontend but is absent from OpenAPI paths.
 	 */
-	async startCertificate(signerAccessCode: string): Promise<ICertificateStartResponse> {
+	async startCertificate(
+		signerAccessCode: string,
+		documentId?: string,
+	): Promise<ICertificateStartResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		return this.call('Failed to start certificate signature', () =>
 			this.http.post(
 				'/signers/certificate/start',
-				{ 'signer-access-code': code },
+				{
+					'signer-access-code': code,
+					...(documentId === undefined
+						? {}
+						: { document_id: this.requireId(documentId, 'Document ID') }),
+				},
 				signerAccessConfig(code),
 			),
 		);
@@ -247,6 +267,7 @@ export class SignerDocumentsResource extends BaseResource {
 	async completeCertificate(
 		signerAccessCode: string,
 		token: string,
+		documentId?: string,
 	): Promise<ICertificateCompleteResponse> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
 		if (typeof token !== 'string' || !token.trim()) {
@@ -255,7 +276,13 @@ export class SignerDocumentsResource extends BaseResource {
 		return this.call('Failed to complete certificate signature', () =>
 			this.http.post(
 				'/signers/certificate/complete',
-				{ 'signer-access-code': code, token },
+				{
+					'signer-access-code': code,
+					token,
+					...(documentId === undefined
+						? {}
+						: { document_id: this.requireId(documentId, 'Document ID') }),
+				},
 				signerAccessConfig(code),
 			),
 		);
@@ -344,10 +371,15 @@ export class SignerDocumentsResource extends BaseResource {
 	async getAssignment(
 		signerAccessCode: string,
 		hasAcceptedTerms?: boolean,
-	): Promise<IDocumentDetailsResponse> {
+		params: { expand?: 'envelope'; document_id?: string } = {},
+	): Promise<ISigningDocument> {
 		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		if (params.document_id !== undefined) this.requireId(params.document_id, 'Document ID');
 		return this.call('Failed to fetch signer assignment', () =>
-			this.http.get('/sign', signerAccessConfig(code, { has_accepted_terms: hasAcceptedTerms })),
+			this.http.get(
+				'/sign',
+				signerAccessConfig(code, { ...params, has_accepted_terms: hasAcceptedTerms }),
+			),
 		);
 	}
 
@@ -404,8 +436,14 @@ export class SignerDocumentsResource extends BaseResource {
 		documentId: string,
 		signerAccessCode: string,
 		assignmentId?: string,
-	): Promise<IDocumentDetailsResponse> {
-		const document = await this.getAssignment(signerAccessCode);
+	): Promise<ISignerDocumentDetailsResponse | ISigningDocument> {
+		// /sign is gated on confirmation for certificate signers; document reads are not.
+		const document =
+			assignmentId === undefined
+				? await this.call<ISignerDocumentDetailsResponse>('Failed to fetch signer document', () =>
+						this.http.get(`/documents/${documentId}`, signerAccessConfig(signerAccessCode)),
+					)
+				: await this.getAssignment(signerAccessCode, undefined, { document_id: documentId });
 		if (
 			document.id !== documentId ||
 			(assignmentId !== undefined && document.assignment?.id !== assignmentId)
@@ -413,6 +451,61 @@ export class SignerDocumentsResource extends BaseResource {
 			throw new ValidationError('Signer access code does not match the document or assignment');
 		}
 		return document;
+	}
+
+	async getTheme(signerAccessCode: string): Promise<IAccountTheme> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.call('Failed to fetch signing theme', () =>
+			this.http.get('/sign/theme', signerAccessConfig(code)),
+		);
+	}
+
+	async downloadLogo(signerAccessCode: string): Promise<Buffer> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		return this.callBinary('Failed to download signing logo', () =>
+			this.http.get<ArrayBuffer>('/sign/logo', {
+				...signerAccessConfig(code),
+				responseType: 'arraybuffer',
+			}),
+		);
+	}
+
+	/** Sends a time-limited download link to the original signing contact. */
+	async resendCertifiedCopy(
+		signerAccessCode: string,
+		documentId?: string,
+	): Promise<ICertifiedCopyResponse> {
+		const code = this.requireId(signerAccessCode, 'signer-access-code');
+		const body =
+			documentId === undefined
+				? undefined
+				: { document_id: this.requireId(documentId, 'Document ID') };
+		return this.call('Failed to send certified copy', () =>
+			this.http.post('/sign/certified-copy', body, signerAccessConfig(code)),
+		);
+	}
+
+	/** Expired tokens return an ApiError (302); redirects remain disabled. */
+	async downloadCertifiedCopy(
+		token: string,
+		artifact: 'certificated' | 'pades' = 'certificated',
+	): Promise<Buffer> {
+		const value = this.requireId(token, 'Download token');
+		if (!['certificated', 'pades'].includes(artifact))
+			throw new ValidationError('artifact must be certificated or pades');
+		const config = { ...publicRequestConfig(), responseType: 'arraybuffer' as const };
+		return this.callBinary('Failed to download certified copy', () =>
+			artifact === 'pades'
+				? this.http.get<ArrayBuffer>(`/signers/downloads/${value}/pades`, config)
+				: this.http.get<ArrayBuffer>(`/signers/downloads/${value}`, config),
+		);
+	}
+
+	async resendDownloadLink(token: string): Promise<ICertifiedCopyResponse> {
+		const value = this.requireId(token, 'Download token');
+		return this.call('Failed to resend download link', () =>
+			this.http.post(`/signers/downloads/${value}/resend`, undefined, publicRequestConfig()),
+		);
 	}
 }
 
