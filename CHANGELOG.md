@@ -6,6 +6,13 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.9.1] - 2026-11-24
+
+### Changed
+
+- Update Axios, Node.js declarations and development tooling while retaining Node.js 22, 24 and 26 support.
+- Align formatting with Biome 2.6 and exclude local contributor guides from package lint checks.
+
 ## [2.9.0] - 2026-11-24
 
 ### Added

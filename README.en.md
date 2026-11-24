@@ -1,6 +1,6 @@
 # @assinafy/cli
 
-*[Leia em português](README.md) · English*
+_[Leia em português](README.md) · English_
 
 The official command-line interface and Node.js SDK for the [Assinafy API](https://api.assinafy.com.br/v1/docs), a Brazilian digital-signature platform. Upload PDFs, manage signers, request signatures, track activity history, and download certified documents — from a terminal, a shell script, or an application.
 
@@ -80,11 +80,11 @@ npx @assinafy/cli whoami
 
 Use an API key for direct owner integrations, OAuth for customer-consented marketplace connections, or a user JWT for user-session operations.
 
-| Credential | Header sent | Use it for |
-| --- | --- | --- |
-| API key | `X-Api-Key: <key>` | Direct owner integrations and permitted account operations. |
+| Credential         | Header sent                     | Use it for                                                            |
+| ------------------ | ------------------------------- | --------------------------------------------------------------------- |
+| API key            | `X-Api-Key: <key>`              | Direct owner integrations and permitted account operations.           |
 | OAuth access token | `Authorization: Bearer <token>` | Marketplace connections, limited to granted scopes and one workspace. |
-| User JWT | `Authorization: Bearer <jwt>` | User sessions and permitted account operations. |
+| User JWT           | `Authorization: Bearer <jwt>`   | User sessions and permitted account operations.                       |
 
 Generate an API key from the Assinafy dashboard, or from the CLI with an existing session:
 
@@ -350,7 +350,7 @@ import { WebhookVerifier } from '@assinafy/cli/api';
 const verifier = new WebhookVerifier(process.env.ASSINAFY_WEBHOOK_SECRET);
 // rawBody: the Buffer exactly as received; headers: the request headers
 if (!verifier.verifyDelivery(rawBody, headers)) {
-  // answer 401 and drop the delivery
+	// answer 401 and drop the delivery
 }
 const event = verifier.extractEvent(rawBody);
 ```
@@ -384,12 +384,12 @@ JSON errors carry a stable shape:
 
 ```json
 {
-  "error": {
-    "message": "Saldo insuficiente. (document doc_abc123 exists; 2 signer(s) created or reused)",
-    "code": "api_error",
-    "statusCode": 402,
-    "details": { "documentId": "doc_abc123", "signerIds": ["sig_1", "sig_2"] }
-  }
+	"error": {
+		"message": "Saldo insuficiente. (document doc_abc123 exists; 2 signer(s) created or reused)",
+		"code": "api_error",
+		"statusCode": 402,
+		"details": { "documentId": "doc_abc123", "signerIds": ["sig_1", "sig_2"] }
+	}
 }
 ```
 
@@ -403,19 +403,19 @@ Every setting resolves as **CLI flag → environment variable → config-file pr
 
 Empty optional settings are ignored, including `.env.example` defaults. Configurations with invalid profile field types are ignored for reads and rejected by mutations.
 
-| What | Flag | Environment variable |
-| --- | --- | --- |
-| API key (sent as `X-Api-Key`) | `--api-key` | `ASSINAFY_API_KEY` |
-| OAuth access token or user JWT (sent as `Bearer`) | `--token` | `ASSINAFY_TOKEN` |
-| Default account / workspace ID | `--account-id` | `ASSINAFY_ACCOUNT_ID` |
-| API base URL | `--base-url` | `ASSINAFY_BASE_URL` |
-| Config profile | `-p, --profile` | `ASSINAFY_PROFILE` |
-| Config directory | — | `ASSINAFY_CONFIG_DIR` |
-| Webhook endpoint signing secret (`whsec_`) | _(config only)_ | `ASSINAFY_WEBHOOK_SECRET` |
-| Password / new password | `--password` / `--new-password` | `ASSINAFY_PASSWORD` / `ASSINAFY_NEW_PASSWORD` |
-| Social provider / reset token | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN` |
-| Signer access code / email or WhatsApp OTP | `--access-code` / `--code` | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
-| Web PKI operation token | `--certificate-token` | `ASSINAFY_CERTIFICATE_TOKEN` |
+| What                                              | Flag                                 | Environment variable                                         |
+| ------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| API key (sent as `X-Api-Key`)                     | `--api-key`                          | `ASSINAFY_API_KEY`                                           |
+| OAuth access token or user JWT (sent as `Bearer`) | `--token`                            | `ASSINAFY_TOKEN`                                             |
+| Default account / workspace ID                    | `--account-id`                       | `ASSINAFY_ACCOUNT_ID`                                        |
+| API base URL                                      | `--base-url`                         | `ASSINAFY_BASE_URL`                                          |
+| Config profile                                    | `-p, --profile`                      | `ASSINAFY_PROFILE`                                           |
+| Config directory                                  | —                                    | `ASSINAFY_CONFIG_DIR`                                        |
+| Webhook endpoint signing secret (`whsec_`)        | _(config only)_                      | `ASSINAFY_WEBHOOK_SECRET`                                    |
+| Password / new password                           | `--password` / `--new-password`      | `ASSINAFY_PASSWORD` / `ASSINAFY_NEW_PASSWORD`                |
+| Social provider / reset token                     | `--provider-token` / `--reset-token` | `ASSINAFY_PROVIDER_TOKEN` / `ASSINAFY_RESET_TOKEN`           |
+| Signer access code / email or WhatsApp OTP        | `--access-code` / `--code`           | `ASSINAFY_SIGNER_ACCESS_CODE` / `ASSINAFY_VERIFICATION_CODE` |
+| Web PKI operation token                           | `--certificate-token`                | `ASSINAFY_CERTIFICATE_TOKEN`                                 |
 
 `.env.example` documents every CLI and installer environment variable.
 
@@ -469,30 +469,30 @@ assinafy send contract.pdf \
 
 ### `documents`
 
-| Command | Description |
-| --- | --- |
-| `documents upload <file> [--name] [--metadata] [--wait]` | Upload a PDF (max 25 MiB) |
-| `documents list [--status] [--method] [--tags] [--page] [--per-page] [--search] [--sort]` | List documents |
-| `documents search [query] [--status] [--page] [--per-page] [--sort]` | Lightweight type-ahead search |
-| `documents get <id>` | Show document details |
-| `documents rename <id> <name>` | Rename a document (before signing starts) |
-| `documents download <id> [--artifact] [-o] [--force]` | Download an artifact (`original`/`certificated`/`certificate-page`/`pades` PDFs, or `bundle` ZIP) |
-| `documents thumbnail <id> [-o] [--force]` | Download the thumbnail (JPEG) |
-| `documents download-page <id> <pageId> [-o] [--force]` | Download one page (JPEG) |
-| `documents activities <id>` | Activity log |
-| `documents delete <id> [-y]` | Delete a document |
-| `documents tags <id>` | List attached tags |
-| `documents tags-set <id> [tags...]` | Replace the tag set by name (none detaches all) |
-| `documents tags-add <id> <tags...>` | Attach tags by name |
-| `documents tags-remove <id> <tagId>` | Detach one tag |
-| `documents create-from-template <templateId> --signers <json> [...]` | Create from a template |
-| `documents estimate-template-cost <templateId> --signers <json>` | Estimate template cost |
-| `documents verify <hash>` | Verify by signature hash (public) |
-| `documents statuses` | List every document status and whether it is deletable |
-| `documents public <id>` | Public unauthenticated lookup |
-| `documents send-token <id> --recipient <email>` | Email a one-time access token to a pending signer (email channel only) |
-| `documents progress <id>` | Signing progress |
-| `documents wait <id> [--timeout] [--interval]` | Poll until ready, failed, or timed out |
+| Command                                                                                   | Description                                                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `documents upload <file> [--name] [--metadata] [--wait]`                                  | Upload a PDF (max 25 MiB)                                                                         |
+| `documents list [--status] [--method] [--tags] [--page] [--per-page] [--search] [--sort]` | List documents                                                                                    |
+| `documents search [query] [--status] [--page] [--per-page] [--sort]`                      | Lightweight type-ahead search                                                                     |
+| `documents get <id>`                                                                      | Show document details                                                                             |
+| `documents rename <id> <name>`                                                            | Rename a document (before signing starts)                                                         |
+| `documents download <id> [--artifact] [-o] [--force]`                                     | Download an artifact (`original`/`certificated`/`certificate-page`/`pades` PDFs, or `bundle` ZIP) |
+| `documents thumbnail <id> [-o] [--force]`                                                 | Download the thumbnail (JPEG)                                                                     |
+| `documents download-page <id> <pageId> [-o] [--force]`                                    | Download one page (JPEG)                                                                          |
+| `documents activities <id>`                                                               | Activity log                                                                                      |
+| `documents delete <id> [-y]`                                                              | Delete a document                                                                                 |
+| `documents tags <id>`                                                                     | List attached tags                                                                                |
+| `documents tags-set <id> [tags...]`                                                       | Replace the tag set by name (none detaches all)                                                   |
+| `documents tags-add <id> <tags...>`                                                       | Attach tags by name                                                                               |
+| `documents tags-remove <id> <tagId>`                                                      | Detach one tag                                                                                    |
+| `documents create-from-template <templateId> --signers <json> [...]`                      | Create from a template                                                                            |
+| `documents estimate-template-cost <templateId> --signers <json>`                          | Estimate template cost                                                                            |
+| `documents verify <hash>`                                                                 | Verify by signature hash (public)                                                                 |
+| `documents statuses`                                                                      | List every document status and whether it is deletable                                            |
+| `documents public <id>`                                                                   | Public unauthenticated lookup                                                                     |
+| `documents send-token <id> --recipient <email>`                                           | Email a one-time access token to a pending signer (email channel only)                            |
+| `documents progress <id>`                                                                 | Signing progress                                                                                  |
+| `documents wait <id> [--timeout] [--interval]`                                            | Poll until ready, failed, or timed out                                                            |
 
 ### `signers`
 
@@ -581,15 +581,15 @@ The same package ships a typed SDK. It covers every published operation, unwraps
 import { AssinafyClient, ApiError, PartialWorkflowError } from '@assinafy/cli/api';
 
 const client = AssinafyClient.create(
-  process.env.ASSINAFY_API_KEY!,
-  process.env.ASSINAFY_ACCOUNT_ID!,
+	process.env.ASSINAFY_API_KEY!,
+	process.env.ASSINAFY_ACCOUNT_ID!,
 );
 
 const { data, meta } = await client.documents.list({ status: 'pending_signature' });
 
 const document = await client.documents.upload(
-  { filePath: './contract.pdf' },
-  { name: 'Service agreement', metadata: { external_id: 'order-123' } },
+	{ filePath: './contract.pdf' },
+	{ name: 'Service agreement', metadata: { external_id: 'order-123' } },
 );
 await client.documents.waitUntilReady(document.id);
 ```
@@ -600,13 +600,13 @@ Errors are typed: `ValidationError` for local input, `ApiError` (with `statusCod
 
 ```ts
 try {
-  await client.uploadAndRequestSignatures({ source: { filePath: './contract.pdf' }, signers });
+	await client.uploadAndRequestSignatures({ source: { filePath: './contract.pdf' }, signers });
 } catch (error) {
-  if (error instanceof PartialWorkflowError) {
-    console.error({ documentId: error.documentId, signerIds: error.signerIds });
-    // Inspect the document before resuming; signer IDs can belong to reused records.
-  }
-  throw error;
+	if (error instanceof PartialWorkflowError) {
+		console.error({ documentId: error.documentId, signerIds: error.signerIds });
+		// Inspect the document before resuming; signer IDs can belong to reused records.
+	}
+	throw error;
 }
 ```
 

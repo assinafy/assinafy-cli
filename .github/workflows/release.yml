@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
@@ -336,7 +336,7 @@ jobs:
         with:
           node-version: 26.x
           registry-url: https://npm.pkg.github.com
-          scope: '@assinafy'
+          scope: "@assinafy"
           package-manager-cache: false
 
       - name: Publish to GitHub Packages

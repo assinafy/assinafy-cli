@@ -1,6 +1,6 @@
 # @assinafy/cli
 
-*Português · [Read in English](README.en.md)*
+_Português · [Read in English](README.en.md)_
 
 CLI e SDK TypeScript para as 147 operações de produção e 157 de staging publicadas da [API Assinafy](https://api.assinafy.com.br/v1/docs): documentos, signatários, assinaturas, templates, contratos, envelopes, assinatura incorporada, OAuth e webhooks.
 
@@ -38,13 +38,13 @@ assinafy workspaces list --json
 
 A precedência da CLI é flag → ambiente → perfil → padrão. As credenciais são escolhidas juntas no primeiro nível preenchido; a chave de API vence o token quando ambos são informados no mesmo nível.
 
-| Valor | Variável |
-| --- | --- |
-| Chave de API | `ASSINAFY_API_KEY` |
-| Bearer token | `ASSINAFY_TOKEN` |
-| Workspace | `ASSINAFY_ACCOUNT_ID` |
-| URL base | `ASSINAFY_BASE_URL` |
-| Perfil | `ASSINAFY_PROFILE` |
+| Valor        | Variável              |
+| ------------ | --------------------- |
+| Chave de API | `ASSINAFY_API_KEY`    |
+| Bearer token | `ASSINAFY_TOKEN`      |
+| Workspace    | `ASSINAFY_ACCOUNT_ID` |
+| URL base     | `ASSINAFY_BASE_URL`   |
+| Perfil       | `ASSINAFY_PROFILE`    |
 
 Produção usa `https://api.assinafy.com.br/v1`; sandbox usa `https://sandbox.assinafy.com.br/v1` e credenciais próprias. HTTPS/TLS 1.2+ é obrigatório. Consulte [.env.example](.env.example) para as demais variáveis seguras.
 
@@ -80,12 +80,12 @@ assinafy assignments create "$DOCUMENT_ID" \
 
 Leia custo, saldo e bloqueios antes da escrita. A operação pode consumir créditos e enviar convites. `notification_methods: []` assume Email em produção; informe o canal para escolhê-lo explicitamente.
 
-| Verificação | Notificação válida | Requisitos adicionais |
-| --- | --- | --- |
-| `Email` | `Email` | E-mail do signatário |
-| `Whatsapp` | `Whatsapp` | Telefone e créditos |
-| `IdDocumentFaceMatchBasic` | `Email` ou `Whatsapp` | CPF, recurso biométrico, consentimento e créditos |
-| `DigitalCertificate` | `Email` ou `Whatsapp` | CPF/CNPJ correspondente, recurso, créditos e passo individual |
+| Verificação                | Notificação válida    | Requisitos adicionais                                         |
+| -------------------------- | --------------------- | ------------------------------------------------------------- |
+| `Email`                    | `Email`               | E-mail do signatário                                          |
+| `Whatsapp`                 | `Whatsapp`            | Telefone e créditos                                           |
+| `IdDocumentFaceMatchBasic` | `Email` ou `Whatsapp` | CPF, recurso biométrico, consentimento e créditos             |
+| `DigitalCertificate`       | `Email` ou `Whatsapp` | CPF/CNPJ correspondente, recurso, créditos e passo individual |
 
 Passos explícitos são contíguos a partir de 1. Um signatário com certificado fica sozinho no passo. Assignments `collect` usam as páginas e entradas reais; `virtual` assina com `entries: []`. Os formatos completos estão em [assignments](docs/assignments.md).
 
@@ -141,17 +141,21 @@ Confirme a disponibilidade do artefato; `document_ready` significa a última ass
 import { AssinafyClient } from '@assinafy/cli/api';
 
 const client = new AssinafyClient({
-  token: process.env.ASSINAFY_TOKEN!,
-  accountId: process.env.ASSINAFY_ACCOUNT_ID!,
+	token: process.env.ASSINAFY_TOKEN!,
+	accountId: process.env.ASSINAFY_ACCOUNT_ID!,
 });
 
 const result = await client.uploadAndRequestSignatures({
-  source: { filePath: './contrato.pdf' },
-  signers: [{
-    name: 'Ana Lima', email: 'ana@example.com',
-    verification_method: 'Email', notification_methods: ['Email'],
-  }],
-  waitForReady: true,
+	source: { filePath: './contrato.pdf' },
+	signers: [
+		{
+			name: 'Ana Lima',
+			email: 'ana@example.com',
+			verification_method: 'Email',
+			notification_methods: ['Email'],
+		},
+	],
+	waitForReady: true,
 });
 console.log(result.document.id, result.assignment.id, result.signer_ids);
 ```

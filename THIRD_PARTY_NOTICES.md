@@ -2,7 +2,7 @@
 
 The self-contained Assinafy CLI bundle includes the following third-party software. Each section preserves the license notice distributed by that package.
 
-## @clack/core 1.4.3
+## @clack/core 1.6.0
 
 License: MIT
 
@@ -18,7 +18,7 @@ Source: git+https://github.com/bombshell-dev/clack.git
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## @clack/prompts 1.7.0
+## @clack/prompts 1.9.0
 
 License: MIT
 
@@ -34,7 +34,7 @@ Source: git+https://github.com/bombshell-dev/clack.git
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## @commander-js/extra-typings 15.0.0
+## @commander-js/extra-typings 15.1.0
 
 License: MIT
 
@@ -62,7 +62,7 @@ Source: git+https://github.com/commander-js/extra-typings.git
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## @types/node 22.20.1
+## @types/node 26.6.6
 
 License: MIT
 
@@ -124,7 +124,7 @@ Source: git+https://github.com/alexindigo/asynckit.git
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## axios 1.20.0
+## axios 1.21.0
 
 License: MIT
 
@@ -192,7 +192,7 @@ Source: git://github.com/felixge/node-combined-stream.git
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
 
-## commander 15.0.0
+## commander 15.1.0
 
 License: MIT
 
@@ -915,7 +915,7 @@ Source: git+https://github.com/Rob--W/proxy-from-env.git
     IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## sisteransi 1.0.5
+## sisteransi 2.0.0
 
 License: MIT
 
@@ -943,7 +943,7 @@ Source: https://github.com/terkelg/sisteransi
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 
-## undici-types 6.21.0
+## undici-types 8.9.0
 
 License: MIT
 

@@ -1,8 +1,17 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
 	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"files": {
-		"includes": ["**", "!**/dist", "!**/node_modules", "!**/coverage", "!**/.claude", "!**/docs"]
+		"includes": [
+			"**",
+			"!**/dist",
+			"!**/node_modules",
+			"!**/coverage",
+			"!**/.claude",
+			"!**/docs",
+			"!**/AGENTS.md",
+			"!**/CLAUDE.md"
+		]
 	},
 	"formatter": {
 		"enabled": true,
