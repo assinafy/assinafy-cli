@@ -663,3 +663,5 @@ The [release runbook](./docs/releasing.md) covers tags, trusted publishing, and 
 ## License
 
 MIT © Assinafy
+
+Staging publishes additional scheduled-send, watcher, signer-capacity, delivery-history and envelope-reminder-estimate operations. Set `ASSINAFY_BASE_URL=https://api.angry-pisco.stage.assinafy.com.br/v1` with staging credentials. See [SDK flows](docs/sdk-reference.md#scheduled-sends-clientscheduledsends) and [complete staging HTTP contracts](docs/api-reference-staging.md).

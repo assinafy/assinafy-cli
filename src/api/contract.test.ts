@@ -42,6 +42,58 @@ const envelope = {
 	documents: [{ id, signer_ids: [id] }],
 };
 const cases: Case[] = [
+	[
+		'GET /v1/documents/{documentId}/watchers',
+		(c) => c.documents.listWatchers(id),
+		undefined,
+		'array',
+	],
+	[
+		'PUT /v1/documents/{documentId}/watchers',
+		(c) => c.documents.setWatchers(id, []),
+		{ watcher_ids: [] },
+		'array',
+	],
+	[
+		'GET /v1/documents/{documentId}/signer-capacities',
+		(c) => c.assignments.signerCapacities(id),
+		undefined,
+		'array',
+	],
+	[
+		'GET /v1/documents/{documentId}/notification-history',
+		(c) => c.assignments.notificationHistory(id),
+		undefined,
+		'array',
+	],
+	[
+		'POST /v1/documents/{documentId}/scheduled-sends',
+		(c) => c.assignments.schedule(id, { ...assignment, send_at: '2027-01-01T12:00:00Z' }),
+		{ ...assignment, send_at: '2027-01-01T12:00:00Z' },
+	],
+	[
+		'POST /v1/accounts/{accountId}/scheduled-sends',
+		(c) => c.envelopes.schedule({ ...envelope, send_at: 1800000000 }),
+		{ ...envelope, send_at: 1800000000 },
+	],
+	[
+		'GET /v1/accounts/{accountId}/scheduled-sends',
+		(c) => c.scheduledSends.list(),
+		undefined,
+		'list',
+	],
+	[
+		'PUT /v1/accounts/{accountId}/scheduled-sends/{scheduledSendId}/cancel',
+		(c) => c.scheduledSends.cancel(id),
+	],
+	[
+		'PUT /v1/accounts/{accountId}/scheduled-sends/{scheduledSendId}/send',
+		(c) => c.scheduledSends.send(id),
+	],
+	[
+		'POST /v1/accounts/{accountId}/envelopes/{envelopeId}/signers/{signerId}/estimate-resend-cost',
+		(c) => c.envelopes.estimateResendCost(id, id),
+	],
 	['GET /v1/accounts/{accountId}/usage', (c) => c.workspaces.usage(id)],
 	[
 		'GET /v1/accounts/{accountId}/notification-policy',
@@ -674,16 +726,15 @@ const cases: Case[] = [
 	],
 ];
 
-const manifest = JSON.parse(
-	readFileSync(new URL('../../docs/api-operations.json', import.meta.url), 'utf8'),
-) as {
-	operations: { method: string; path: string }[];
-};
+const operations = ['', '-staging'].flatMap((suffix) => {
+	const manifest = JSON.parse(
+		readFileSync(new URL(`../../docs/api-operations${suffix}.json`, import.meta.url), 'utf8'),
+	) as { operations: { method: string; path: string }[] };
+	return manifest.operations.map(({ method, path }) => `${method} ${path}`);
+});
 
 it('has a transport case for every published operation', () => {
-	expect(cases.map(([operation]) => operation).sort()).toEqual(
-		manifest.operations.map(({ method, path }) => `${method} ${path}`).sort(),
-	);
+	expect(cases.map(([operation]) => operation).sort()).toEqual([...new Set(operations)].sort());
 });
 
 describe('published HTTP contracts', () => {

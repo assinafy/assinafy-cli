@@ -8,6 +8,7 @@ import { EmbedResource } from './resources/embed.js';
 import { EnvelopeResource } from './resources/envelopes.js';
 import { FieldsResource } from './resources/fields.js';
 import { OAuthResource } from './resources/oauth.js';
+import { ScheduledSendResource } from './resources/scheduled-sends.js';
 import { SignerDocumentsResource } from './resources/signer-documents.js';
 import { SignerResource, validateCreateSignerPayload } from './resources/signers.js';
 import { TagResource } from './resources/tags.js';
@@ -90,6 +91,7 @@ export class AssinafyClient {
 	public readonly contracts: ContractResource;
 	public readonly signers: SignerResource;
 	public readonly workspaces: WorkspaceResource;
+	public readonly scheduledSends: ScheduledSendResource;
 	public readonly assignments: AssignmentResource;
 	public readonly webhooks: WebhookResource;
 	public readonly templates: TemplateResource;
@@ -171,6 +173,11 @@ export class AssinafyClient {
 		this.signers = new SignerResource(this.axiosInstance, this.defaultAccountId, this.logger);
 		this.workspaces = new WorkspaceResource(this.axiosInstance, undefined, this.logger);
 		this.assignments = new AssignmentResource(
+			this.axiosInstance,
+			this.defaultAccountId,
+			this.logger,
+		);
+		this.scheduledSends = new ScheduledSendResource(
 			this.axiosInstance,
 			this.defaultAccountId,
 			this.logger,
@@ -266,6 +273,7 @@ export class AssinafyClient {
 					signer.notification_methods ?? (useWhatsapp ? ['Whatsapp'] : undefined),
 				step: signer.step,
 				embedded: signer.embedded,
+				sign_as: signer.sign_as,
 			};
 			validateSignerOptions(reference);
 			return { reference, payload };

@@ -259,12 +259,41 @@ export type IPaginatedResponse<T> = PaginatedResult<T>;
 
 export type ISignerListResponse = PaginatedResult<ISigner>;
 
+/** Capacity stated by the sender on the certificate page (staging). */
+export const SIGNER_CAPACITIES = [
+	'Sign',
+	'Approve',
+	'Acknowledge',
+	'Party',
+	'Witness',
+	'Intervening',
+	'Receipt',
+	'IssuerEndorserGuarantor',
+	'IssuerEndorserGuarantorSurety',
+	'Surety',
+	'PartySurety',
+	'JointDebtor',
+	'PartyJointDebtor',
+	'ContractingParty',
+	'ContractedParty',
+	'Landlord',
+	'Tenant',
+	'Buyer',
+	'Seller',
+	'AttorneyInFact',
+	'LegalRepresentative',
+	'Employer',
+	'Employee',
+] as const;
+export type SignerCapacity = (typeof SIGNER_CAPACITIES)[number];
+
 /** Signer reference accepted by the assignment endpoints. */
 export type SignerReference =
 	| string
 	| {
 			id?: string;
 			signer_id?: string;
+			sign_as?: SignerCapacity | null;
 			verification_method?: AssignmentVerificationMethod;
 			/** Production defaults an empty array to Email; it does not disable invitations. */
 			notification_methods?: AssignmentNotificationMethod[];
@@ -292,7 +321,7 @@ export interface ICreateAssignmentPayload {
 	/** Camel-case legacy alias used by the quick-start docs. */
 	signerIds?: string[];
 	message?: string;
-	expires_at?: string;
+	expires_at?: string | number | null;
 	copy_receivers?: string[];
 	/** Field placement entries. Required when `method` is `collect`. */
 	entries?: ICollectAssignmentEntry[];
@@ -1005,6 +1034,7 @@ export interface IUploadAndRequestSignaturesResult {
 
 /** Input for a signer in `uploadAndRequestSignatures`. */
 export interface IUploadAndRequestSignaturesSigner {
+	sign_as?: SignerCapacity | null;
 	embedded?: boolean;
 	name: string;
 	email?: string;
@@ -1548,4 +1578,39 @@ export interface IOAuthUserInfo {
 	name?: string | null;
 	email?: string | null;
 	email_verified?: boolean | null;
+}
+
+/** A queued assignment or envelope; staging deployment only. */
+export interface IScheduledSend {
+	resource?: string;
+	id: string;
+	type: 'assignment' | 'envelope';
+	document_ids: string[];
+	status: 'pending' | 'processing' | 'sent' | 'cancelled' | 'failed';
+	send_at: string;
+	assignment_id: string | null;
+	envelope_id: string | null;
+	failure_reason: string | null;
+	created_at: string;
+	processed_at: string | null;
+}
+
+export interface IScheduledSendListParams extends IPaginationParams {
+	document_id?: string;
+}
+
+export interface ISignerCapacity {
+	signer_id: string;
+	sign_as: SignerCapacity;
+}
+
+/** Delivery/open timestamps are hints, not proof that a person read the message. */
+export interface ISignerNotificationHistory {
+	signer_id: string;
+	notification_history: Array<
+		IAssignmentSignerNotification & {
+			delivered_at: string | null;
+			opened_at: string | null;
+		}
+	>;
 }

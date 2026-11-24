@@ -21,6 +21,9 @@ Commands:
   identity-verification <documentId> <assignmentId> <signerId>      Fetch a signer identity review and its evidence summary
   identity-image [options] <documentId> <assignmentId> <signerId>   Download identity review evidence while the review is open
   review-identity [options] <documentId> <assignmentId> <signerId>  Approve certification or reject and cancel the document after identity review
+  schedule [options] <documentId>                                   Schedule an assignment without sending or charging now (staging)
+  signer-capacities <documentId>                                    Read the capacities signers were assigned (staging)
+  notification-history <documentId>                                 Read notification delivery/open times (staging)
   help [command]                                                    display help for command
 ```
 
@@ -204,4 +207,47 @@ Options:
   --note <note>          Private review note (at most 2000 characters)
   -y, --yes              Skip the confirmation prompt
   -h, --help             display help for command
+```
+
+### `assinafy assignments schedule`
+
+```text
+Usage: assinafy assignments schedule [options] <documentId>
+
+Schedule an assignment without sending or charging now (staging)
+
+Arguments:
+  documentId     Document ID
+
+Options:
+  --data <json>  Assignment JSON with send_at (ISO 8601 or Unix seconds)
+  -h, --help     display help for command
+```
+
+### `assinafy assignments signer-capacities`
+
+```text
+Usage: assinafy assignments signer-capacities [options] <documentId>
+
+Read the capacities signers were assigned (staging)
+
+Arguments:
+  documentId  Document ID
+
+Options:
+  -h, --help  display help for command
+```
+
+### `assinafy assignments notification-history`
+
+```text
+Usage: assinafy assignments notification-history [options] <documentId>
+
+Read notification delivery/open times (staging)
+
+Arguments:
+  documentId  Document ID
+
+Options:
+  -h, --help  display help for command
 ```

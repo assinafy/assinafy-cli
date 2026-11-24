@@ -552,3 +552,31 @@ export const documentsCommand = new Command('documents')
 	.addCommand(sendTokenCommand)
 	.addCommand(progressCommand)
 	.addCommand(waitCommand);
+
+documentsCommand.addCommand(
+	new Command('watchers')
+		.description('List document watchers (staging; owner credentials required)')
+		.argument('<documentId>', 'Document ID')
+		.action(async (id, _opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				printData(await client.documents.listWatchers(id), config);
+			});
+		}),
+);
+documentsCommand.addCommand(
+	new Command('set-watchers')
+		.description('Replace contacts notified when the document ends (staging)')
+		.argument('<documentId>', 'Document ID')
+		.requiredOption('--watcher-ids <json>', 'JSON array of contact IDs; [] removes all watchers')
+		.action(async (id, opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				printData(
+					await client.documents.setWatchers(
+						id,
+						parseJsonArray(opts.watcherIds, '--watcher-ids') as string[],
+					),
+					config,
+				);
+			});
+		}),
+);

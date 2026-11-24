@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { linkSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,11 +25,24 @@ it.skipIf(process.platform === 'win32')('rejects links before extracting release
 			},
 		);
 	const pack = () =>
-		execFileSync('tar', ['-czf', archive, '-C', directory, 'assinafy', 'VERSION', 'README.md']);
+		execFileSync('tar', [
+			'-czf',
+			archive,
+			'-C',
+			directory,
+			'assinafy',
+			'VERSION',
+			'README.md',
+			'docs/api-operations.json',
+			'docs/api-operations-staging.json',
+		]);
 	try {
 		writeFileSync(path.join(directory, 'assinafy'), 'example executable');
 		writeFileSync(path.join(directory, 'VERSION'), '2.4.1');
 		writeFileSync(path.join(directory, 'README.md'), 'example documentation');
+		mkdirSync(path.join(directory, 'docs'));
+		writeFileSync(path.join(directory, 'docs/api-operations.json'), '{}');
+		writeFileSync(path.join(directory, 'docs/api-operations-staging.json'), '{}');
 		pack();
 		expect(validate().status).toBe(0);
 		for (const link of [symlinkSync, linkSync]) {

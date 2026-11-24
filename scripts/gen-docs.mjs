@@ -67,7 +67,7 @@ for (const file of readdirSync(docsDir)) {
 
 let index =
 	'# Command reference\n\nCommand pages are auto-generated from `assinafy <command> --help`.\n\n';
-index += `- [\`api-reference.md\`](./api-reference.md) — all ${operations.length} published HTTP operations with official request/response payloads\n- [\`sdk-reference.md\`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [\`oauth-guide.md\`](./oauth-guide.md) — authorization, PKCE, token rotation, and marketplace connections\n- [\`migration-v2.md\`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [\`releasing.md\`](./releasing.md) — GitHub release and registry-publishing runbook\n\n## Commands\n\n`;
+index += `- [\`api-reference.md\`](./api-reference.md) — all ${operations.length} published HTTP operations with official request/response payloads\n- [\`api-reference-staging.md\`](./api-reference-staging.md) — staging HTTP operations and complete request/response payloads\n- [\`sdk-reference.md\`](./sdk-reference.md) — every public Node.js SDK method, helper, type mapping, and runtime caveat\n- [\`oauth-guide.md\`](./oauth-guide.md) — authorization, PKCE, token rotation, and marketplace connections\n- [\`migration-v2.md\`](./migration-v2.md) — version 2 runtime and response compatibility notes\n- [\`releasing.md\`](./releasing.md) — GitHub release and registry-publishing runbook\n\n## Commands\n\n`;
 
 for (const [name, md] of pages) {
 	const file = `${name}.md`;

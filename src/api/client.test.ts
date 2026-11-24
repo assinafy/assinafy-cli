@@ -127,6 +127,7 @@ describe('AssinafyClient transport security', () => {
 describe('AssinafyClient.uploadAndRequestSignatures', () => {
 	it.each([
 		{ signers: [{ name: 'Ana', verification_method: 'SMS' }] },
+		{ signers: [{ name: 'Ana', sign_as: 'witness' as never }] },
 		{ signers: [{ name: 'Ana', notification_methods: ['SMS'] }] },
 		{ signers: [{ name: 'Ana', step: 1.5 }] },
 		{ signers: [{ name: 'Ana', step: 2 }] },
@@ -175,6 +176,7 @@ describe('AssinafyClient.uploadAndRequestSignatures', () => {
 						government_id: '00000000000',
 						notification_methods: ['Whatsapp'],
 						step: 1,
+						sign_as: 'Witness',
 					},
 				],
 			});
@@ -191,6 +193,7 @@ describe('AssinafyClient.uploadAndRequestSignatures', () => {
 						verification_method,
 						notification_methods: ['Whatsapp'],
 						step: 1,
+						sign_as: 'Witness',
 					},
 				],
 			});

@@ -6,8 +6,11 @@ import { Command } from '@commander-js/extra-typings';
 import { expect, it, vi } from 'vitest';
 import { AssinafyClient } from '../api';
 import * as cliClient from '../lib/client';
+import { assignmentsCommand } from './assignments';
+import { documentsCommand } from './documents';
 import { embedCommand } from './embed';
 import { envelopesCommand } from './envelopes';
+import { scheduledSendsCommand } from './scheduled-sends';
 import { signerCommand } from './signer';
 import { usersCommand } from './users';
 import { webhooksCommand } from './webhooks';
@@ -93,6 +96,9 @@ it('runs envelope, embedded signing, delivery and notification CLI flows over lo
 			.option('--json')
 			.option('-q, --quiet')
 			.addCommand(envelopesCommand)
+			.addCommand(assignmentsCommand)
+			.addCommand(documentsCommand)
+			.addCommand(scheduledSendsCommand)
 			.addCommand(embedCommand)
 			.addCommand(signerCommand)
 			.addCommand(workspacesCommand)
@@ -147,6 +153,103 @@ it('runs envelope, embedded signing, delivery and notification CLI flows over lo
 				],
 			),
 		).toEqual({ id: 'envelope' });
+		const scheduled = { id: 'schedule', status: 'pending' };
+		const scheduledAssignment = {
+			method: 'virtual',
+			signers: [{ id: 'signer', sign_as: 'Witness' }],
+			send_at: '2027-01-01T12:00:00Z',
+			expires_at: null,
+			max_total_credits: 0,
+		};
+		expect(
+			await run(
+				['assignments', 'schedule', 'document', '--data', JSON.stringify(scheduledAssignment)],
+				[
+					{
+						method: 'POST',
+						path: '/documents/document/scheduled-sends',
+						body: scheduledAssignment,
+						response: scheduled,
+					},
+				],
+			),
+		).toEqual(scheduled);
+		await run(
+			['scheduled-sends', 'list', '--document', 'document'],
+			[{ method: 'GET', path: '/accounts/account/scheduled-sends', response: [scheduled] }],
+		);
+		await run(['scheduled-sends', 'cancel', 'schedule'], [], true);
+		await run(
+			['scheduled-sends', 'cancel', 'schedule', '--yes'],
+			[
+				{
+					method: 'PUT',
+					path: '/accounts/account/scheduled-sends/schedule/cancel',
+					response: { ...scheduled, status: 'cancelled' },
+				},
+			],
+		);
+		await run(['scheduled-sends', 'send', 'schedule'], [], true);
+		await run(
+			['scheduled-sends', 'send', 'schedule', '--yes'],
+			[
+				{
+					method: 'PUT',
+					path: '/accounts/account/scheduled-sends/schedule/send',
+					response: { ...scheduled, status: 'sent' },
+				},
+			],
+		);
+		const scheduledEnvelope = { ...payload, send_at: 1800000000 };
+		await run(
+			['envelopes', 'schedule', '--data', JSON.stringify(scheduledEnvelope)],
+			[
+				{
+					method: 'POST',
+					path: '/accounts/account/scheduled-sends',
+					body: scheduledEnvelope,
+					response: scheduled,
+				},
+			],
+		);
+		await run(
+			['envelopes', 'estimate-resend-cost', 'envelope', 'signer'],
+			[
+				{
+					method: 'POST',
+					path: '/accounts/account/envelopes/envelope/signers/signer/estimate-resend-cost',
+					response: { total: 0 },
+				},
+			],
+		);
+		await run(
+			['documents', 'watchers', 'document'],
+			[{ method: 'GET', path: '/documents/document/watchers' }],
+		);
+		await run(
+			['documents', 'set-watchers', 'document', '--watcher-ids', '[]'],
+			[{ method: 'PUT', path: '/documents/document/watchers', body: { watcher_ids: [] } }],
+		);
+		await run(
+			['assignments', 'signer-capacities', 'document'],
+			[
+				{
+					method: 'GET',
+					path: '/documents/document/signer-capacities',
+					response: [{ signer_id: 'signer', sign_as: 'Witness' }],
+				},
+			],
+		);
+		await run(
+			['assignments', 'notification-history', 'document'],
+			[
+				{
+					method: 'GET',
+					path: '/documents/document/notification-history',
+					response: [{ signer_id: 'signer', notification_history: [] }],
+				},
+			],
+		);
 		const added = { id: 'second', signer_ids: ['signer'], max_total_credits: 0 };
 		await run(
 			['envelopes', 'add-document', 'envelope', '--data', JSON.stringify(added)],

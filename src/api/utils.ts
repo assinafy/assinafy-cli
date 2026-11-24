@@ -9,6 +9,7 @@ import type {
 	IDocumentStatsParams,
 	Logger,
 } from './types.js';
+import { SIGNER_CAPACITIES, type SignerCapacity } from './types.js';
 
 const DOCUMENT_ARTIFACT_NAMES: readonly DocumentArtifactName[] = [
 	'original',
@@ -183,6 +184,18 @@ export function requireExpiration(value: string, name = 'expires_at'): string {
 	return value;
 }
 
+/** Validate absolute scheduled times; the server checks its clock and scheduling window. */
+export function requireScheduledTime(value: string | number, name = 'send_at'): void {
+	if (typeof value === 'number') {
+		if (!Number.isSafeInteger(value))
+			throw new ValidationError(`${name} must be an integer Unix time`);
+	} else if (typeof value === 'string') {
+		requireExpiration(value, name);
+	} else {
+		throw new ValidationError(`${name} must be an ISO 8601 time or integer Unix time`);
+	}
+}
+
 /** Reject an invalid email before it reaches an API request body or query. */
 export function requireEmail(value: string | null | undefined): string {
 	if (!value || !EMAIL_RE.test(value)) {
@@ -193,11 +206,15 @@ export function requireEmail(value: string | null | undefined): string {
 
 /** Validate the shared verification, notification, and step fields on signer entries. */
 export function validateSignerOptions(input: {
+	sign_as?: unknown;
 	verification_method?: unknown;
 	notification_methods?: unknown;
 	step?: unknown;
 	embedded?: unknown;
 }): void {
+	if (input.sign_as != null && !SIGNER_CAPACITIES.includes(input.sign_as as SignerCapacity)) {
+		throw new ValidationError('sign_as must be a published signer capacity or null');
+	}
 	if (input.embedded !== undefined && typeof input.embedded !== 'boolean') {
 		throw new ValidationError('embedded must be a boolean');
 	}

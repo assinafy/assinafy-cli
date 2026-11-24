@@ -12,118 +12,120 @@ import {
 } from './api-doc-values.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const manifest = JSON.parse(readFileSync(path.join(root, 'docs', 'api-operations.json'), 'utf8'));
-const reference = readFileSync(path.join(root, 'docs', 'api-reference.md'), 'utf8');
-const sdkReference = readFileSync(path.join(root, 'docs', 'sdk-reference.md'), 'utf8');
+for (const suffix of ['', '-staging']) {
+	const manifest = JSON.parse(
+		readFileSync(path.join(root, 'docs', `api-operations${suffix}.json`), 'utf8'),
+	);
+	const reference = readFileSync(path.join(root, 'docs', `api-reference${suffix}.md`), 'utf8');
+	const sdkReference = readFileSync(path.join(root, 'docs', 'sdk-reference.md'), 'utf8');
 
-for (const operation of manifest.operations) {
-	const marker = `\`${operation.method} ${operation.path}\``;
-	const start = reference.indexOf(`\n${marker}\n`);
-	if (start === -1) throw new Error(`Missing API documentation for ${marker}`);
-	const next = reference.indexOf('\n### ', start + marker.length);
-	const section = reference.slice(start, next === -1 ? reference.length : next);
-	if (!section.includes('#### Responses'))
-		throw new Error(`${marker} has no response documentation`);
-	if (operation.hasRequestBody && !section.includes('#### Request Body')) {
-		throw new Error(`${marker} has no request-body documentation`);
+	for (const operation of manifest.operations) {
+		const marker = `\`${operation.method} ${operation.path}\``;
+		const start = reference.indexOf(`\n${marker}\n`);
+		if (start === -1) throw new Error(`Missing API documentation for ${marker}`);
+		const next = reference.indexOf('\n### ', start + marker.length);
+		const section = reference.slice(start, next === -1 ? reference.length : next);
+		if (!section.includes('#### Responses'))
+			throw new Error(`${marker} has no response documentation`);
+		if (operation.hasRequestBody && !section.includes('#### Request Body')) {
+			throw new Error(`${marker} has no request-body documentation`);
+		}
 	}
-}
 
-if (!reference.includes(`Contract SHA-256: \`${manifest.hash}\``)) {
-	throw new Error('API reference and operation manifest hashes do not match');
-}
+	if (!reference.includes(`Contract SHA-256: \`${manifest.hash}\``)) {
+		throw new Error('API reference and operation manifest hashes do not match');
+	}
 
-let expectedStatus;
-let json;
-for (const line of reference.split('\n')) {
-	const heading = line.match(/^##### (\d{3})\b/);
-	if (heading) expectedStatus = Number(heading[1]);
-	else if (/^#{1,4} /.test(line)) expectedStatus = undefined;
-	if (line === '```json') {
-		json = [];
-	} else if (json !== undefined) {
-		if (line === '```') {
-			const payload = JSON.parse(json.join('\n'));
-			verifyPlaceholderValues(payload);
-			if (
-				expectedStatus !== undefined &&
-				payload &&
-				!Array.isArray(payload) &&
-				typeof payload.status === 'number' &&
-				payload.status !== expectedStatus
-			) {
-				throw new Error(
-					`Response example status ${payload.status} does not match ${expectedStatus}`,
-				);
+	let expectedStatus;
+	let json;
+	for (const line of reference.split('\n')) {
+		const heading = line.match(/^##### (\d{3})\b/);
+		if (heading) expectedStatus = Number(heading[1]);
+		else if (/^#{1,4} /.test(line)) expectedStatus = undefined;
+		if (line === '```json') {
+			json = [];
+		} else if (json !== undefined) {
+			if (line === '```') {
+				const payload = JSON.parse(json.join('\n'));
+				verifyPlaceholderValues(payload);
+				if (
+					expectedStatus !== undefined &&
+					payload &&
+					!Array.isArray(payload) &&
+					typeof payload.status === 'number' &&
+					payload.status !== expectedStatus
+				) {
+					throw new Error(
+						`Response example status ${payload.status} does not match ${expectedStatus}`,
+					);
+				}
+				json = undefined;
+			} else {
+				json.push(line);
 			}
-			json = undefined;
-		} else {
-			json.push(line);
 		}
 	}
-}
 
-for (const file of [
-	'README.md',
-	'README.en.md',
-	...readdirSync(path.join(root, 'docs'))
-		.filter((name) => name.endsWith('.md'))
-		.map((name) => path.join('docs', name)),
-]) {
-	const unsafeEmail = readFileSync(path.join(root, file), 'utf8')
-		.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)
-		?.find((email) => !/@example\.com$/i.test(email));
-	if (unsafeEmail) throw new Error(`${file} contains a non-placeholder email`);
-}
+	for (const file of [
+		'README.md',
+		'README.en.md',
+		...readdirSync(path.join(root, 'docs'))
+			.filter((name) => name.endsWith('.md'))
+			.map((name) => path.join('docs', name)),
+	]) {
+		const unsafeEmail = readFileSync(path.join(root, file), 'utf8')
+			.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi)
+			?.find((email) => !/@example\.com$/i.test(email));
+		if (unsafeEmail) throw new Error(`${file} contains a non-placeholder email`);
+	}
 
-if (/"(?:api_key|access_token)"\s*:\s*"(?!example_credential")/i.test(reference)) {
-	throw new Error('API reference contains a non-placeholder credential');
-}
+	if (/"(?:api_key|access_token)"\s*:\s*"(?!example_credential")/i.test(reference)) {
+		throw new Error('API reference contains a non-placeholder credential');
+	}
 
-// The SDK must also *implement* every published operation, not merely document
-// it. Scanning the resource sources keeps that at 100% without a live call.
-const implemented = new Set();
-const resourceDir = path.join(root, 'src', 'api', 'resources');
-for (const file of readdirSync(resourceDir)) {
-	if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
-	const source = readFileSync(path.join(resourceDir, file), 'utf8');
-	if (file !== 'base.ts') {
-		const resource =
-			file === 'authentication.ts'
-				? 'auth'
-				: file === 'signer-documents.ts'
-					? 'signerDocuments'
-					: file.slice(0, -3);
-		const start = sdkReference.indexOf(`(\`client.${resource}\`)`);
-		if (start === -1) throw new Error(`Missing SDK documentation for client.${resource}`);
-		const end = sdkReference.indexOf('\n## ', start);
-		const section = sdkReference.slice(start, end === -1 ? undefined : end);
-		for (const [, method] of source.matchAll(/^\tasync (\w+)\(/gm)) {
-			if (!section.includes(`\`${method}(`))
-				throw new Error(`Missing SDK method documentation: ${resource}.${method}`);
+	// The SDK must also *implement* every published operation, not merely document
+	// it. Scanning the resource sources keeps that at 100% without a live call.
+	const implemented = new Set();
+	const resourceDir = path.join(root, 'src', 'api', 'resources');
+	for (const file of readdirSync(resourceDir)) {
+		if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
+		const source = readFileSync(path.join(resourceDir, file), 'utf8');
+		if (file !== 'base.ts') {
+			const resource =
+				file === 'authentication.ts'
+					? 'auth'
+					: file.slice(0, -3).replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+			const start = sdkReference.indexOf(`(\`client.${resource}\`)`);
+			if (start === -1) throw new Error(`Missing SDK documentation for client.${resource}`);
+			const end = sdkReference.indexOf('\n## ', start);
+			const section = sdkReference.slice(start, end === -1 ? undefined : end);
+			for (const [, method] of source.matchAll(/^\tasync (\w+)\(/gm)) {
+				if (!section.includes(`\`${method}(`))
+					throw new Error(`Missing SDK method documentation: ${resource}.${method}`);
+			}
+		}
+		for (const match of source.matchAll(
+			/this\.http\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*(?:`([^`]+)`|'([^']+)')/g,
+		)) {
+			implemented.add(normalizeRoute(match[1], match[2] ?? match[3]));
 		}
 	}
-	for (const match of source.matchAll(
-		/this\.http\.(get|post|put|patch|delete)(?:<[^>]*>)?\(\s*(?:`([^`]+)`|'([^']+)')/g,
-	)) {
-		implemented.add(normalizeRoute(match[1], match[2] ?? match[3]));
-	}
-}
 
-const unimplemented = manifest.operations.filter(
-	(operation) => !implemented.has(normalizeRoute(operation.method, operation.path)),
-);
-if (unimplemented.length > 0) {
-	throw new Error(
-		`SDK does not implement ${unimplemented.length} published operation(s): ${unimplemented
-			.map((operation) => `${operation.method} ${operation.path}`)
-			.join(', ')}`,
+	const unimplemented = manifest.operations.filter(
+		(operation) => !implemented.has(normalizeRoute(operation.method, operation.path)),
+	);
+	if (unimplemented.length > 0) {
+		throw new Error(
+			`SDK does not implement ${unimplemented.length} published operation(s): ${unimplemented
+				.map((operation) => `${operation.method} ${operation.path}`)
+				.join(', ')}`,
+		);
+	}
+
+	console.log(
+		`Verified documentation and SDK coverage for ${manifest.operations.length} API operations`,
 	);
 }
-
-console.log(
-	`Verified documentation and SDK coverage for ${manifest.operations.length} API operations`,
-);
 
 /** Compare spec paths (`/v1/accounts/{account_id}`) with SDK template literals. */
 function normalizeRoute(method, route) {

@@ -268,7 +268,7 @@ validate_archive() {
 				fi
 				;;
 			VERSION) version_count=$((version_count + 1)) ;;
-			README.md | README.en.md | CONTRIBUTING.md | SECURITY.md | .env.example | LICENSE | THIRD_PARTY_NOTICES.md | docs/*.md | docs/api-operations.json) ;;
+			README.md | README.en.md | CONTRIBUTING.md | SECURITY.md | .env.example | LICENSE | THIRD_PARTY_NOTICES.md | docs/*.md | docs/api-operations.json | docs/api-operations-staging.json) ;;
 			*) fail "Release archive contained an unexpected path: $entry" ;;
 		esac
 	done < <(tar -tzf "$archive")

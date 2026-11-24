@@ -14,12 +14,15 @@ import type {
 	IDocumentActivityListParams,
 	IEmptyResult,
 	IEstimateCostResponse,
+	IResendCostEstimate,
+	IScheduledSend,
 	PaginatedResult,
 } from '../types.js';
 import {
 	cleanParams,
 	idempotencyHeaders,
 	requireDocumentArtifactName,
+	requireScheduledTime,
 	requireSort,
 	validateCreditCeiling,
 	validateDigitalCertificateMethod,
@@ -29,6 +32,33 @@ import { BaseResource } from './base.js';
 
 /** Workspace envelopes keep separate document assignments and charge one document allowance. */
 export class EnvelopeResource extends BaseResource {
+	/** Schedule one envelope request; idempotency headers are not supported here (staging). */
+	async schedule(
+		payload: ICreateEnvelopePayload & { send_at: string | number },
+		accountId?: string,
+	): Promise<IScheduledSend> {
+		const id = this.accountId(accountId);
+		validateCreate(payload);
+		requireScheduledTime(payload.send_at);
+		return this.call('Failed to schedule envelope', () =>
+			this.http.post(`/accounts/${id}/scheduled-sends`, payload),
+		);
+	}
+
+	/** Estimate one reminder for the whole envelope without sending or charging (staging). */
+	async estimateResendCost(
+		envelopeId: string,
+		signerId: string,
+		accountId?: string,
+	): Promise<IResendCostEstimate> {
+		const id = this.accountId(accountId);
+		const eid = this.requireId(envelopeId, 'Envelope ID');
+		const sid = this.requireId(signerId, 'Signer ID');
+		return this.call('Failed to estimate envelope reminder cost', () =>
+			this.http.post(`/accounts/${id}/envelopes/${eid}/signers/${sid}/estimate-resend-cost`),
+		);
+	}
+
 	async list(
 		params: IEnvelopeListParams = {},
 		accountId?: string,

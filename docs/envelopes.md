@@ -23,6 +23,8 @@ Commands:
   resend <envelopeId> <signerId>                       Resend one signer’s envelope invitation; paid channels cost credits
   add-document [options] <envelopeId>                  Add a processed document and notify its envelope signers
   remove-document [options] <envelopeId> <documentId>  Cancel and remove an open document, notifying its recipients
+  schedule [options]                                   Schedule an envelope without sending or charging now (staging)
+  estimate-resend-cost <envelopeId> <signerId>         Estimate one envelope reminder without sending or charging (staging)
   help [command]                                       display help for command
 ```
 
@@ -206,5 +208,32 @@ Arguments:
 
 Options:
   -y, --yes   Skip confirmation
+  -h, --help  display help for command
+```
+
+### `assinafy envelopes schedule`
+
+```text
+Usage: assinafy envelopes schedule [options]
+
+Schedule an envelope without sending or charging now (staging)
+
+Options:
+  --data <json>  Envelope JSON with send_at (ISO 8601 or Unix seconds)
+  -h, --help     display help for command
+```
+
+### `assinafy envelopes estimate-resend-cost`
+
+```text
+Usage: assinafy envelopes estimate-resend-cost [options] <envelopeId> <signerId>
+
+Estimate one envelope reminder without sending or charging (staging)
+
+Arguments:
+  envelopeId  Envelope ID
+  signerId    Signer ID
+
+Options:
   -h, --help  display help for command
 ```

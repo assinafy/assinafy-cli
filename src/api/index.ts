@@ -14,6 +14,7 @@ export { EmbedResource } from './resources/embed.js';
 export { EnvelopeResource } from './resources/envelopes.js';
 export { FieldsResource } from './resources/fields.js';
 export { OAuthResource } from './resources/oauth.js';
+export { ScheduledSendResource } from './resources/scheduled-sends.js';
 export { SignerDocumentsResource } from './resources/signer-documents.js';
 export { SignerResource } from './resources/signers.js';
 export { TagResource } from './resources/tags.js';

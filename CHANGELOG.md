@@ -6,6 +6,20 @@ All notable changes to `@assinafy/cli` are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-24
+
+### Added
+
+- Staging scheduled assignment and envelope requests, with queue listing, cancellation and immediate sending in the SDK and CLI.
+- Document watchers, signer capacities, notification delivery/open times and envelope reminder cost estimates for staging.
+- Signer `sign_as` capacities in assignment creation, estimates and the upload-and-send workflow.
+- Complete staging HTTP request/response reference alongside the production reference.
+
+### Fixed
+
+- Assignment payloads preserve explicit null expirations and signer capacities.
+- Path identifiers reject non-string values before transport; assignments reject non-object bodies and blank signer IDs.
+
 ## [2.8.0] - 2026-11-11
 
 ### Added

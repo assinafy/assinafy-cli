@@ -113,6 +113,8 @@ try {
 
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
+| `listWatchers(documentId)` | `GET /documents/{documentId}/watchers` (staging) | `ISigner[]` |
+| `setWatchers(documentId, watcherIds)` | `PUT /documents/{documentId}/watchers` (staging); `{ watcher_ids: string[] }` | `ISigner[]` |
 | `upload(source, options?)` | [`POST /accounts/{accountId}/documents`](./api-reference.md#upload-and-create-document) | `IDocumentUploadResponse` |
 | `list(params?, accountId?)` | [`GET /accounts/{accountId}/documents`](./api-reference.md#list-documents) | `IDocumentListResponse` |
 | `search(params?, accountId?)` | [`GET /accounts/{accountId}/documents/search`](./api-reference.md#search-documents-lightweight) | `IDocumentListResponse` |
@@ -138,6 +140,8 @@ try {
 | `sendToken(documentId, email, channel?)` or `sendToken(documentId, { email })` | [`PUT /public/documents/{documentId}/send-token`](./api-reference.md#send-access-token-for-public-document) | `ISendTokenResponse` (`{ document; channel; recipient }`) |
 | `isFullySigned(documentId)` | SDK helper over `details` | `boolean` |
 | `getSigningProgress(documentId)` | SDK helper over `details` | `{ signed; total; pending; percentage }` |
+
+Watchers require owner credentials; OAuth application tokens cannot manage them. Up to ten workspace contacts with email addresses receive an email when the document is signed by all, declined or expired. The email has no document link or attachment. Setting watchers replaces the whole list, duplicates count once, and `[]` clears it. Changes stop once the document ends. See the complete [staging request and response contracts](./api-reference-staging.md#documents). CLI: `documents watchers` and `documents set-watchers --watcher-ids '["example_signer"]'`.
 
 Upload input and options:
 
@@ -175,6 +179,8 @@ An envelope groups up to 20 processed documents and 20 existing workspace signer
 | --- | --- | --- |
 | `list(params?, accountId?)` | `GET /accounts/{accountId}/envelopes`; `{ page?, per_page?, search?, status?: "open" | "closed" }` | `PaginatedResult<IDocumentEnvelope>` |
 | `create(payload, options?)` | `POST /accounts/{accountId}/envelopes`; `ICreateEnvelopePayload` | `IDocumentEnvelope` |
+| `schedule(payload, accountId?)` | `POST /accounts/{accountId}/scheduled-sends` (staging); creation body plus `send_at` | `IScheduledSend` |
+| `estimateResendCost(envelopeId, signerId, accountId?)` | `POST …/{envelopeId}/signers/{signerId}/estimate-resend-cost` (staging); no body | `IResendCostEstimate` |
 | `estimateCost(payload, accountId?)` | `POST /accounts/{accountId}/envelopes/estimate-cost`; same creation body, no changes or charges | `IEstimateCostResponse` |
 | `get(envelopeId, accountId?)` | `GET /accounts/{accountId}/envelopes/{envelopeId}` | `IDocumentEnvelope` |
 | `update(envelopeId, payload, accountId?)` | `PATCH /accounts/{accountId}/envelopes/{envelopeId}`; `{ name?, message?: string | null, document_ids?: string[] }` | `IDocumentEnvelope` |
@@ -279,6 +285,8 @@ A successful creation means the envelope exists, not that every invitation arriv
 Creation options are `{ accountId?, idempotencyKey? }`. The case-sensitive key belongs to the workspace and does not expire; reusing it returns the original envelope regardless of the replacement body. Persist and deliberately reuse it after an ambiguous failure; never generate a new key for the same intended operation. `IdempotencyKeyInUse` is 409 while the first request runs. A credit ceiling refusal creates and charges nothing. There are no SDK write retries. Deleting an envelope also removes its idempotency replay result.
 
 Adding a document uses existing envelope signers, sends updated invitations, and can charge certificate credits. Removing an open document cancels it and notifies recipients; links from it continue to open the rest. Cancel affects only cancellable documents; completed certificates stay valid. Deleting requires every document closed and leaves the documents intact. Document deletion is refused while its envelope remains open, including documents removed from it. CLI cancel/delete/remove-document confirm unless `--yes`.
+
+Envelope reminder estimates send and charge nothing. They price one reminder for the whole envelope, independent of document count, and do not check current reminder eligibility. Scheduled envelopes accept the same creation payload plus `send_at`, but do not accept an idempotency key. See [scheduled sends](#scheduled-sends-clientscheduledsends).
 
 ## Embedded signing (`client.embed`)
 
@@ -458,6 +466,9 @@ The hourly lifecycle uses Brasília calendar days: notice-period alerts, warning
 | SDK method | HTTP operation | Resolves to |
 | --- | --- | --- |
 | `list(params?, accountId?)` | [`GET /assignments?accountId=…`](./api-reference.md#list-assignments) | `PaginatedResult<IAssignment>` |
+| `schedule(documentId, payload)` | `POST /documents/{documentId}/scheduled-sends` (staging); assignment body plus `send_at` | `IScheduledSend` |
+| `signerCapacities(documentId)` | `GET /documents/{documentId}/signer-capacities` (staging) | `ISignerCapacity[]` (`{ signer_id, sign_as }`) |
+| `notificationHistory(documentId)` | `GET /documents/{documentId}/notification-history` (staging) | `ISignerNotificationHistory[]` |
 | `create(documentId, payload)` | [`POST /documents/{documentId}/assignments`](./api-reference.md#create-assignment-request-signatures) | `IAssignment` |
 | `estimateCost(documentId, payload)` | [`POST /documents/{documentId}/assignments/estimate-cost`](./api-reference.md#estimate-assignment-cost) | `IEstimateCostResponse` |
 | `resetExpiration(documentId, assignmentId, expiresAt)` | [`PUT …/reset-expiration`](./api-reference.md#reset-assignment-expiration) | `IAssignment`; accepts a date, datetime or `null` to clear the deadline |
@@ -476,6 +487,7 @@ Assignment payload:
   signers?: Array<string | {
     id?: string;
     signer_id?: string;
+    sign_as?: SignerCapacity | null; // staging
     verification_method?: 'Email' | 'Whatsapp' | 'DigitalCertificate' | 'IdDocumentFaceMatchBasic';
     notification_methods?: Array<'Email' | 'Whatsapp'>;
     step?: number;
@@ -484,7 +496,7 @@ Assignment payload:
   signer_ids?: string[]; // compatibility alias
   signerIds?: string[];  // compatibility alias
   message?: string;
-  expires_at?: string;
+  expires_at?: string | number | null;
   copy_receivers?: string[];
   max_total_credits?: number;
   entries?: ICollectAssignmentEntry[];
@@ -509,6 +521,56 @@ Production defaults `notification_methods: []` to `['Email']` and sends an invit
 ```
 
 `credit_balance` can be null for unlimited plans. `IResendCostEstimate` also accepts the published `IEstimateCostResponse` shape. Check `'total' in estimate` to select the production shape; use its `has_sufficient_credits` before resending. The published shape uses `total_credits` and `has_sufficient_resources`.
+
+On staging, `sign_as` records the capacity the sender assigns, printed on the certificate page. Omission or null means `Sign`. Values are exported as `SIGNER_CAPACITIES` and `SignerCapacity`: `Sign`, `Approve`, `Acknowledge`, `Party`, `Witness`, `Intervening`, `Receipt`, `IssuerEndorserGuarantor`, `IssuerEndorserGuarantorSurety`, `Surety`, `PartySurety`, `JointDebtor`, `PartyJointDebtor`, `ContractingParty`, `ContractedParty`, `Landlord`, `Tenant`, `Buyer`, `Seller`, `AttorneyInFact`, `LegalRepresentative`, `Employer`, `Employee`. The SDK preserves it through creation, estimates, scheduling and `uploadAndRequestSignatures`; CLI `assignments create --signers` and `send --signers` accept it in signer JSON. It is fixed on creation and read through `signerCapacities`; invitations, the signing page and webhooks do not carry it. An unsent document returns `[]`.
+
+`notificationHistory(documentId)` returns an array of `{ signer_id, notification_history }`, in assignment signer order. Each history entry extends `IAssignmentSignerNotification` with required nullable `delivered_at` and `opened_at`. It retains `event` and `status`, plus optional `error_code`, `error_message`, `sent_at` and `failed_at`. Status is `sent | delivered | opened | failed`; timestamps and error fields are nullable. `error_code` is `MailboxFull | AddressNotFound | AddressSuppressed | ContentRejected | MarkedAsSpam | NotOnWhatsapp | RecipientRestricted | NotSent | Unknown | null`. Delivery and open times are hints: scanners may open email, and blocked images or disabled read receipts may hide opens. An unsent document returns `[]`. Both history and capacities accept OAuth `documents:read`. CLI: `assignments signer-capacities` and `assignments notification-history`.
+
+## Scheduled sends (`client.scheduledSends`)
+
+These routes are published on [staging](https://api.angry-pisco.stage.assinafy.com.br/v1/docs). Configure that deployment explicitly; production may return 404 until rollout. Full HTTP parameters, payloads, responses and errors are in [the staging API reference](./api-reference-staging.md).
+
+| SDK method | HTTP operation | Resolves to |
+| --- | --- | --- |
+| `list(params?, accountId?)` | `GET /accounts/{accountId}/scheduled-sends`; `{ page?, per_page?, document_id? }` | `PaginatedResult<IScheduledSend>` |
+| `cancel(scheduledSendId, accountId?)` | `PUT /accounts/{accountId}/scheduled-sends/{scheduledSendId}/cancel`; no body | `IScheduledSend` |
+| `send(scheduledSendId, accountId?)` | `PUT /accounts/{accountId}/scheduled-sends/{scheduledSendId}/send`; no body | `IScheduledSend` |
+
+Create with `assignments.schedule(documentId, { ...assignment, send_at })` or `envelopes.schedule({ ...envelope, send_at }, accountId?)`. `send_at` accepts an ISO 8601 timestamp (offsetless means UTC) or integer Unix seconds, from one hour to 90 days ahead according to the server clock. Each non-null expiration must be at least two hours after `send_at`. Scheduling validates methods, plan features and workspace signer membership, but charges and sends nothing. A document can have one pending/processing scheduled send. Sending it separately causes the queued request to fail later.
+
+```ts
+const pending = await client.assignments.schedule('example_document', {
+  method: 'virtual',
+  signers: [{ id: 'example_signer', sign_as: 'Witness' }],
+  send_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+  expires_at: null,
+  max_total_credits: 0,
+});
+await client.scheduledSends.list({ document_id: 'example_document' });
+await client.scheduledSends.cancel(pending.id);
+```
+
+Every mutation returns this unwrapped shape (IDs and timestamps shown are synthetic):
+
+```json
+{
+  "resource": "scheduled_send",
+  "id": "example_schedule",
+  "type": "assignment",
+  "document_ids": ["example_document"],
+  "status": "pending",
+  "send_at": "2027-01-01T12:00:00Z",
+  "assignment_id": null,
+  "envelope_id": null,
+  "failure_reason": null,
+  "created_at": "2027-01-01T09:00:00Z",
+  "processed_at": null
+}
+```
+
+`type` is `assignment | envelope`; `status` is `pending | processing | sent | cancelled | failed`. `assignment_id`/`envelope_id` identify the successful result. Deleted documents leave `document_ids`; deleting an envelope clears `envelope_id`. `failure_reason` contains the Portuguese refusal when failed; `processed_at` marks sending, failure or cancellation. The worker checks due sends every five minutes, using the original member's permissions and current balance; failures notify that member, or active owners if the member left. No retry is performed by the SDK.
+
+`cancel` and `send` require pending status, otherwise 409. Sending now rechecks the create operation's rules and credit ceiling, sends invitations and can charge credits. A refusal leaves the request pending without a failure email; inspect it before retrying. OAuth requires `documents:write` even to list, because failure details can reveal billing or membership state. CLI: `assignments schedule <documentId> --data <json>`, `envelopes schedule --data <json>`, and `scheduled-sends list|cancel|send`; cancel/send confirm unless `--yes`.
 
 ## Signers (`client.signers`)
 
@@ -1013,7 +1075,7 @@ Verify the raw bytes before parsing; re-serialized JSON does not match. The enve
 
 ## Contract boundaries
 
-- Production OpenAPI currently publishes 147 operations. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
+- Production OpenAPI publishes 147 operations; staging publishes 157, all exposed by the SDK. Watchers, scheduled sends, signer capacities, notification delivery times and envelope reminder estimates require staging until their production rollout. Some sandbox deployments lag it; account/user statistics and user notification-preference routes may return route-level 404s even though production documentation includes them.
 - Certificate start/complete are deployed production extensions, exposed by `startCertificate` and `completeCertificate` with the signing application's payloads. They supplement the 147 OpenAPI operations; the API manifest contains only published paths.
 - The SDK retains the two template compatibility routes above. Both `sendToken` call forms send the email-only production body.
 - Original signer artifacts require a signer code. Completed copies use private expiring download tokens. Older download call forms remain callable for compatibility; server authorization and lifecycle rules apply.

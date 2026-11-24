@@ -220,3 +220,32 @@ envelopesCommand.addCommand(
 			});
 		}),
 );
+
+envelopesCommand.addCommand(
+	new Command('schedule')
+		.description('Schedule an envelope without sending or charging now (staging)')
+		.requiredOption('--data <json>', 'Envelope JSON with send_at (ISO 8601 or Unix seconds)')
+		.action(async (opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				const payload = parseJsonObject(
+					opts.data,
+					'--data',
+				) as unknown as ICreateEnvelopePayload & { send_at: string | number };
+				printData(await client.envelopes.schedule(payload, requireAccountId(config)), config);
+			});
+		}),
+);
+envelopesCommand.addCommand(
+	new Command('estimate-resend-cost')
+		.description('Estimate one envelope reminder without sending or charging (staging)')
+		.argument('<envelopeId>', 'Envelope ID')
+		.argument('<signerId>', 'Signer ID')
+		.action(async (id, signerId, _opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				printData(
+					await client.envelopes.estimateResendCost(id, signerId, requireAccountId(config)),
+					config,
+				);
+			});
+		}),
+);

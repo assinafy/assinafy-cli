@@ -20,6 +20,7 @@ import type {
 	IEstimateCostResponse,
 	IPublicDocumentInfo,
 	ISendTokenResponse,
+	ISigner,
 	ISignerDocumentDetailsResponse,
 	ISigningProgress,
 	ITag,
@@ -76,6 +77,29 @@ export interface IDocumentUploadOptions {
 }
 
 export class DocumentResource extends BaseResource {
+	/** Read contacts who receive a completion email without document access (staging). */
+	async listWatchers(documentId: string): Promise<ISigner[]> {
+		const id = this.requireId(documentId, 'Document ID');
+		return this.call('Failed to list document watchers', () =>
+			this.http.get(`/documents/${id}/watchers`),
+		);
+	}
+
+	/** Replace all watchers; an empty list clears them. Owner credentials required (staging). */
+	async setWatchers(documentId: string, watcherIds: string[]): Promise<ISigner[]> {
+		const id = this.requireId(documentId, 'Document ID');
+		if (
+			!Array.isArray(watcherIds) ||
+			new Set(watcherIds).size > 10 ||
+			watcherIds.some((value) => typeof value !== 'string' || !value.trim())
+		) {
+			throw new ValidationError('watcher_ids must contain at most 10 nonblank contact IDs');
+		}
+		return this.call('Failed to set document watchers', () =>
+			this.http.put(`/documents/${id}/watchers`, { watcher_ids: watcherIds }),
+		);
+	}
+
 	/**
 	 * Upload a PDF to the workspace.
 	 *

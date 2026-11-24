@@ -3,7 +3,7 @@ import type { ICollectAssignmentEntry, ICreateAssignmentPayload, SignerReference
 import { requireAccountId } from '../lib/client';
 import { CliError } from '../lib/errors';
 import { saveDownload } from '../lib/files';
-import { parseCreditCeiling, parseJsonArray, splitList } from '../lib/json';
+import { parseCreditCeiling, parseJsonArray, parseJsonObject, splitList } from '../lib/json';
 import { addSignerRefOptions, addSortableListOptions } from '../lib/options';
 import { printData, printPaginatedData, printSuccess } from '../lib/output';
 import { listParams, tableWithFooter } from '../lib/pagination';
@@ -291,3 +291,38 @@ export const assignmentsCommand = new Command('assignments')
 	.addCommand(identityVerificationCommand)
 	.addCommand(identityImageCommand)
 	.addCommand(reviewIdentityCommand);
+
+assignmentsCommand.addCommand(
+	new Command('schedule')
+		.description('Schedule an assignment without sending or charging now (staging)')
+		.argument('<documentId>', 'Document ID')
+		.requiredOption('--data <json>', 'Assignment JSON with send_at (ISO 8601 or Unix seconds)')
+		.action(async (id, opts, command) => {
+			await runWithClient(command, async ({ client, config }) => {
+				const payload = parseJsonObject(
+					opts.data,
+					'--data',
+				) as unknown as ICreateAssignmentPayload & { send_at: string | number };
+				printData(await client.assignments.schedule(id, payload), config);
+			});
+		}),
+);
+for (const [name, method] of [
+	['signer-capacities', 'signerCapacities'],
+	['notification-history', 'notificationHistory'],
+] as const) {
+	assignmentsCommand.addCommand(
+		new Command(name)
+			.description(
+				name === 'signer-capacities'
+					? 'Read the capacities signers were assigned (staging)'
+					: 'Read notification delivery/open times (staging)',
+			)
+			.argument('<documentId>', 'Document ID')
+			.action(async (id, _opts, command) => {
+				await runWithClient(command, async ({ client, config }) => {
+					printData(await client.assignments[method](id), config);
+				});
+			}),
+	);
+}

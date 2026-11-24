@@ -9,16 +9,20 @@ import type {
 	IIdentityReviewPayload,
 	IResendCostEstimate,
 	IResendEmailResponse,
+	IScheduledSend,
+	ISignerCapacity,
 	ISignerIdentityReview,
+	ISignerNotificationHistory,
 	IWhatsAppNotification,
 	PaginatedResult,
+	SignerCapacity,
 	SignerReference,
 } from '../types.js';
 import {
 	cleanParams,
 	requireExpiration,
+	requireScheduledTime,
 	requireSort,
-	stripEmpty,
 	validateCreditCeiling,
 	validateDigitalCertificateMethod,
 	validateSignerOptions,
@@ -37,6 +41,9 @@ export function buildAssignmentPayload(
 		skipDigitalCertificateStepValidation?: boolean;
 	} = {},
 ): Record<string, unknown> {
+	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+		throw new ValidationError('Assignment payload must be an object');
+	}
 	if (
 		payload.method !== undefined &&
 		payload.method !== 'virtual' &&
@@ -46,6 +53,7 @@ export function buildAssignmentPayload(
 	}
 	const signers = extractSignerRefs(payload);
 	validateCreditCeiling(payload.max_total_credits);
+	if (payload.expires_at != null) requireScheduledTime(payload.expires_at, 'expires_at');
 	// The docs mark `signers` "Required for virtual" only, but the API prices per signer in both
 	// modes and answers a signer-less body with
 	// 400 "Pelo menos um signatários precisa ser informado." A collect estimate needs them too.
@@ -64,16 +72,17 @@ export function buildAssignmentPayload(
 		validateSigningSteps(normalisedSigners);
 	}
 
-	return stripEmpty({
-		method,
-		signers: normalisedSigners,
-		message: payload.message,
-		expires_at:
-			payload.expires_at === undefined ? undefined : requireExpiration(payload.expires_at),
-		copy_receivers: payload.copy_receivers,
-		entries: payload.entries,
-		max_total_credits: payload.max_total_credits,
-	});
+	return Object.fromEntries(
+		Object.entries({
+			method,
+			signers: normalisedSigners,
+			message: payload.message,
+			expires_at: payload.expires_at,
+			copy_receivers: payload.copy_receivers,
+			entries: payload.entries,
+			max_total_credits: payload.max_total_credits,
+		}).filter(([, value]) => value !== undefined),
+	);
 }
 
 function extractSignerRefs(payload: ICreateAssignmentPayload): SignerReference[] {
@@ -96,19 +105,21 @@ function normaliseSignerRef(
 	options: { allowSignersWithoutId?: boolean },
 ): {
 	id?: string;
+	sign_as?: SignerCapacity | null;
 	verification_method?: string;
 	notification_methods?: string[];
 	step?: number;
 	embedded?: boolean;
 } {
 	if (typeof ref === 'string') {
-		if (!ref) throw new ValidationError('Signer ID cannot be empty');
+		if (!ref.trim()) throw new ValidationError('Signer ID cannot be empty');
 		return { id: ref };
 	}
 	if (ref && typeof ref === 'object') {
 		const input = ref as {
 			id?: string;
 			signer_id?: string;
+			sign_as?: SignerCapacity | null;
 			verification_method?: string;
 			notification_methods?: string[];
 			step?: number;
@@ -116,15 +127,18 @@ function normaliseSignerRef(
 		};
 		const id = input.id ?? input.signer_id;
 		validateSignerOptions(input);
-		const normalised = stripEmpty({
-			id,
-			verification_method: input.verification_method,
-			notification_methods: input.notification_methods,
-			step: input.step,
-			embedded: input.embedded,
-		});
+		const normalised = Object.fromEntries(
+			Object.entries({
+				id,
+				sign_as: input.sign_as,
+				verification_method: input.verification_method,
+				notification_methods: input.notification_methods,
+				step: input.step,
+				embedded: input.embedded,
+			}).filter(([, value]) => value !== undefined),
+		);
 
-		if (typeof id === 'string' && id.length > 0) {
+		if (typeof id === 'string' && id.trim().length > 0) {
 			return normalised as {
 				id: string;
 				verification_method?: string;
@@ -144,6 +158,33 @@ function normaliseSignerRef(
 }
 
 export class AssignmentResource extends BaseResource {
+	/** Keep a request for later; no invitation or charge until the server sends it (staging). */
+	async schedule(
+		documentId: string,
+		payload: ICreateAssignmentPayload & { send_at: string | number },
+	): Promise<IScheduledSend> {
+		const id = this.requireId(documentId, 'Document ID');
+		requireScheduledTime(payload?.send_at);
+		const body = { ...buildAssignmentPayload(payload), send_at: payload.send_at };
+		return this.call('Failed to schedule assignment', () =>
+			this.http.post(`/documents/${id}/scheduled-sends`, body),
+		);
+	}
+
+	async signerCapacities(documentId: string): Promise<ISignerCapacity[]> {
+		const id = this.requireId(documentId, 'Document ID');
+		return this.call('Failed to fetch signer capacities', () =>
+			this.http.get(`/documents/${id}/signer-capacities`),
+		);
+	}
+
+	async notificationHistory(documentId: string): Promise<ISignerNotificationHistory[]> {
+		const id = this.requireId(documentId, 'Document ID');
+		return this.call('Failed to fetch notification history', () =>
+			this.http.get(`/documents/${id}/notification-history`),
+		);
+	}
+
 	/** Fetch an account review and available evidence for a signer's identity verification. */
 	async getIdentityVerification(
 		documentId: string,

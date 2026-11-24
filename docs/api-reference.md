@@ -7,7 +7,7 @@ The renderer reuses a generic 400 envelope for several non-400 errors; top-level
 - OpenAPI: 3.1.0
 - API document version: 1.0.0
 - Operations: 147
-- Contract SHA-256: `511261bfe294776d09e879a9e0cf4cd586542653d87d78fe3e32e125037edaac`
+- Contract SHA-256: `bd1c42d8293167ea95fc5ffcd26730960e37c219dc9a67f224295e6012c3d115`
 
 ## Accounts
 
@@ -1567,7 +1567,7 @@ List documents of the workspace, most recently updated first. Every row includes
 
 `POST /v1/accounts/{accountId}/documents`
 
-Create a document from an uploaded file. Maximum file size 25MB; maximum 2000 pages.
+Create a document from an uploaded file: PDF, or a Word or OpenDocument text file (`.doc`, `.docx`, `.odt`), which is converted to PDF. Maximum file size 25MB; maximum 2000 pages.
 
 **Authentication:** Bearer access token (`Authorization: Bearer ...`) or API key (`X-Api-Key` header).
 
@@ -1581,7 +1581,7 @@ Create a document from an uploaded file. Maximum file size 25MB; maximum 2000 pa
 
 Fields (`multipart/form-data`):
 
-- `file` (string, required) — The PDF file to upload.
+- `file` (string, required) — The file to upload: PDF, DOC, DOCX or ODT.
 
 Example:
 
@@ -4278,9 +4278,18 @@ Per-unit costs (in credits) used to build the estimate:
 |------|------|
 | Extra document | 1 credit |
 | Email notification | 0 credits |
-| WhatsApp notification | 0.45 credits |
-| Digital certificate signature (per signer) | 0.5 credits |
+| WhatsApp notification | depends on the plan, see the table below |
+| Digital certificate signature (per signer) | 0.45 credits |
 | Identity document verification (per signer) | depends on the plan, see the table below |
+
+WhatsApp notification, per plan:
+
+| Plan | Price per signer |
+|------|------------------|
+| Pro | 0.4 credits |
+| Other plans and enterprise contracts | 0.45 credits |
+
+Identity document verification, per plan:
 
 | Plan | Price per signer |
 |------|------------------|
@@ -5361,7 +5370,7 @@ Example:
 
 `PUT /v1/authentication/request-password-reset`
 
-Send the user an email with instructions to reset their password. Used when the password was forgotten or never set.
+Send the user an email with instructions to reset their password. Used when the password was forgotten or never set. An address with no account gets the same `200` and no email, so the answer never tells whether an address has an account. An `email` that is not text answers `400`.
 
 **Authentication:** none (public endpoint).
 
@@ -5393,6 +5402,24 @@ Example:
 }
 ```
 
+##### 400 — One or more fields failed validation.
+
+```json
+{
+    "status": 400,
+    "message": "Bad request.",
+    "data": null,
+    "code": "PlanRestricted",
+    "errors": [
+        {
+            "field": "full_name",
+            "code": "Required",
+            "message": "Full Name cannot be blank."
+        }
+    ]
+}
+```
+
 ##### 500 — Unexpected server error.
 
 ```json
@@ -5415,7 +5442,7 @@ Example:
 
 `PUT /v1/authentication/reset-password`
 
-Reset the user's password using the token received by email.
+Reset the user's password using the token received by email. A wrong, expired or non-text token, and an address with no account, answer `400`. The new password needs at least 6 characters. A reset ends every session of the user (login tokens issued before it answer `401`) and revokes every connected OAuth app; the user's API key keeps working.
 
 **Authentication:** none (public endpoint).
 

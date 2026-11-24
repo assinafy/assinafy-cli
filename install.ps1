@@ -66,7 +66,7 @@ function Test-ArchiveLayout([string]$Archive, [string]$Target) {
 		}
 		$allowed = $expectedExecutables -ccontains $entry -or
 			$entry -cin @("VERSION", "README.md", "README.en.md", "CONTRIBUTING.md", "SECURITY.md", ".env.example", "LICENSE", "THIRD_PARTY_NOTICES.md") -or
-			$entry -cmatch '^docs/[^/]+\.md$' -or $entry -ceq "docs/api-operations.json"
+			$entry -cmatch '^docs/[^/]+\.md$' -or $entry -cin @("docs/api-operations.json", "docs/api-operations-staging.json")
 		if (-not $allowed) {
 			Fail "Release archive contained an unexpected path: $entry"
 		}

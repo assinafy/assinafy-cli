@@ -13,7 +13,11 @@ import {
 } from './api-doc-values.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const docsUrl = 'https://api.assinafy.com.br/v1/docs';
+const staging = process.argv.includes('--staging');
+const suffix = staging ? '-staging' : '';
+const docsUrl = staging
+	? 'https://api.angry-pisco.stage.assinafy.com.br/v1/docs'
+	: 'https://api.assinafy.com.br/v1/docs';
 const specUrl = `${docsUrl}/openapi.json`;
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete']);
 // OAuth requests use form encoding; retain support for renderers that list JSON first.
@@ -68,7 +72,7 @@ for (let offset = 0; offset < operations.length; offset += 10) {
 }
 
 const grouped = Map.groupBy(sections, (operation) => operation.tag);
-let markdown = `# Assinafy API v1 — request/response reference
+let markdown = `# Assinafy API v1${staging ? ' (staging)' : ''} — request/response reference
 
 Generated from the official [Assinafy OpenAPI document](${specUrl}) and its native Markdown renderer. It contains every published operation and the complete examples supplied by Assinafy. Runtime-only SDK helpers are documented in [sdk-reference.md](./sdk-reference.md).
 
@@ -86,9 +90,9 @@ for (const [tag, tagged] of grouped) {
 
 markdown = sanitizeExampleValues(markdown);
 
-writeFileSync(path.join(root, 'docs', 'api-reference.md'), markdown);
+writeFileSync(path.join(root, 'docs', `api-reference${suffix}.md`), markdown);
 writeFileSync(
-	path.join(root, 'docs', 'api-operations.json'),
+	path.join(root, 'docs', `api-operations${suffix}.json`),
 	`${JSON.stringify({ specUrl, hash, operations }, null, 2)}\n`,
 );
 console.log(`Generated ${operations.length} API operations (${hash.slice(0, 12)})`);

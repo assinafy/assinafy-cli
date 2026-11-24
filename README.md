@@ -2,7 +2,9 @@
 
 *Português · [Read in English](README.en.md)*
 
-CLI e SDK TypeScript para as 147 operações publicadas da [API Assinafy](https://api.assinafy.com.br/v1/docs): documentos, signatários, assinaturas, templates, contratos, envelopes, assinatura incorporada, OAuth e webhooks.
+CLI e SDK TypeScript para as 147 operações de produção e 157 de staging publicadas da [API Assinafy](https://api.assinafy.com.br/v1/docs): documentos, signatários, assinaturas, templates, contratos, envelopes, assinatura incorporada, OAuth e webhooks.
+
+Staging também oferece envios agendados, observadores, capacidades dos signatários e histórico de entrega: [fluxos e contratos](docs/sdk-reference.md#scheduled-sends-clientscheduledsends). Configure `ASSINAFY_BASE_URL=https://api.angry-pisco.stage.assinafy.com.br/v1` com credenciais próprias.
 
 ## Instalação
 

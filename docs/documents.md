@@ -33,6 +33,8 @@ Commands:
   send-token [options] <id>                      Email a one-time access token to a signer of a pending document
   progress <id>                                  Show signing progress for a document
   wait [options] <id>                            Poll a document until it is ready (or fails / times out)
+  watchers <documentId>                          List document watchers (staging; owner credentials required)
+  set-watchers [options] <documentId>            Replace contacts notified when the document ends (staging)
   help [command]                                 display help for command
 ```
 
@@ -399,4 +401,33 @@ Options:
   --timeout <ms>   Maximum time to wait in milliseconds (default: "30000")
   --interval <ms>  Poll interval in milliseconds (default: "2000")
   -h, --help       display help for command
+```
+
+### `assinafy documents watchers`
+
+```text
+Usage: assinafy documents watchers [options] <documentId>
+
+List document watchers (staging; owner credentials required)
+
+Arguments:
+  documentId  Document ID
+
+Options:
+  -h, --help  display help for command
+```
+
+### `assinafy documents set-watchers`
+
+```text
+Usage: assinafy documents set-watchers [options] <documentId>
+
+Replace contacts notified when the document ends (staging)
+
+Arguments:
+  documentId            Document ID
+
+Options:
+  --watcher-ids <json>  JSON array of contact IDs; [] removes all watchers
+  -h, --help            display help for command
 ```

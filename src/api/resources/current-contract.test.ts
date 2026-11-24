@@ -37,6 +37,20 @@ function capture() {
 }
 
 describe('current assignment and signer contracts', () => {
+	it.each(['Witness', null])(
+		'preserves signer capacity %s on creation and estimates',
+		async (sign_as) => {
+			const { client, requests } = capture();
+			const payload = {
+				method: 'virtual',
+				signers: [{ id: 'signer', sign_as }],
+			} as ICreateAssignmentPayload;
+			await client.assignments.create('document', payload);
+			await client.assignments.estimateCost('document', payload);
+			expect(requests.map((r) => r.body)).toEqual([payload, payload]);
+		},
+	);
+
 	it('forwards a zero credit ceiling and embedded signer without dropping either', async () => {
 		const { client, requests } = capture();
 		const payload = {
@@ -357,4 +371,90 @@ it('selects each envelope document for certificate start and completion without 
 		ValidationError,
 	);
 	expect(requests).toHaveLength(2);
+});
+
+describe('scheduled requests and watcher boundaries', () => {
+	it.each([undefined, null, '', '2026-02-30T00:00:00Z', NaN, Infinity, 1.5, {}, []])(
+		'rejects invalid send_at %s before sending',
+		async (send_at) => {
+			const { client, requests } = capture();
+			await expect(
+				client.assignments.schedule('document', { signers: ['signer'], send_at: send_at as never }),
+			).rejects.toBeInstanceOf(ValidationError);
+			await expect(
+				client.envelopes.schedule({ ...envelope, send_at: send_at as never }),
+			).rejects.toBeInstanceOf(ValidationError);
+			expect(requests).toHaveLength(0);
+		},
+	);
+	it('preserves scheduled payloads including explicit no expiration and signer capacity', async () => {
+		const { client, requests } = capture();
+		const body = {
+			method: 'virtual' as const,
+			send_at: '2027-01-01T12:00:00-03:00',
+			expires_at: null,
+			signers: [{ id: 'signer', sign_as: 'Witness' as const }],
+			max_total_credits: 0,
+		};
+		await client.assignments.schedule('document', body);
+		expect(requests[0]?.body).toEqual(body);
+		expect(requests[0]?.headers.get('Idempotency-Key')).toBeUndefined();
+	});
+	it.each(['witness', ['Witness'], false, 1])(
+		'rejects invalid signer capacity %s',
+		async (sign_as) => {
+			const { client, requests } = capture();
+			await expect(
+				client.assignments.create('document', {
+					signers: [{ id: 'signer', sign_as: sign_as as never }],
+				}),
+			).rejects.toBeInstanceOf(ValidationError);
+			expect(requests).toHaveLength(0);
+		},
+	);
+	it('clears watchers and forwards duplicate IDs without inventing an ordering', async () => {
+		const { client, requests } = capture();
+		await client.documents.setWatchers('document', []);
+		await client.documents.setWatchers('document', ['signer', 'signer']);
+		await client.documents.setWatchers('document', Array(11).fill('signer'));
+		expect(requests.map((r) => r.body)).toEqual([
+			{ watcher_ids: [] },
+			{ watcher_ids: ['signer', 'signer'] },
+			{ watcher_ids: Array(11).fill('signer') },
+		]);
+	});
+	it.each([null, {}, [' '], [1], Array.from({ length: 11 }, (_, i) => `signer_${i}`)])(
+		'rejects invalid watcher list %s',
+		async (ids) => {
+			const { client, requests } = capture();
+			await expect(client.documents.setWatchers('document', ids as never)).rejects.toBeInstanceOf(
+				ValidationError,
+			);
+			expect(requests).toHaveLength(0);
+		},
+	);
+});
+
+it.each([42, ['document'], { toString: () => 'document' }])(
+	'rejects non-string path IDs %s before transport',
+	async (id) => {
+		const { client, requests } = capture();
+		await expect(client.documents.get(id as never)).rejects.toBeInstanceOf(ValidationError);
+		await expect(client.scheduledSends.cancel(id as never)).rejects.toBeInstanceOf(ValidationError);
+		expect(requests).toHaveLength(0);
+	},
+);
+it.each([null, [], 'body'])('rejects a non-object assignment payload %s', async (body) => {
+	const { client, requests } = capture();
+	await expect(client.assignments.create('document', body as never)).rejects.toBeInstanceOf(
+		ValidationError,
+	);
+	expect(requests).toHaveLength(0);
+});
+it.each([' ', { id: ' ' }])('rejects blank assignment signer IDs %s', async (signer) => {
+	const { client, requests } = capture();
+	await expect(client.assignments.create('document', { signers: [signer] })).rejects.toBeInstanceOf(
+		ValidationError,
+	);
+	expect(requests).toHaveLength(0);
 });

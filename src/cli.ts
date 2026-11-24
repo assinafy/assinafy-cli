@@ -12,6 +12,7 @@ import { fieldsCommand } from './commands/fields';
 import { loginCommand } from './commands/login';
 import { logoutCommand } from './commands/logout';
 import { oauthCommand } from './commands/oauth';
+import { scheduledSendsCommand } from './commands/scheduled-sends';
 import { sendCommand } from './commands/send';
 import { signerCommand } from './commands/signer';
 import { signersCommand } from './commands/signers';
@@ -67,6 +68,7 @@ ${pc.gray('Sandbox:')} target it with ${pc.blue('--base-url https://sandbox.assi
 	.addCommand(contractsCommand)
 	.addCommand(signersCommand)
 	.addCommand(assignmentsCommand)
+	.addCommand(scheduledSendsCommand)
 	.addCommand(templatesCommand)
 	.addCommand(tagsCommand)
 	.addCommand(fieldsCommand)

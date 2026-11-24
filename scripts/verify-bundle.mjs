@@ -71,6 +71,8 @@ for (const api of [cjsApi, esmApi]) {
 	const client = new api.AssinafyClient({ allowUnauthenticated: true });
 	if (!(client.oauth instanceof api.OAuthResource))
 		fail('SDK entry point is missing OAuthResource');
+	if (!(client.scheduledSends instanceof api.ScheduledSendResource))
+		fail('SDK entry point is missing ScheduledSendResource');
 	if (!(client.contracts instanceof api.ContractResource))
 		fail('SDK entry point is missing ContractResource');
 	if (
@@ -125,6 +127,8 @@ try {
 		`import { type AssinafyClient, type IContract, type IContractAmendment, type PaginatedResult, type ISendTokenResponse, type IOAuthTokenResponse, type IOAuthAuthorizationRequest, type ICertificateStartResponse, type ICertificateCompleteResponse, type IVerifySignerCodePayload, type IDocumentEnvelope, type IEmbedSession, type ISigningDocument, type INotificationPolicy } from '@assinafy/cli/api';
 declare const client: AssinafyClient;
 const envelope: Promise<IDocumentEnvelope> = client.envelopes.create({ name: 'Example', signers: [{ id: 'signer', embedded: true }], documents: [{ id: 'document', signer_ids: ['signer'] }], max_total_credits: 0 }, { idempotencyKey: 'example-operation' });
+const scheduled = client.assignments.schedule('document', { signers: [{ id: 'signer', sign_as: 'Witness' }], send_at: '2027-01-01T12:00:00Z', expires_at: null });
+void [scheduled, client.scheduledSends.list({ document_id: 'document' }), client.documents.setWatchers('document', []), client.assignments.notificationHistory('document'), client.envelopes.estimateResendCost('envelope', 'signer')];
 const embed: Promise<IEmbedSession> = client.embed.createSession('document', 'assignment', 'signer');
 const signing: Promise<ISigningDocument> = client.signerDocuments.getAssignment('example-code', undefined, { document_id: 'document', expand: 'envelope' });
 const policy: Promise<INotificationPolicy> = client.workspaces.updateNotificationPolicy('account', { owners_receive_all: false });

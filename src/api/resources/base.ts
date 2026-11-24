@@ -100,7 +100,7 @@ export abstract class BaseResource {
 }
 
 function safeIdentifier(value: string, name: string): string {
-	if (value === '.' || value === '..' || /[\s/?#\\%]/.test(value)) {
+	if (typeof value !== 'string' || value === '.' || value === '..' || /[\s/?#\\%]/.test(value)) {
 		throw new ValidationError(`${name} contains invalid URL characters`);
 	}
 	return value;
